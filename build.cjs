@@ -2,7 +2,7 @@
 // 설명 탭의 글은 README.md에서 가져온다. README를 고치고 다시 묶으면 페이지의 설명도 같이 바뀐다.
 const fs = require('fs'), path = require('path');
 const { copyIcons } = require('./icon-files.cjs');
-const LAB = { name: '동현삼', version: '0.01', data: 'sam/donghyun_sam_data.json',
+const LAB = { name: '동현삼', version: '0.02', data: 'sam/donghyun_sam_data.json',
   game: ['sam/sam-parser.js', 'sam/sam-rules.js', 'sam/sam-battle.js', 'sam/sam-lang.js', 'sam/sam-battle-scene.js', 'sam/sam-scene.js'] };
 const ENGINE = ['dh-core.js', 'dh-loop.js', 'dh-clock.js', 'dh-grid.js', 'dh-tilemap.js', 'dh-layout.js', 'dh-engine.js', 'dh-lang.js'].map(f => 'engine/' + f);
 const JS = ['lang/donghyun.js', ...ENGINE, ...LAB.game, 'app.js'];

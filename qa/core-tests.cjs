@@ -280,14 +280,38 @@ ok('동현삼 설정: 스테이지 조건(주 셋 · 기한) · 전투 기한과
   const r = g.attack(13, 16, 3000), b = r.battle; assert.deepStrictEqual([b.B.days, b.B.mp, b.T.mountain.cost], [7, 8, 3]); const u = b.units.find(x => x.side === 'att'); const reach = [...b.range(u).values()]; assert.ok(reach.some(v => v.cost > 5) && reach.every(v => v.cost <= 8), '이동력 8만큼 간다');
   for (let i = 0; i < 40 && !b.winner; i++) b.endSide(); assert.deepStrictEqual([b.winner, b.day, b.reason], ['def', 7, '7일을 버텼다'], '가만히 있으면 7일째에 수비가 이긴다');
 });
-ok('동현삼 설정: 틀린 번호와 값은 까닭을 말하고 globalState를 그대로 둔다 · 예제 넷이 모두 읽힌다', () => {
+ok('동현삼 설정: 틀린 번호와 값은 까닭을 말하고 globalState를 그대로 둔다 · 예제 열이 모두 읽힌다', () => {
   const w = S.parse(samJ()), st = S.newState(), same = JSON.stringify(st), L = S.lang;
   const E = (list, re) => { const r = S.applyDonghyunLang(L.compose(list), st, { world: w }); assert.strictEqual(r.ok, false); assert.ok(re.test(r.errors[0]), r.errors[0]); assert.strictEqual(JSON.stringify(st), same); };
   E([[3, 500], [8, 99, 1, 100]], /설정 8\(주 초기값\): 99번 주는 없다/); E([[8, 12, 4, 101]], /충성도 값 101은 쓸 수 없다\. 0~100만 된다/); E([[8, 12, 3, 1250]], /병력 값 1,250은 쓸 수 없다\. 0~99,900, 100 단위만 된다/);
   E([[30, 999, 1, 50]], /999번 장수는 없다/); E([[20, 42]], /주는 41개뿐이다/); E([[10, 1050]], /징병 수량 값 1,050은 쓸 수 없다\. 100~10,000, 100 단위만 된다/); E([[6, 50], [5, 150]], /우리 주 시작 병력 값 150은/);
   const r = S.applyDonghyunLang(put(9, 1), st, { world: w }); assert.ok(/1번째 정수 9은 동현삼 설정 번호가 아니다/.test(r.errors[0]));
-  const ex = S.examples(w); assert.deepStrictEqual(ex.map(e => e.id), ['none', 'rich', 'stage', 'fast']);
+  const ex = S.examples(w); assert.deepStrictEqual(ex.map(e => e.id), ['none', 'rich', 'stage', 'fast', 'calm', 'weak', 'unify', 'swap', 'scale', 'loop']);
   for (const e of ex) { const s2 = S.newState(), q = S.applyDonghyunLang(e.code, s2, { world: w }); assert.ok(q.ok, e.name + q.errors.join()); assert.strictEqual(q.empty, e.id === 'none'); assert.ok(e.code.startsWith('나는 동현이냐?') && e.code.endsWith('동현이구나')); }
   assert.strictEqual(L.describe(S.newState()).length, 18); assert.ok(L.describe(S.newState()).every(x => x.now !== undefined && x.range), '표의 모든 줄에 범위와 기본값이 있다');
+});
+ok('동현삼 예제: 이름 앞에 번호 01~10 · 예제마다 새 판이 열린다 · 09 변수(배율 1~24) · 10 반복문(원소의 여덟 주)', () => {
+  const w = () => S.parse(samJ()), ex = S.examples(w()), by = id => ex.find(e => e.id === id), run = code => { const st = S.newState(), r = S.applyDonghyunLang(code, st, { world: w() }); return { st, r }; };
+  ex.forEach((e, i) => { assert.ok(e.name.startsWith(String(i + 1).padStart(2, '0') + ' · '), e.name); assert.ok(e.code.split('\n')[1].startsWith('ㅋㅋ '), e.id + ': 둘째 줄이 설명이다');
+    for (const l of e.code.split('\n')) if (l.startsWith('ㅋㅋ')) assert.ok(!l.includes('~'), e.id + ': 주석에 ~가 있으면 문장이 갈린다');
+    const { st, r } = run(e.code); assert.ok(r.ok); const g = new S.Game(w(), { player: 'liubei', state: st }); assert.strictEqual(g.months, 0); });
+  const pick = (id, f) => { const { st, r } = run(by(id).code); assert.ok(r.ok); return f(st, r); };
+  assert.deepStrictEqual(pick('calm', (st, r) => r.applied), ['AI 신중함(×10) 10배', '농지 개발에 드는 금 50', '농지 1마다 달마다 쌀 8', '징병에 드는 금 200']);
+  assert.deepStrictEqual(pick('weak', (st, r) => r.applied), ['군주 장로', '우리 주 시작 금 100', '우리 주 시작 쌀 600', '우리 주 시작 병력 3,000', '승리 조건: 차지할 주 수 3', '기한(달) 60']);
+  assert.deepStrictEqual(pick('unify', (st, r) => r.applied), ['군주 조조', '난수 씨앗 3', '기한(달) 120']);
+  assert.deepStrictEqual(pick('swap', st => st.officers), [[121, 'war', 100], [121, 'cha', 75], [122, 'war', 75], [122, 'int', 95], [123, 'war', 40], [123, 'int', 95]]);
+  // 09 변수: 대입 한 줄만 바꾸면 세 값이 함께 바뀐다
+  const sc = by('scale').code.split('\n'), at = sc.findIndex(l => l.startsWith('동현아 ')), scale = k => run(sc.map((l, i) => i === at ? '동현아 ' + A.expression(k) : l).join('\n'));
+  assert.strictEqual(sc.filter(l => l.startsWith('동현아 ')).length, 1); assert.strictEqual(sc[at], '동현아 ' + A.expression(5));
+  assert.deepStrictEqual(pick('scale', st => [st.start.player, st.start.gold, st.start.rice, st.rules.draft.troops]), [3, 5000, 20000, 2000]);
+  for (const k of [1, 2, 12, 24]) { const { st, r } = scale(k); assert.ok(r.ok, k + ': ' + r.errors.join()); assert.deepStrictEqual([st.start.gold, st.start.rice, st.rules.draft.troops], [k * 1000, k * 4000, k * 400]); }
+  assert.ok(/징병 수량 값 0은 쓸 수 없다/.test(scale(0).r.errors.join())); assert.ok(/우리 주 시작 쌀 값 100,000은 쓸 수 없다/.test(scale(25).r.errors.join()));
+  // 10 반복문: 되돌아가는 문장 번호가 주석에 적힌 번호와 같다
+  const lp = by('loop').code.split('\n'), jump = lp.find(l => l.startsWith('뭉치 ')), back = lp.findIndex(l => l.includes('되돌아오는 자리')) + 1;
+  assert.ok(back > 0 && lp.slice(0, back).every(l => !l.includes('~')), '되돌아오는 자리까지는 한 줄이 한 문장이다');
+  assert.strictEqual(jump, `뭉치 동현${'ㅠ'.repeat(10)}? 신중동역 ${A.expression(back)}`); assert.ok(lp[back - 1].includes(`${back}번 문장`) && lp.some(l => l.includes(`${back}번 문장으로 돌아간다`)));
+  const L = run(by('loop').code); assert.deepStrictEqual(L.st.provinces, [2, 3, 4, 5, 6, 7, 8, 9].map(n => [n, 'troops', 10000])); assert.strictEqual(L.r.output.trim().split('\n').length, 32, '정수 서른두 개(설정 여덟 개 × 네 정수)');
+  const g = new S.Game(w(), { player: 'liubei', state: L.st }), yuan = [...g.provinces.values()].filter(p => p.owner === 'yuan'), names = yuan.map(p => p.name);
+  assert.deepStrictEqual([names, yuan.every(p => p.troops === 10000)], [['북평', '계', '남피', '평원', '업', '진양', '상당', '북해'], true], '원소의 주는 여덟 개이고 모두 10,000이다');
 });
 console.log(`핵심 시험 ${n}개 통과`);

@@ -1,5 +1,5 @@
 /* 동현 공통 엔진 · 7/7 engine — Engine과 Scene. 두 게임이 똑같이 쓰는 뼈대다.
- * Engine이 갖는 것: 캔버스(고해상도 맞춤) · 루프(Loop) · 달력(Clock) · 난수(RNG) · 사건 버스 · 장면 쌓기 · 입력(찍기·끌기·바퀴·키).
+ * Engine이 갖는 것: 캔버스(고해상도 맞춤 · fit) · 루프(Loop) · 달력(Clock) · 난수(RNG) · 사건 버스 · 장면 쌓기 · 입력(찍기·끌기·바퀴·키).
  * 게임은 Scene을 이어받아 update(tick)·render(g,alpha)·onTap/onDrag/onWheel/onKey만 채운다. 규칙과 자료는 게임 쪽에 둔다. */
 (function (root) {
   'use strict';
@@ -74,12 +74,17 @@
       g.fillStyle = this.background; g.fillRect(0, 0, this.width, this.height);
       for (const s of this.scenes) { g.save(); s.render(g, alpha); g.restore(); }           // 아래 장면부터 겹쳐 그린다
     }
-    /** 캔버스 안쪽 해상도를 화면 배율에 맞춘다(글자·선이 흐리지 않게). 논리 좌표는 그대로다. */
-    _fit() {
+    /** 캔버스 안쪽 해상도를 화면 배율에 맞춘다(글자·선이 흐리지 않게). 논리 좌표는 그대로다.
+     *  cssWidth(화면에 보이는 캔버스 폭, CSS px)를 주면 그 크기에서도 또렷하도록 배율을 4배까지 올린다(전체 화면). */
+    _fit(cssWidth) {
       const dpr = Math.min(3, Math.max(1, Math.round(root.devicePixelRatio || 1)));
-      this._scale = dpr; this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
+      const scale = cssWidth > 0 ? Math.min(4, Math.max(dpr, Math.ceil(cssWidth * dpr / this.width - 0.01))) : dpr;
+      if (scale === this._scale && this.g) return;
+      this._scale = scale; this.canvas.width = this.width * scale; this.canvas.height = this.height * scale;
       this.g = this.canvas.getContext('2d');
     }
+    /** 캔버스가 화면에서 커지거나 작아진 뒤에 부른다. cssWidth 없이 부르면 화면 배율로 되돌린다. 루프가 멈춰 있어도 한 번 다시 그린다. */
+    fit(cssWidth) { if (!this.canvas) return; this._fit(cssWidth); this._render(1); }
     /** 화면 좌표 → 논리 좌표 */
     _pt(ev) { const b = this.canvas.getBoundingClientRect(); return { x: (ev.clientX - b.left) * this.width / b.width, y: (ev.clientY - b.top) * this.height / b.height }; }
     _bindInput() {

@@ -45,10 +45,10 @@ main{padding:0 40px}
 .series-context strong{display:block;font-size:13px;letter-spacing:-.02em;font-weight:650;color:var(--series-ink)}
 .series-links{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;flex:1;min-width:0} /* 데스크톱: 두 줄, 반씩. 항목 수에 따라 열 수를 정하고 홀수면 동현랭이 두 칸(휴대폰 규칙과 같다) */
 /* 열 수 규칙은 넓은 화면에서만. :has()가 더 센 규칙이라 그냥 두면 좁은 화면의 열 수(자동 채움 · 휴대폰 두 열)를 눌러 버린다 */
-@media(min-width:1181px){
-.series-links:has(.series-item:nth-child(13):last-child),.series-links:has(.series-item:nth-child(14):last-child){grid-template-columns:repeat(7,minmax(0,1fr))}
-.series-links:has(.series-item:nth-child(17):last-child),.series-links:has(.series-item:nth-child(18):last-child){grid-template-columns:repeat(9,minmax(0,1fr))}
-.series-links:has(.series-item:nth-child(19):last-child),.series-links:has(.series-item:nth-child(20):last-child){grid-template-columns:repeat(10,minmax(0,1fr))}
+@media(min-width:781px){ /* 휴대폰(780px 이하)은 두 열 규칙을 따른다. 지금 여기 칸은 글이 길어 제 폭만큼은 지킨다 */
+.series-links:has(.series-item:nth-child(13):last-child),.series-links:has(.series-item:nth-child(14):last-child){grid-template-columns:repeat(7,minmax(min-content,1fr))}
+.series-links:has(.series-item:nth-child(17):last-child),.series-links:has(.series-item:nth-child(18):last-child){grid-template-columns:repeat(9,minmax(min-content,1fr))}
+.series-links:has(.series-item:nth-child(19):last-child),.series-links:has(.series-item:nth-child(20):last-child){grid-template-columns:repeat(10,minmax(min-content,1fr))}
 }
 .series-links:has(.series-item:nth-child(odd):last-child) .series-item[data-series="lang"]{grid-column:span 2}
 .series-item.is-current{background:#f2b705;border-color:#f2b705;color:#26211c}.series-item.is-current .series-note{color:#554018}
@@ -138,7 +138,7 @@ th{background:var(--surface2);font-weight:700}
 .maker-note p{font-size:var(--text-sm)}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;padding:24px 40px 36px;border-top:1px solid var(--line);margin-top:36px;font-size:var(--text-xs);color:var(--muted)}
 footer a{color:var(--muted);white-space:nowrap}
-@media(max-width:1180px){.series-strip{flex-wrap:wrap}.series-context{flex-basis:100%}.series-links{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}.series-links .series-item[data-series="lang"]{grid-column:auto}}
+@media(max-width:1180px){.series-strip{flex-wrap:wrap}.series-context{flex-basis:100%}.series-links{flex-basis:100%;gap:4px}.series-item{padding:8px 4px}} /* 781~1180px: 설명은 윗줄로, 칸은 좌우 간격을 줄여 데스크톱과 같은 두 줄 */
 @media(max-width:1050px){main{padding:0 24px}.header{padding:0 24px}footer{padding:24px}.play-grid{grid-template-columns:1fr}}
 @media(max-width:780px){
   .brand-divider,.brand-sub{display:none}.edition{gap:6px}
@@ -193,6 +193,41 @@ sup.tm{font-size:.55em;line-height:0;vertical-align:super;margin-left:.08em;lett
 .boot-error{padding:12px 14px;border:1px solid var(--error);border-radius:8px;color:var(--error);white-space:pre-wrap;font-size:var(--text-sm)}
 #status[data-kind=error]{color:var(--error)}
 #result[data-kind=ok]{color:#2f6b2a}[data-theme=dark] #result[data-kind=ok]{color:#9fd08a}
+/* ---- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄우고 오른쪽 위에 닫기 단추.
+   요소 전체 화면을 못 쓰는 기기(iPhone Safari)는 창을 가득 채우는 유사 전체 화면. 크기는 app.js의 fit()이 --fs-*로 정한다 ---- */
+.stage-full{position:relative}
+.board-bar{display:flex;justify-content:flex-end;margin-top:8px}
+.small-btn{min-height:32px;font-size:var(--text-xs);padding:0 10px}
+.board-bar .small-btn:disabled{opacity:.45;cursor:default}
+.stage-full:fullscreen{width:100vw;height:100vh;background:#0e0d0b}
+.stage-full.pseudo-full{position:fixed;inset:0;z-index:1000;width:100vw;height:100vh;height:100dvh;background:#0e0d0b}
+html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior:none}
+.stage-full.fs{display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;background:#0e0d0b;padding:calc(56px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left))}
+.stage-full.fs #host{flex:1 1 auto;min-height:0;min-width:0;display:flex;overflow:auto;overscroll-behavior:contain}
+.stage-full.fs .dh-app{flex:0 0 auto;margin:auto;width:var(--fs-app,100%)}
+.stage-full.fs .dh-stage{width:var(--fs-stage,100%)}
+.stage-full.fs:not(.stack):not(.side) .dh-body{grid-template-columns:auto 300px}
+.stage-full.fs:not(.stack):not(.side) .dh-panel{max-height:var(--fs-panel,none);overflow:auto;overscroll-behavior:contain}
+/* 좁거나 세로로 긴 화면: 정보 띠 · 지도 · 조작 창을 아래로 쌓고, 넘치면 안에서 민다 */
+.stage-full.fs.stack .dh-body{grid-template-columns:minmax(0,1fr);justify-items:center}
+.stage-full.fs.stack .dh-panel{justify-self:stretch}
+.stage-full.fs.stack .dh-info{margin-left:0;width:100%}
+/* 낮은 가로 화면(가로로 든 휴대폰): 지도를 왼쪽에 꽉 채우고 정보 띠와 조작 창을 오른쪽에 세운다 */
+.stage-full.fs.side{padding-top:calc(14px + env(safe-area-inset-top))}
+.stage-full.fs.side .dh-app{grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);width:100%;height:var(--fs-h,100%)}
+.stage-full.fs.side .dh-body{display:contents}
+.stage-full.fs.side .dh-stage{grid-area:1/1/3/2;align-self:center}
+.stage-full.fs.side .dh-top{grid-area:1/2/2/3;margin-top:42px}
+.stage-full.fs.side .dh-panel{grid-area:2/2/3/3;min-height:0;overflow:auto;overscroll-behavior:contain}
+.stage-full.fs.side .dh-info{margin-left:0;width:100%}
+.stage-full.fs.side .dh-title{display:none}
+.exit-full{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:5;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
+.exit-full:hover,.exit-full:focus-visible{opacity:1;background:rgba(20,18,16,.9)!important}
+/* 안내는 5초 동안 뜬다. 정보 띠를 가리지 않게 닫기 단추 왼쪽의 빈 띠에 둔다(가로로 든 휴대폰에서는 지도 아래쪽) */
+.full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 172px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
+.full-hint[hidden]{display:none}.full-hint>span{display:block}
+.stage-full.fs.side .full-hint{top:auto;bottom:calc(22px + env(safe-area-inset-bottom));left:calc(24px + env(safe-area-inset-left));max-width:min(440px,calc(100% - 320px))}
+.stage-full,.board-bar{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* 설정 번호 표: 편집기 아래에 접어 둔다 */
 .lang-rule{margin-top:10px;border-top:1px solid var(--line)}
 .lang-rule summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm);font-weight:700;list-style:none}

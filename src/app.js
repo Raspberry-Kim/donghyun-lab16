@@ -86,10 +86,56 @@ function fillLang() {
   selectExample();
 }
 
+/* ---------- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄운다 ---------- */
+const stageFull = $('#stage-full'), host = $('#host'), FS_VARS = ['--fs-stage', '--fs-app', '--fs-panel', '--fs-h'];
+const fullEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+const canNativeFull = !!((document.fullscreenEnabled || document.webkitFullscreenEnabled) && (stageFull.requestFullscreen || stageFull.webkitRequestFullscreen));
+const isPseudo = () => stageFull.classList.contains('pseudo-full');
+const isFull = () => fullEl() === stageFull || isPseudo();
+/** 전체 화면에서 지도의 크기를 정한다. 세 가지 배치: 좁거나 세로로 긴 화면은 아래로 쌓고(stack), 낮은 가로 화면은 지도를 왼쪽에 꽉 채우고(side), 나머지는 평소처럼 지도 옆에 조작 창을 둔다 */
+function fit() {
+  const app = host.querySelector('.dh-app'); if (!app || !current) return;
+  const st = stageFull.style, e = current.engine, ratio = e.width / e.height;
+  FS_VARS.forEach(v => st.removeProperty(v));
+  if (!isFull()) { stageFull.classList.remove('stack', 'side'); return e.fit(); }
+  const stack = stageFull.clientWidth < 720 || stageFull.clientHeight > stageFull.clientWidth, side = !stack && stageFull.clientHeight < 600;
+  stageFull.classList.toggle('stack', stack); stageFull.classList.toggle('side', side);
+  const cs = getComputedStyle(stageFull), px = k => parseFloat(cs[k]) || 0, top = app.querySelector('.dh-top');
+  const W = stageFull.clientWidth - px('paddingLeft') - px('paddingRight'), H = stageFull.clientHeight - px('paddingTop') - px('paddingBottom');
+  let w = 0;
+  for (let i = 0; i < 2; i++) {                          // 두 번 잰다: 폭이 정해져야 정보 띠의 높이(줄 수)가 정해진다
+    if (stack) w = Math.min(i ? host.clientWidth : W, H * 0.62 * ratio);
+    else if (side) { w = Math.min(H * ratio, W - 270); st.setProperty('--fs-h', Math.floor(H) + 'px'); }
+    else { w = Math.max(240, Math.floor(Math.min(W - 310, (H - top.offsetHeight - 10) * ratio))); st.setProperty('--fs-app', w + 310 + 'px'); st.setProperty('--fs-panel', Math.floor(w / ratio) + 'px'); }
+    w = Math.max(240, Math.floor(w)); st.setProperty('--fs-stage', w + 'px');
+  }
+  e.fit(w);
+}
+function setPseudo(on) { stageFull.classList.toggle('pseudo-full', on); document.documentElement.classList.toggle('pseudo-full-on', on); onFull(); }
+function exitFull() { if (isPseudo()) return setPseudo(false); if (fullEl() === stageFull) (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document); }
+let hintTimer = 0;
+function onFull() {
+  const on = isFull(); stageFull.classList.toggle('fs', on);
+  $('#exit-full').hidden = !on; $('#full').textContent = on ? '전체 화면 닫기' : '전체 화면';
+  clearTimeout(hintTimer); $('#full-hint').hidden = !on; if (on) hintTimer = setTimeout(() => { $('#full-hint').hidden = true; }, 5000);
+  fit(); setTimeout(fit, 60);
+  if (on) { $('#full').blur(); const cv = host.querySelector('.dh-canvas'); if (cv) cv.focus({ preventScroll: true }); }   // 방향키가 바로 듣게
+}
+document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
+addEventListener('resize', () => { if (isFull()) fit(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && isPseudo()) setPseudo(false); });
+$('#exit-full').onclick = exitFull;
+$('#full').onclick = () => {
+  if (isFull()) return exitFull(); if (!current) return;
+  if (!canNativeFull) return setPseudo(true);            // iPhone Safari: 창을 가득 채우는 유사 전체 화면
+  try { const r = stageFull.requestFullscreen ? stageFull.requestFullscreen() : stageFull.webkitRequestFullscreen(); if (r && r.catch) r.catch(() => setPseudo(true)); } catch (err) { setPseudo(true); }
+};
+window.__dhFull = { fit, setPseudo, isFull };            // 시험용 손잡이
+
 /* ---------- 시작: 자료를 읽고 기본값으로 판을 연다 ---------- */
 GAME.boot($('#host'), '#lab-data').then(g => {
   current = g; window.__dh = g;                          // 시험용 손잡이
-  $('#run').disabled = false; $('#status').textContent = '기본값으로 열었다';
+  $('#run').disabled = false; $('#full').disabled = false; $('#status').textContent = '기본값으로 열었다';
   fillLang();
 }).catch(e => {
   const p = el('pre', e.message); p.className = 'boot-error'; $('#host').replaceChildren(p);
