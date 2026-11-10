@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="동현랭으로 시작값과 규칙 수치를 정하고, 41개 주를 잇는 지도에서 달마다 명령을 내리고 10×10 육각 전장에서 싸우는 1인용 삼국 전략 실험실이다.">
+  <meta name="description" content="동현랭으로 시작값과 규칙 수치를 정하고, 41개 주를 잇는 지도에서 달마다 명령을 내리고 10×10 육각 전장에서 싸우는 1인용 삼국지 전략 시뮬레이션 게임이다.">
   <title>동현삼™ · 동현랭으로 여는 삼국 전략</title>
   <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="./favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png">
@@ -205,7 +205,9 @@ sup.tm{font-size:.55em;line-height:0;vertical-align:super;margin-left:.08em;lett
 /* ---- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄우고 오른쪽 위에 닫기 단추.
    요소 전체 화면을 못 쓰는 기기(iPhone Safari)는 창을 가득 채우는 유사 전체 화면. 크기는 app.js의 fit()이 --fs-*로 정한다 ---- */
 .stage-full{position:relative}
-.board-bar{display:flex;justify-content:flex-end;margin-top:8px}
+.board-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+.save-note{flex:1 1 200px;font-size:var(--text-xs);line-height:1.5;color:var(--muted);word-break:keep-all}.save-note b{color:var(--ink);font-weight:600}
+@media (max-width:560px){.save-note{flex-basis:100%}}
 .small-btn{min-height:32px;font-size:var(--text-xs);padding:0 10px}
 .board-bar .small-btn:disabled{opacity:.45;cursor:default}
 .stage-full:fullscreen{width:100vw;height:100vh;background:#0e0d0b}
@@ -230,13 +232,29 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .stage-full.fs.side .dh-panel{grid-area:2/2/3/3;min-height:0;overflow:auto;overscroll-behavior:contain}
 .stage-full.fs.side .dh-info{margin-left:0;width:100%}
 .stage-full.fs.side .dh-title{display:none}
-.exit-full{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:5;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
+.full-tools{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:5;display:flex;gap:6px}
+.stage-full.fs.stack .exit-full .long,.stage-full.fs.side .exit-full .long{display:none}      /* 좁은 화면에서는 '✕ 닫기'로 줄인다 */
+.exit-full{min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
 .exit-full:hover,.exit-full:focus-visible{opacity:1;background:rgba(20,18,16,.9)!important}
 /* 안내는 5초 동안 뜬다. 정보 띠를 가리지 않게 닫기 단추 왼쪽의 빈 띠에 둔다(가로로 든 휴대폰에서는 지도 아래쪽) */
-.full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 172px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
+.full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 318px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
 .full-hint[hidden]{display:none}.full-hint>span{display:block}
+.stage-full.fs.stack .full-hint{top:auto;bottom:calc(14px + env(safe-area-inset-bottom));max-width:calc(100% - 28px)}
 .stage-full.fs.side .full-hint{top:auto;bottom:calc(22px + env(safe-area-inset-bottom));left:calc(24px + env(safe-area-inset-left));max-width:min(440px,calc(100% - 320px))}
 .stage-full,.board-bar{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* ---- 저장 · 불러오기 메뉴(동현심과 같은 모양): 화면 가운데 뜨고, 전체 화면에서도 같은 자리다 ---- */
+.menu-back{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(14,13,11,.5)}
+.menu-back[hidden]{display:none}
+.game-menu{box-sizing:border-box;width:min(380px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:8px;box-shadow:4px 4px 0 rgba(0,0,0,.35);padding:8px;line-height:1.4;text-align:left}
+.game-menu h4{margin:4px 8px 6px;font:700 var(--text-sm) var(--body);line-height:1.5;word-break:keep-all}
+.game-menu .menu-text{margin:0 8px 8px;font-size:var(--text-xs);line-height:1.6;color:var(--muted);word-break:keep-all}
+.game-menu .mi{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;min-height:44px;padding:8px 10px;border:0;border-radius:5px;background:none;color:inherit;font:var(--text-sm) var(--body);text-align:left;cursor:pointer}
+.game-menu .mi:hover,.game-menu .mi:focus-visible{background:var(--surface2)}
+.game-menu .mi:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.game-menu .mi:active{background:var(--accent);color:#26211c}
+.game-menu .mi:disabled{opacity:.45;cursor:default;background:none}
+.game-menu .mi span{white-space:nowrap}
+.game-menu .mi small{font-size:var(--text-xs);color:var(--muted);text-align:right;word-break:keep-all}
 /* 설정 번호 표: 편집기 아래에 접어 둔다 */
 .lang-rule{margin-top:10px;border-top:1px solid var(--line)}
 .lang-rule summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm);font-weight:700;list-style:none}
@@ -285,6 +303,8 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .dh-btn:hover:not(:disabled){background:var(--surface2,#efe7d8)}
 .dh-btn:disabled{opacity:.5;cursor:not-allowed}
 .dh-btn.dh-primary{background:var(--accent,#f2b705);border-color:#a77915;color:#26211c;font-weight:700}
+.dh-key{display:inline-block;min-width:1.35em;margin-right:6px;padding:0 3px;border:1px solid currentColor;border-radius:4px;font:600 .6875rem/1.45 var(--mono,ui-monospace,monospace);text-align:center;opacity:.62;vertical-align:1px}
+@media (hover:none) and (pointer:coarse){.dh-key{display:none}}
 .dh-log{list-style:none;margin:0;padding:8px 0 0;border-top:1px solid var(--line,#d9cdb8);max-height:9.5em;overflow:auto;font-size:.8125rem;color:var(--muted,#6e6356);line-height:1.5}
 .dh-log li:first-child{color:var(--ink,#26211c)}
 /* 좁은 화면: 조작 창이 캔버스 아래로 내려간다. data-panel로 고정할 수도 있다 */
@@ -296,27 +316,28 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 <body>
 <header class="header">
   <a class="brand" href="#" aria-label="동현삼 첫 화면으로"><span class="brand-main"><img class="brand-icon" src="data:image/png;base64,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" alt="" width="96" height="96">동현<span>삼</span><sup>TM</sup></span><i class="brand-divider"></i><span class="brand-sub">THREE KINGDOMS<small>코드로 여는 삼국 전략</small></span></a><a class="doi-badge" href="https://doi.org/10.5281/zenodo.24106052" target="_blank" rel="noopener" aria-label="동현삼 Zenodo DOI 10.5281/zenodo.24106052" title="Zenodo DOI (모든 버전)"><b>DOI</b><span>10.5281/zenodo.24106052</span></a>
-  <div class="edition">v0.02<button id="theme" class="icon-btn" aria-label="밝은 화면과 어두운 화면 전환" title="화면 전환" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+  <div class="edition">v0.03<button id="theme" class="icon-btn" aria-label="밝은 화면과 어두운 화면 전환" title="화면 전환" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
 </header>
 <main>
 <!-- SERIES-NAV-START -->
 <nav class="series-strip" aria-label="동현 프로젝트 이동"><p class="series-context"><strong>동현의 작은 실험들</strong>하나의 언어, 열일곱 개의 작은 세계</p><div class="series-links"><a class="series-item" data-series="lang" href="https://raspberry-kim.github.io/donghyun-lang/" aria-label="동현랭™ 언어 플레이그라운드로 이동"><span class="series-name">동현랭<sup>™</sup></span><span class="series-note">언어</span></a><a class="series-item" data-series="fly" href="https://raspberry-kim.github.io/donghyun-lab1/" aria-label="동현초™ 초파리 회로실험실로 이동"><span class="series-name">동현초<sup>™</sup></span><span class="series-note">초파리</span></a><a class="series-item" data-series="worm" href="https://raspberry-kim.github.io/donghyun-lab2/" aria-label="동현파™ 선충 회로실험실로 이동"><span class="series-name">동현파<sup>™</sup></span><span class="series-note">선충</span></a><a class="series-item" data-series="village" href="https://raspberry-kim.github.io/donghyun-lab3/" aria-label="동현빌™ 마을 유행 실험실로 이동"><span class="series-name">동현빌<sup>™</sup></span><span class="series-note">마을</span></a><a class="series-item" data-series="tactics" href="https://raspberry-kim.github.io/donghyun-lab4/" aria-label="동현전™ 전략 시뮬레이션 실험실로 이동"><span class="series-name">동현전<sup>™</sup></span><span class="series-note">전략</span></a><a class="series-item" data-series="copter" href="https://raspberry-kim.github.io/donghyun-lab5/" aria-label="동현콥™ 원버튼 비행 실험실로 이동"><span class="series-name">동현콥<sup>™</sup></span><span class="series-note">비행</span></a><a class="series-item" data-series="ten" href="https://raspberry-kim.github.io/donghyun-lab6/" aria-label="동현텐™ 숫자 짝 실험실로 이동"><span class="series-name">동현텐<sup>™</sup></span><span class="series-note">숫자</span></a><a class="series-item" data-series="war" href="https://raspberry-kim.github.io/donghyun-lab7/" aria-label="동현워™ 중세 전술 실험실로 이동"><span class="series-name">동현워<sup>™</sup></span><span class="series-note">중세</span></a><a class="series-item" data-series="doom" href="https://raspberry-kim.github.io/donghyun-lab8/" aria-label="동현둠™ 1인칭 슈팅 실험실로 이동"><span class="series-name">동현둠<sup>™</sup></span><span class="series-note">1인칭</span></a><a class="series-item" data-series="cr" href="https://raspberry-kim.github.io/donghyun-lab9/" aria-label="동현크™ 플랫폼 액션 실험실로 이동"><span class="series-name">동현크<sup>™</sup></span><span class="series-note">플랫폼</span></a><a class="series-item" data-series="mon" href="https://raspberry-kim.github.io/donghyun-lab10/" aria-label="동현몬™ 동현몬스터 실험실로 이동"><span class="series-name">동현몬<sup>™</sup></span><span class="series-note">모험</span></a><a class="series-item" data-series="zooo" href="https://raspberry-kim.github.io/donghyun-lab11/" aria-label="동현주™ 얼굴 퍼즐 실험실로 이동"><span class="series-name">동현주<sup>™</sup></span><span class="series-note">퍼즐</span></a><a class="series-item" data-series="sim" href="https://raspberry-kim.github.io/donghyun-lab12/" aria-label="동현심™ 도시 만들기 실험실로 이동"><span class="series-name">동현심<sup>™</sup></span><span class="series-note">도시</span></a><a class="series-item" data-series="ram" href="https://raspberry-kim.github.io/donghyun-lab13/" aria-label="동현램™ 도시 부수기 실험실로 이동"><span class="series-name">동현램<sup>™</sup></span><span class="series-note">몬스터</span></a><a class="series-item" data-series="q" href="https://raspberry-kim.github.io/donghyun-lab14/" aria-label="동현큐™ 선 긋기 실험실로 이동"><span class="series-name">동현큐<sup>™</sup></span><span class="series-note">선 긋기</span></a><a class="series-item" data-series="doc" href="https://raspberry-kim.github.io/donghyun-lab15/" aria-label="동현닥™ 알약 실험실로 이동"><span class="series-name">동현닥<sup>™</sup></span><span class="series-note">알약</span></a><span class="series-item is-current" data-series="sam" aria-current="page"><span class="series-name">동현삼<sup>™</sup></span><span class="series-note">삼국 · 지금 여기</span></span><a class="series-item" data-series="hang" href="https://raspberry-kim.github.io/donghyun-lab17/" aria-label="동현항™ 항해 교역 실험실로 이동"><span class="series-name">동현항<sup>™</sup></span><span class="series-note">항해</span></a></div></nav>
 <!-- SERIES-NAV-END -->
   <section class="intro">
-    <div><div class="eyebrow">THREE KINGDOMS × ESOTERIC LANGUAGE</div><h1>삼국 실험실: <span class="title-brand">동현<span>삼</span><sup>TM</sup></span></h1><p><strong>동현랭</strong>으로 시작값과 규칙 수치를 정하는 1인용 삼국 전략이다. 후한 말의 <strong>41개 주</strong>를 잇는 지도에서 군주 아홉 가운데 하나를 골라, 달마다 주 하나에 명령 하나(농지 개발 · 징병 · 이동 · 수색 · 침공)를 내린다. 침공하면 <strong>10×10 육각 전장</strong>에서 부대를 움직여 싸운다. 모든 주(또는 코드로 정한 수의 주)를 차지하면 이긴다. 마우스나 손가락으로 논다.</p></div>
-    <div class="model-stamp"><strong>41 <span>주</span></strong><strong>9 <span>군주</span></strong><small>1인용 · 주 41 · 군주 9 · 장수 40 · 마우스·손가락</small><div class="input-marks" role="group" aria-label="입력 표식 · 쓸 수 있는 것: 마우스(손가락) · 전체 화면"><span class="mark off kb" tabindex="0" data-tip="키보드 없음 · 명령은 마우스와 손가락으로 내린다. 지도를 한 번 누른 뒤 방향키로 지도를 옮기고 +·−로 확대·축소하는 것만 된다." aria-label="키보드 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path class="dots" d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13h.01M9.5 13h.01M13 13h.01M16.5 13h.01"/><path d="M8 16h8"/></svg></span><span class="mark on ms" tabindex="0" data-tip="마우스·손가락 가능 · 지도에서 주를 누르고 조작 창의 단추로 명령한다. 끌면 지도가 움직이고 바퀴로 확대·축소한다." aria-label="마우스·손가락 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg></span><span class="mark off gp" tabindex="0" data-tip="게임패드 없음 · 이 실험실은 게임패드를 읽지 않는다." aria-label="게임패드 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="4.5"/><path d="M7 9.6v4.8M4.6 12h4.8"/><circle cx="16.6" cy="9.6" r=".85"/><circle cx="14.4" cy="12" r=".85"/><circle cx="18.8" cy="12" r=".85"/><circle cx="16.6" cy="14.4" r=".85"/><path class="dots" d="M11.3 13.4h.01M12.9 13.4h.01"/></svg></span><span class="mark on fs" tabindex="0" data-tip="전체 화면 가능 · 지도 아래 <b>전체 화면</b> 단추를 누르면 지도와 조작 창이 화면에 꽉 찬다. 닫기는 오른쪽 위 ✕ 단추나 Esc." aria-label="전체 화면 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><text class="full" x="12" y="14.6" text-anchor="middle">FULL</text></svg></span></div></div>
+    <div><div class="eyebrow">THREE KINGDOMS × ESOTERIC LANGUAGE</div><h1>삼국 실험실: <span class="title-brand">동현<span>삼</span><sup>TM</sup></span></h1><p><strong>동현랭</strong>으로 시작값과 규칙 수치를 정하는 1인용 삼국지 전략 시뮬레이션 게임이다. 후한 말의 <strong>41개 주</strong>를 잇는 지도에서 군주 아홉 가운데 하나를 골라, 달마다 주 하나에 명령 하나(농지 개발 · 징병 · 이동 · 수색 · 침공)를 내린다. 침공하면 <strong>10×10 육각 전장</strong>에서 부대를 움직여 싸운다. 모든 주(또는 코드로 정한 수의 주)를 차지하면 이긴다.</p></div>
+    <div class="model-stamp"><strong>41 <span>주</span></strong><strong>9 <span>군주</span></strong><small>1인용 · 주 41 · 군주 9 · 장수 40 · 키보드·마우스</small><div class="input-marks" role="group" aria-label="입력 표식 · 쓸 수 있는 것: 키보드 · 마우스(손가락) · 전체 화면"><span class="mark on kb" tabindex="0" data-tip="키보드 가능 · 방향키로 주를 고르고 숫자 키로 조작 창의 단추를 누른다. Enter는 노란 단추, Space는 명령이 남은 다음 우리 주, Esc는 그만두기다. 전투에서는 방향키로 칸을 고르고 Enter로 찍는다. 지도를 한 번 눌러야 키가 듣는다." aria-label="키보드 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path class="dots" d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13h.01M9.5 13h.01M13 13h.01M16.5 13h.01"/><path d="M8 16h8"/></svg></span><span class="mark on ms" tabindex="0" data-tip="마우스·손가락 가능 · 지도에서 주를 누르고 조작 창의 단추로 명령한다. 끌면 지도가 움직이고 바퀴로 확대·축소한다." aria-label="마우스·손가락 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg></span><span class="mark off gp" tabindex="0" data-tip="게임패드 없음 · 이 실험실은 게임패드를 읽지 않는다." aria-label="게임패드 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="4.5"/><path d="M7 9.6v4.8M4.6 12h4.8"/><circle cx="16.6" cy="9.6" r=".85"/><circle cx="14.4" cy="12" r=".85"/><circle cx="18.8" cy="12" r=".85"/><circle cx="16.6" cy="14.4" r=".85"/><path class="dots" d="M11.3 13.4h.01M12.9 13.4h.01"/></svg></span><span class="mark on fs" tabindex="0" data-tip="전체 화면 가능 · 지도 아래 <b>전체 화면</b> 단추를 누르면 지도와 조작 창이 화면에 꽉 찬다. 닫기는 오른쪽 위 ✕ 단추나 Esc." aria-label="전체 화면 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><text class="full" x="12" y="14.6" text-anchor="middle">FULL</text></svg></span></div></div>
   </section>
-  <nav class="tabs" aria-label="동현삼 메뉴"><button class="active" data-tab="play" aria-current="page">지도</button><button data-tab="protocol">동현삼 출전 규약</button><button data-tab="rules">규칙</button><button data-tab="engine">엔진과 자료</button><button data-tab="about">모델과 출처</button><span>시작값과 규칙은 동현랭으로, 명령은 마우스와 손가락으로</span></nav>
+  <nav class="tabs" aria-label="동현삼 메뉴"><button class="active" data-tab="play" aria-current="page">지도</button><button data-tab="protocol">동현삼 출전 규약</button><button data-tab="rules">규칙</button><button data-tab="engine">엔진과 자료</button><button data-tab="about">모델과 출처</button><span>시작값과 규칙은 동현랭으로, 명령은 키보드나 마우스 · 손가락으로</span></nav>
   <div class="getting-started"><p><strong>처음이라면?</strong> 지도는 기본값으로 이미 열려 있다. 조작 창에서 군주를 고르면 시작한다. 예제 <b>02 · 넉넉한 유비</b>를 고르고 <b>출전</b>을 누르면 그 설정으로 새 판이 열린다. 시작값과 규칙 수치는 모두 <b>동현랭</b>이 출력한 정수로만 바꾼다.</p><a href="https://raspberry-kim.github.io/donghyun-lang/" target="_blank" rel="noopener">동현랭 배우기 · 실행기 ↗</a></div>
 
   <section id="tab-play" class="tab-panel">
     <div class="play-grid" id="play-grid">
       <div class="field-col">
         <div class="section-title"><h2><span>A</span> 지도</h2><span id="status" role="status">자료를 읽는 중</span></div>
-        <div class="stage-full" id="stage-full"><button id="exit-full" class="exit-full" type="button" hidden aria-label="전체 화면 닫기">✕ 전체 화면 닫기</button><p class="full-hint" id="full-hint" hidden><span>원래 화면으로 돌아오려면 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누른다.</span></p>
+        <div class="stage-full" id="stage-full"><div class="full-tools"><button id="fs-save" class="exit-full" type="button" hidden>저장</button><button id="fs-load" class="exit-full" type="button" hidden>불러오기</button><button id="exit-full" class="exit-full" type="button" hidden aria-label="전체 화면 닫기">✕ <span class="long">전체 화면 </span>닫기</button></div><p class="full-hint" id="full-hint" hidden><span>원래 화면으로 돌아오려면 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누른다.</span></p>
           <div id="host"></div>
+          <div class="menu-back" id="menu-back" hidden><div class="game-menu" id="menu" role="dialog" aria-modal="true" aria-labelledby="menu-title"></div></div>
         </div>
-        <div class="board-bar"><button id="full" class="small-btn" type="button" disabled title="지도와 조작 창을 화면에 꽉 채운다">전체 화면</button></div>
+        <div class="board-bar"><span class="save-note">저장은 브라우저 칸 3개와 <b>.dhsave</b> 파일. 저절로 저장하지 않는다.</span><button id="game-save" class="small-btn" type="button" disabled title="지금 판을 브라우저 칸이나 파일에 적어 둔다">저장</button><button id="game-load" class="small-btn" type="button" disabled title="저장해 둔 판을 이어 한다">불러오기</button><input id="load-file" type="file" accept=".dhsave,.json,application/json" hidden><button id="full" class="small-btn" type="button" disabled title="지도와 조작 창을 화면에 꽉 채운다">전체 화면</button></div>
       </div>
       <div class="side-col">
         <section class="setup-panel" id="setup-panel">
@@ -337,7 +358,7 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
   </section>
 
   <section id="tab-protocol" class="tab-panel document" hidden>
-    <div class="doc-heading"><div class="eyebrow">SORTIE I/O · v0.02</div><h2>시작값과 규칙 수치는 동현랭으로, 명령은 마우스와 손가락으로.</h2></div>
+    <div class="doc-heading"><div class="eyebrow">SORTIE I/O · v0.03</div><h2>시작값과 규칙 수치는 동현랭으로, 명령은 키보드나 마우스 · 손가락으로.</h2></div>
 <p>동현랭에는 '금'이나 '병력' 같은 낱말이 없다. 값은 모두 정수이고, 밖으로 나가는 것은 출력뿐이다. 그래서 동현랭 코드가 출력한 정수를 <b>설정 번호 · 값</b> 순서로 읽는다. 어느 번호가 무엇인지는 동현삼이 정한다.</p>
 <pre class="code-example">나는 동현이냐?
 ㅋㅋ 3번 우리 주 시작 금 = 3,000
@@ -355,12 +376,21 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
   </section>
 
   <section id="tab-rules" class="tab-panel document" hidden>
-    <div class="doc-heading"><div class="eyebrow">HOW TO PLAY</div><h2>달마다 주 하나에 명령 하나, 침공하면 육각 전장.</h2><p class="input-note">머리글 오른쪽에 붙은 네 아이콘(키보드·마우스·게임패드·전체 화면 FULL)은 입력 표식이다. 이 실험실은 <b>마우스(손가락)와 전체 화면이 켜져 있다</b>. 키보드는 지도를 옮기고 확대·축소하는 데만 쓰고, 동현랭 코드를 쓸 때 쓴다. 아이콘에 마우스를 올리거나 손을 대면 풍선 도움말이 뜬다.</p><p class="input-note"><b>전체 화면</b>: 지도 아래 <b>전체 화면</b> 단추를 누르면 정보 띠 · 지도 · 조작 창이 화면에 꽉 찬다. 동현랭 편집기는 따라오지 않으니 출전은 미리 해 둔다. 닫을 때는 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누른다(Esc도 된다). 요소 전체 화면을 못 쓰는 기기(iPhone)에서는 창을 가득 채우는 방식으로 연다.</p></div>
+    <div class="doc-heading"><div class="eyebrow">HOW TO PLAY</div><h2>달마다 주 하나에 명령 하나, 침공하면 육각 전장.</h2><p class="input-note">머리글 오른쪽에 붙은 네 아이콘(키보드·마우스·게임패드·전체 화면 FULL)은 입력 표식이다. 이 실험실은 <b>키보드 · 마우스(손가락) · 전체 화면이 켜져 있다</b>. 키보드만으로도, 마우스나 손가락만으로도 끝까지 할 수 있다. 키보드는 지도를 한 번 누른 뒤에 듣는다. 아이콘에 마우스를 올리거나 손을 대면 풍선 도움말이 뜬다.</p><p class="input-note"><b>전체 화면</b>: 지도 아래 <b>전체 화면</b> 단추를 누르면 정보 띠 · 지도 · 조작 창이 화면에 꽉 찬다. 동현랭 편집기는 따라오지 않으니 출전은 미리 해 둔다. 닫을 때는 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누른다(Esc도 된다). 요소 전체 화면을 못 쓰는 기기(iPhone)에서는 창을 가득 채우는 방식으로 연다.</p></div>
 <h3>놀이 방법</h3>
 <ul><li>페이지를 열면 기본값으로 판이 열려 있다. 조작 창에서 <b>군주 아홉</b> 가운데 하나를 고르면 200년 1월부터 시작한다.</li><li>지도에서 <b>우리 주를 찍고</b> 조작 창의 단추로 명령을 내린다. 주마다 한 달에 명령 하나다: 농지 개발 · 징병 · 이동 · 수색 · 침공.</li><li><b>이동</b>은 차례로 고른다: 누가(장수 한 명 또는 병력만) → 어디로(단추나 지도의 이웃한 우리 주) → 얼마나(병력 없이 · 절반 · 전부). <b>침공</b>은 어디로(이웃한 남의 주) → 얼마나(절반 · 전부)만 고른다. 나설 장수는 무력 순으로 셋까지 저절로 정해진다.</li><li><b>턴 종료</b>를 누르면 다른 군주들이 차례로 움직이고 달이 넘어간다. 달이 바뀔 때 세금과 수확이 들어오고 군량이 나간다.</li><li><b>침공</b>하면 지도 위에 10×10 육각 전장이 얹힌다. 우리 부대를 찍으면 갈 수 있는 칸이 노랗게 보이고, 바로 옆 칸의 적(붉은 테)을 찍으면 친다. 남은 싸움은 <b>맡기기</b>로 AI에게 넘길 수 있다.</li><li>모든 주를 차지하면 이기고, 우리 주를 모두 잃으면 진다. 동현랭으로 <b>차지할 주 수</b>(20번)와 <b>기한</b>(21번)을 정하면 그 수를 채웠을 때 이기고, 기한이 다 되면 진다.</li><li>오른쪽 동현랭 코드의 <b>출전</b>을 누르면 코드가 출력한 정수대로 시작값과 규칙 수치가 정해지고 새 판이 열린다. 코드에 오류가 있으면 하던 판을 그대로 둔다.</li></ul>
 <h3>조작</h3>
-<div class="table-wrap"><table><thead><tr><th>입력</th><th>하는 일</th></tr></thead><tbody><tr><td>지도 찍기</td><td>주를 고른다. 이동 · 침공할 곳을 고르는 중이면 그 주가 대상이 된다. 손가락이 조금 빗나가도 가까운 주가 잡힌다</td></tr><tr><td>지도 끌기</td><td>지도를 옮긴다</td></tr><tr><td>마우스 바퀴 · 확대 · 축소 단추</td><td>지도를 키우고 줄인다(1~3배)</td></tr><tr><td>조작 창 단추</td><td>군주 고르기 · 명령 · 턴 종료 · 전투의 대기 · 차례 넘기기 · 맡기기 · 퇴각. 못 누르는 단추에는 까닭이 적힌다</td></tr><tr><td>방향키 · <code>+</code> <code>−</code></td><td>지도를 한 번 찍은 뒤에 듣는다. 지도를 옮기고 키우고 줄인다. 명령은 키보드로 내리지 않는다</td></tr><tr><td><code>Esc</code></td><td>전투에서 고른 부대를 놓는다. 전체 화면에서는 전체 화면이 닫힌다</td></tr><tr><td><code>Ctrl</code>/<code>⌘</code> + <code>Enter</code></td><td>동현랭 편집기에서 출전</td></tr><tr><td><b>전체 화면</b> 단추(지도 아래)</td><td>정보 띠 · 지도 · 조작 창을 화면에 꽉 채운다. 닫을 때는 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누르거나 <code>Esc</code>를 누른다</td></tr></tbody></table></div>
-<ul><li>화면은 위 정보 띠(날짜 · 군주 · 주 · 병력 · 남은 명령) · 가운데 지도(480×360) · 조작 창(설명 · 단추 · 기록)으로 나뉜다. 폭이 좁으면 조작 창이 지도 아래로 내려간다.</li><li><b>전체 화면</b>에서는 화면 모양에 따라 배치가 셋으로 바뀐다. 넓은 화면은 평소처럼 지도 오른쪽에 조작 창을 두고, 낮은 가로 화면(눕힌 휴대폰)은 지도를 왼쪽에 꽉 채우고 정보 띠와 조작 창을 오른쪽에 모으며, 좁거나 세로로 긴 화면은 아래로 쌓는다. 지도는 커진 만큼 더 촘촘히 그린다(4배까지).</li><li>동현랭 편집기는 전체 화면에 따라오지 않는다. 설정을 바꾸려면 <b>출전</b>을 먼저 누르고 전체 화면을 켠다. iPhone Safari처럼 전체 화면을 내주지 않는 브라우저에서는 창을 가득 채우는 방식으로 띄운다.</li><li>설명 탭을 읽는 동안에는 판이 멈춘다. 게임패드 · 소리 · 저장은 없다.</li></ul>
+<div class="table-wrap"><table><thead><tr><th>입력</th><th>하는 일</th></tr></thead><tbody><tr><td>지도 찍기</td><td>주를 고른다. 이동 · 침공할 곳을 고르는 중이면 그 주가 대상이 된다. 손가락이 조금 빗나가도 가까운 주가 잡힌다</td></tr><tr><td>지도 끌기</td><td>지도를 옮긴다</td></tr><tr><td>마우스 바퀴 · 확대 · 축소 단추</td><td>지도를 키우고 줄인다(1~3배)</td></tr><tr><td>조작 창 단추</td><td>군주 고르기 · 명령 · 턴 종료 · 전투의 대기 · 차례 넘기기 · 맡기기 · 퇴각. 못 누르는 단추에는 까닭이 적힌다</td></tr><tr><td>키보드</td><td>지도를 한 번 찍은 뒤에 듣는다. 아래 <b>키보드</b> 표를 보라</td></tr><tr><td><code>Ctrl</code>/<code>⌘</code> + <code>Enter</code></td><td>동현랭 편집기에서 출전</td></tr><tr><td><b>저장</b> · <b>불러오기</b> 단추(지도 아래)</td><td>판을 브라우저 칸이나 <code>.dhsave</code> 파일에 남기고 되살린다. 아래 <b>저장과 불러오기</b>를 보라</td></tr><tr><td><b>전체 화면</b> 단추(지도 아래)</td><td>정보 띠 · 지도 · 조작 창을 화면에 꽉 채운다. 닫을 때는 오른쪽 위 <b>✕ 전체 화면 닫기</b>를 누르거나 <code>Esc</code>를 누른다</td></tr></tbody></table></div>
+<ul><li>화면은 위 정보 띠(날짜 · 군주 · 주 · 병력 · 남은 명령) · 가운데 지도(480×360) · 조작 창(설명 · 단추 · 기록)으로 나뉜다. 폭이 좁으면 조작 창이 지도 아래로 내려간다.</li><li><b>전체 화면</b>에서는 화면 모양에 따라 배치가 셋으로 바뀐다. 넓은 화면은 평소처럼 지도 오른쪽에 조작 창을 두고, 낮은 가로 화면(눕힌 휴대폰)은 지도를 왼쪽에 꽉 채우고 정보 띠와 조작 창을 오른쪽에 모으며, 좁거나 세로로 긴 화면은 아래로 쌓는다. 지도는 커진 만큼 더 촘촘히 그린다(4배까지).</li><li>동현랭 편집기는 전체 화면에 따라오지 않는다. 설정을 바꾸려면 <b>출전</b>을 먼저 누르고 전체 화면을 켠다. iPhone Safari처럼 전체 화면을 내주지 않는 브라우저에서는 창을 가득 채우는 방식으로 띄운다.</li><li>설명 탭을 읽는 동안에는 판이 멈춘다. 게임패드와 소리는 없다.</li></ul>
+<h4>키보드</h4>
+<p>키보드만으로 처음부터 끝까지 할 수 있다. 키는 지도를 한 번 찍은 뒤에 듣는다. 조작 창의 단추에는 누를 숫자가 적혀 있다(손가락 화면에서는 숨긴다).</p>
+<p>지도에서:</p>
+<div class="table-wrap"><table><thead><tr><th>키</th><th>하는 일</th></tr></thead><tbody><tr><td>방향키</td><td>그쪽으로 가장 가까운 주를 고른다. 고른 주가 없으면 우리 군주가 있는 주부터 시작한다(군주를 고르기 전에는 화면 가운데에서 가까운 주). 이동 · 침공에서 '어디로'를 고르는 중이면 대상을 옮긴다(겨눈 주에 테가 하나 더 둘리고 그 단추가 노랗게 된다)</td></tr><tr><td><code>Space</code></td><td>이번 달 명령이 남은 다음 우리 주를 고른다. <code>Shift</code>+<code>Space</code>는 거꾸로 돈다. 남은 주가 없으면 우리 주를 모두 돈다</td></tr><tr><td>숫자 <code>1</code>~<code>9</code></td><td>그 번호의 단추를 누른다. 평소에는 1 농지 개발 · 2 징병 · 3 이동 · 4 수색 · 5 침공 · 6 턴 종료이고, 군주를 고를 때는 1~9가 군주다</td></tr><tr><td><code>Enter</code></td><td>노란 단추를 누른다(평소에는 턴 종료). '어디로'를 고르는 중이면 겨눈 주로 정한다</td></tr><tr><td><code>Esc</code></td><td>고르던 것을 그만둔다. 고르던 것이 없으면 고른 주를 놓는다</td></tr><tr><td><code>Shift</code>+방향키 · <code>W</code> <code>A</code> <code>S</code> <code>D</code></td><td>지도를 옮긴다</td></tr><tr><td><code>+</code> <code>−</code></td><td>지도를 키우고 줄인다</td></tr></tbody></table></div>
+<p>전투에서:</p>
+<div class="table-wrap"><table><thead><tr><th>키</th><th>하는 일</th></tr></thead><tbody><tr><td>방향키</td><td>칸 커서를 옮긴다. 처음 누르면 우리 부대 자리에 커서가 생긴다. 고른 부대가 없으면 커서가 놓인 칸의 사정이 조작 창에 보인다</td></tr><tr><td><code>Enter</code></td><td>커서가 놓인 칸을 찍는다. 손으로 찍는 것과 같다: 우리 부대면 고르고, 노란 칸이면 옮기고, 붉은 테의 적이면 친다. 커서가 아직 없으면 우리 부대를 고른다. 결과 카드에서는 지도로 돌아가고, 퇴각을 되묻는 창에서는 노란 단추(돌아가기)를 누른다</td></tr><tr><td><code>Space</code></td><td>아직 일을 마치지 않은 다음 우리 부대를 고르고 커서를 그리로 옮긴다. <code>Shift</code>+<code>Space</code>는 거꾸로 돈다</td></tr><tr><td>숫자 <code>1</code>~<code>4</code></td><td>1 대기 · 2 차례 넘기기 · 3 맡기기 · 4 퇴각. 퇴각을 되묻는 창에서는 1 정말 물러난다 · 2 돌아가기</td></tr><tr><td><code>Esc</code></td><td>고른 부대를 놓는다</td></tr></tbody></table></div>
+<ul><li>누르고 있어도 단추는 한 번만 눌린다. <code>Ctrl</code> · <code>⌘</code> · <code>Alt</code>와 함께 누른 키는 브라우저에 넘긴다.</li><li>전체 화면에서는 <code>Esc</code>가 전체 화면을 닫는다. 그때 고르던 것을 그만두려면 <b>그만두기</b> 단추의 숫자를 누른다.</li><li>손으로 전장을 찍으면 칸 커서는 숨는다. 방향키를 누르면 다시 나온다.</li></ul>
+<h3>저장과 불러오기</h3>
+<ul><li>지도 아래 <b>저장</b>을 누르면 메뉴가 뜬다. <b>브라우저 칸 1 · 2 · 3</b> 가운데 하나에 남기거나 <b>파일로 내려받기</b>로 <code>.dhsave</code> 파일 하나를 받는다. 찬 칸은 덮어쓸지 한 번 더 묻는다. <b>칸 지우기</b>로 칸을 비운다. 저절로 저장되지는 않는다.</li><li><b>불러오기</b>에서 칸을 고르거나 <b>파일에서 불러오기</b>로 <code>.dhsave</code> 파일을 고르면 그 판이 되살아난다. 저장하지 않은 진행은 사라지니 한 번 더 묻는다.</li><li>저장은 <b>군주를 고른 뒤, 우리 차례의 지도에서</b> 한다. 다른 군주들이 움직이는 동안과 전투 중에는 저장하지 못한다(까닭을 알려 준다). 끝난 판도 저장된다. 불러오기는 언제든 되고, 전투 중이었으면 그 전투를 접는다.</li><li>판과 함께 <b>저장될 때의 동현랭 설정 · 날짜 · 난수 상태</b>가 따라온다. 그래서 불러온 뒤 같은 명령을 내리면 같은 판이 이어진다. 편집기의 코드는 바뀌지 않는다. <b>출전</b>을 누르면 편집기의 코드로 새 판이 열린다.</li><li>맞지 않는 파일(다른 게임의 저장 · 깨진 파일 · 자료와 어긋나는 값)은 까닭을 알리고 하던 판을 그대로 둔다.</li><li>칸은 이 기기의 이 브라우저에만 남는다(사이트 데이터를 지우거나 사생활 보호 창을 닫으면 사라지고, Safari는 7일 동안 열지 않으면 지울 수 있다). 다른 기기로 옮기거나 오래 두려면 파일로 내려받는다.</li><li>메뉴가 열린 동안 판은 멎는다. <code>↑</code> <code>↓</code>로 고르고 <code>Enter</code>로 누른다. <code>Esc</code>를 누르거나 메뉴 바깥을 누르면 닫힌다. 전체 화면에서는 오른쪽 위에 <b>저장</b> · <b>불러오기</b> 단추가 있다. 브라우저 전체 화면에서 <code>Esc</code>를 누르면 전체 화면이 먼저 닫히고 메뉴는 남는다.</li></ul>
 <h3>동현삼 규칙</h3>
 <p>수치는 모두 동현삼이 정한 시험 값이다. <code>src/sam/sam-rules.js</code>의 <code>RULES</code>와 <code>src/sam/sam-battle.js</code>의 <code>TERRAIN</code>·<code>BATTLE</code>에 모여 있다. 이 값들이 기본값이 되고, 동현랭 설정이 있으면 그 위에 덮어쓴다. 아래 표는 기본값이다.</p>
 <h4>한 달 = 한 턴</h4>
@@ -376,9 +406,9 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 <h4>전투 (10×10 육각 전장)</h4>
 <p>침공하면 지도 위에 전투 장면이 얹힌다. 전장은 주 번호로 만들어서 같은 주는 언제나 같은 전장이다.</p>
 <div class="table-wrap"><table><thead><tr><th>지형</th><th>이동력</th><th>방어 보정</th></tr></thead><tbody><tr><td>평지</td><td>1</td><td>0</td></tr><tr><td>산</td><td>3</td><td>0.3</td></tr><tr><td>강</td><td>4</td><td>0</td></tr><tr><td>성</td><td>1</td><td>0.4</td></tr></tbody></table></div>
-<ul><li>부대는 한쪽에 셋까지다. 무력 순으로 나서고, 장수가 둘 이상이면 한 명은 남아 주를 지킨다. 병력은 부대 수로 나눈다. 장수 없는 쪽은 무력 40의 수비대(원정대) 하나다.</li><li>이동력은 부대마다 하루 5다. 우리 부대를 찍으면 갈 수 있는 칸이 노랗게 보인다. 적은 지나갈 수 없고, 아군은 지나가되 겹쳐 설 수 없다.</li><li>바로 옆 칸의 적을 친다(붉은 테). 한 부대는 하루에 한 번 움직이고 한 번 친다.</li><li>피해 = <code>(공격 부대 병력 × 장수 무력 ÷ 100) × (1 − 맞는 쪽 지형의 방어 보정)</code>, 소수점은 버린다. 반격은 없다.<br>셈은 정수로 한다(<code>병력 × 무력 × (100 − 방어%) ÷ 10000</code>). 소수로 셈하면 100 × 90 ÷ 100 × 0.7이 62.99…가 되어 63이 아니라 62가 나온다.</li><li>하루는 공격 측이 먼저, 이어서 수비 측이다.</li><li>승패: 한쪽이 모두 무너지면 진다 · 공격 측이 차례를 마칠 때 성에 서 있으면 이긴다 · 20일이 지나면 수비 측이 이긴다 · 물러나면 진다.</li><li>조작 창: 대기 · 차례 넘기기 · 맡기기(남은 싸움을 AI에게) · 퇴각(한 번 더 묻는다).</li><li>끝나면 결과 카드가 뜨고, 지도로 돌아가면서 <code>Game.settle()</code>이 결과를 반영한다. 공격 측이 이기면 주의 주인이 바뀌고(충성도 −10), 진 쪽 장수와 남은 병력은 가장 가까운 자기 주로 물러난다. 주를 모두 잃은 세력은 무너지고 장수는 재야가 된다.</li></ul>
+<ul><li>부대는 한쪽에 셋까지다. 무력 순으로 나서고, 장수가 둘 이상이면 한 명은 남아 주를 지킨다. 병력은 부대 수로 나눈다. 장수 없는 쪽은 무력 40의 수비대(원정대) 하나다.</li><li>이동력은 부대마다 하루 5다. 우리 부대를 찍으면 갈 수 있는 칸이 노랗게 보인다. 적은 지나갈 수 없고, 아군은 지나가되 겹쳐 설 수 없다.</li><li>바로 옆 칸의 적을 친다(붉은 테). 한 부대는 하루에 한 번 움직이고 한 번 친다.</li><li>피해 = <code>(공격 부대 병력 × 장수 무력 ÷ 100) × (1 − 맞는 쪽 지형의 방어 보정)</code>, 소수점은 버린다. 반격은 없다.<br>셈은 정수로 한다(<code>병력 × 무력 × (100 − 방어%) ÷ 10000</code>). 소수로 셈하면 100 × 90 ÷ 100 × 0.7이 62.99…가 되어 63이 아니라 62가 나온다.</li><li>하루는 공격 측이 먼저, 이어서 수비 측이다.</li><li>승패: 한쪽이 모두 무너지면 진다 · 공격 측이 차례를 마칠 때 성에 서 있으면 이긴다 · 20일이 지나면 수비 측이 이긴다 · 물러나면 진다.</li><li>조작 창: 대기 · 차례 넘기기 · 맡기기(남은 싸움을 AI에게) · 퇴각(한 번 더 묻는다). 키보드로는 방향키 칸 커서와 <code>Enter</code>로 찍는다.</li><li>끝나면 결과 카드가 뜨고, 지도로 돌아가면서 <code>Game.settle()</code>이 결과를 반영한다. 공격 측이 이기면 주의 주인이 바뀌고(충성도 −10), 진 쪽 장수와 남은 병력은 가장 가까운 자기 주로 물러난다. 주를 모두 잃은 세력은 무너지고 장수는 재야가 된다.</li></ul>
 <h4>알아 둘 것</h4>
-<ul><li>피해식에 반격이 없어서 먼저 치는 쪽이 크게 유리하다. 한 번 치면 공격 부대 병력의 (무력)%만큼이 깎인다.</li><li>유비로 시작해 아무 준비도 하지 않으면 200년 2월에 진류의 조조 군(9,100)이 소패(5,000)로 쳐들어온다. 첫 달에 허창이 진류로 병력 4,000을 보내기 때문이다. 첫 달부터 달마다 징병하면 52달째에야 처음 침공받았다(씨앗 1).</li><li>저장과 불러오기는 아직 없다.</li></ul>
+<ul><li>피해식에 반격이 없어서 먼저 치는 쪽이 크게 유리하다. 한 번 치면 공격 부대 병력의 (무력)%만큼이 깎인다.</li><li>유비로 시작해 아무 준비도 하지 않으면 200년 2월에 진류의 조조 군(9,100)이 소패(5,000)로 쳐들어온다. 첫 달에 허창이 진류로 병력 4,000을 보내기 때문이다. 첫 달부터 달마다 징병하면 52달째에야 처음 침공받았다(씨앗 1).</li><li>저장은 한 달의 사이사이(우리 차례)에만 한다. 전투 한가운데나 다른 군주들의 차례는 저장하지 않는다.</li></ul>
   </section>
 
   <section id="tab-engine" class="tab-panel document" hidden>
@@ -388,16 +418,24 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
         ├─ Clock     턴·날짜. Loop의 틱마다 update()
         ├─ RNG       씨앗 난수 (같은 씨앗이면 같은 판)
         ├─ EventBus  clock:phase · clock:turn · clock:day · clock:month · clock:year
-        ├─ 입력       찍기 · 끌기 · 바퀴 · 키 (포인터 이벤트 하나로 마우스·손가락)
+        ├─ 입력       찍기 · 끌기 · 바퀴 · 키 (포인터 이벤트 하나로 마우스·손가락 · 키는 캔버스가 초점을 가졌을 때)
         └─ Scene 쌓기 setScene · pushScene · popScene (맨 위 장면만 논리가 돈다. 전투는 지도 위에 얹는다)
 
 MapScene (Scene을 이어받음) ─ Grid(Square|Hex) + Camera + TileMapRenderer
         게임 장면은 drawOver(g)에서 지도 위 그림만 그린다 (주·길·항구·배)
 
-Layout   DOM. setInfo(위 띠) · setDetail(설명) · setMenu(단추) · log(기록)</pre>
+Layout   DOM. setInfo(위 띠) · setDetail(설명) · setMenu(단추) · log(기록) · press(번호) · pressPrimary()</pre>
 <p>엔진 파일은 모두 같은 꼴이다. 전역 <code>DH</code>에 붙고, node에서는 <code>require</code>로 같은 <code>DH</code>를 받는다. 규칙 파일(<code>*-rules.js</code>, <code>*-battle.js</code>, <code>*-lang.js</code>)은 화면을 모른다. node에서 그대로 돌려 시험한다.</p>
 <h4>Engine</h4>
-<div class="table-wrap"><table><thead><tr><th>쓰는 것</th><th>뜻</th></tr></thead><tbody><tr><td><code>new DH.Engine({canvas, width, height, seed, clock})</code></td><td>캔버스 없이 만들면 논리만 돈다(node 시험)</td></tr><tr><td><code>setScene / pushScene / popScene</code></td><td>장면 바꾸기 · 얹기 · 내리기</td></tr><tr><td><code>start() / stop() / step(n)</code></td><td>루프 켜기 · 끄기 · 틱 n번(시험용)</td></tr><tr><td><code>fit(cssWidth)</code></td><td>캔버스가 화면에서 커졌을 때 부른다. 그 폭에 맞게 그리는 배율을 올리고(4배까지) 한 번 다시 그린다. 값 없이 부르면 화면 배율로 되돌린다</td></tr><tr><td><code>clock</code> <code>rng</code> <code>bus</code> <code>tick</code></td><td>달력 · 난수 · 사건 버스 · 지금 틱</td></tr><tr><td><code>on(type, fn)</code></td><td>사건 듣기. 끊는 함수를 돌려준다</td></tr><tr><td><code>snapshot()</code></td><td>저장 묶음: 틱 · 달력 · 난수 상태 · 맨 위 장면의 <code>save()</code></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>쓰는 것</th><th>뜻</th></tr></thead><tbody><tr><td><code>new DH.Engine({canvas, width, height, seed, clock})</code></td><td>캔버스 없이 만들면 논리만 돈다(node 시험)</td></tr><tr><td><code>setScene / pushScene / popScene</code></td><td>장면 바꾸기 · 얹기 · 내리기</td></tr><tr><td><code>start() / stop() / step(n)</code></td><td>루프 켜기 · 끄기 · 틱 n번(시험용)</td></tr><tr><td><code>fit(cssWidth)</code></td><td>캔버스가 화면에서 커졌을 때 부른다. 그 폭에 맞게 그리는 배율을 올리고(4배까지) 한 번 다시 그린다. 값 없이 부르면 화면 배율로 되돌린다</td></tr><tr><td><code>clock</code> <code>rng</code> <code>bus</code> <code>tick</code></td><td>달력 · 난수 · 사건 버스 · 지금 틱</td></tr><tr><td><code>on(type, fn)</code></td><td>사건 듣기. 끊는 함수를 돌려준다</td></tr><tr><td><code>snapshot()</code></td><td>저장 묶음: 틱 · 달력 · 난수 상태 · 맨 위 장면의 <code>save()</code></td></tr><tr><td><code>checkSnapshot(s)</code></td><td>저장 묶음의 달력과 난수가 이 엔진에 맞는지 본다. 맞지 않으면 까닭을 담아 던진다(아무것도 바꾸지 않는다)</td></tr><tr><td><code>restore(s)</code></td><td>달력과 난수를 되돌린다. 흐르는 날짜는 멈춘 채로 돌아온다. 장면과 판은 게임이 따로 되돌린다</td></tr><tr><td><code>DH.Save.need · int · head</code></td><td>저장 묶음을 검사하는 작은 도구. <code>head(d, format, version, name)</code>는 어느 게임의 몇 번째 형식인지 본다</td></tr></tbody></table></div>
+<h4>저장 묶음</h4>
+<pre class="code-example">{ format: 'donghyunsam-save', version: 1,    // 어느 게임의 몇 번째 형식인지
+  lab: '0.03', savedAt: '2026-11-10T03:19:00.000Z',
+  summary: { title: '유비', date: '200년 4월', line: '주 2 · 병력 13,000' },   // 메뉴에 보이는 한 줄
+  settings: [[3, 5000], [10, 2000]],         // 저장될 때 적용돼 있던 동현랭 설정 [번호, 값…]
+  engine, tick, clock, rng, scene,           // Engine.snapshot()
+  game: { player, months, over, overWhy, provinces: […], officers: […], factions: […] } }   // Game.toJSON()</pre>
+<ul><li><code>game</code>에는 판이 흐르며 바뀌는 값만 적는다. 주의 이름 · 인접 · 지도처럼 자료에 있는 것은 적지 않고 불러올 때 자료에서 다시 읽는다.</li><li>불러올 때는 머리말 → 설정(<code>lang.applySettings</code>) → 달력과 난수(<code>engine.checkSnapshot</code>) → 판(<code>Game.restore</code>) 순서로 모두 검사한 뒤에야 바꾼다. 하나라도 맞지 않으면 <code>{ ok: false, why }</code>를 돌려주고 하던 판을 그대로 둔다.</li><li>페이지는 장면의 <code>saveInfo()</code> · <code>saveGame()</code> · <code>loadGame(d)</code> 셋만 부른다. 브라우저 칸은 <code>localStorage</code>의 <code>donghyunsam:slot1</code>~<code>slot3</code>이고, 파일은 같은 JSON을 <code>.dhsave</code>라는 이름으로 내려받은 것이다.</li></ul>
 <h4>Loop: 60FPS와 틱</h4>
 <ul><li>그리기는 화면 주사율을 따르고, 논리는 초당 60틱으로 고정이다. 120Hz 화면에서도 게임 빠르기가 같다.</li><li>한 프레임에 밀린 틱은 5개까지만 따라잡는다. 탭이 가려지면 멈춘다.</li><li>시험은 <code>step(n)</code>으로 틱을 직접 돌린다. 실제 시간에 기대지 않는다.</li></ul>
 <h4>Clock: 턴과 날짜</h4>
@@ -410,13 +448,13 @@ Layout   DOM. setInfo(위 띠) · setDetail(설명) · setMenu(단추) · log(�
 <h4>TileMapRenderer와 Camera</h4>
 <ul><li>화면에 걸친 칸만 그린다. 같은 색끼리 한 경로로 모아 칠하고, 사각 격자는 한 줄에서 이어진 같은 타일을 긴 네모 하나로 합친다.</li><li><code>Camera</code>: <code>pan · zoomAt · centerOn · clampTo · toWorld · toScreen</code>. 동서로 이어진 지도는 x를 한 바퀴 안으로 접는다.</li></ul>
 <h4>Layout: 화면 나누기</h4>
-<ul><li>위: 정보 띠. 가운데: 캔버스(480×360, 4:3, 시리즈와 같다). 오른쪽: 조작 창.</li><li>폭이 860px 아래면 조작 창이 캔버스 아래로 내려간다. 단추 높이는 44px 이상이다.</li><li>자료에서 온 글은 <code>textContent</code>로만 넣는다.</li><li>전체 화면은 엔진이 아니라 페이지(<code>src/app.js</code> · <code>src/style.css</code>)가 맡는다. 페이지가 배치와 지도 폭을 정하고 <code>engine.fit(폭)</code>을 부른다.</li></ul>
+<ul><li>위: 정보 띠. 가운데: 캔버스(480×360, 4:3, 시리즈와 같다). 오른쪽: 조작 창.</li><li>폭이 860px 아래면 조작 창이 캔버스 아래로 내려간다. 단추 높이는 44px 이상이다.</li><li>자료에서 온 글은 <code>textContent</code>로만 넣는다.</li><li><code>new DH.Layout(host, { hotkeys: true })</code>로 만들면 조작 단추에 번호(1~9)가 자리대로 붙는다(흐린 단추도 센다). 장면은 <code>press(n)</code>으로 그 번호의 단추를, <code>pressPrimary()</code>로 노란 단추를 누른다. 단추에 <code>key</code>를 주면 그 글자를 적고 번호는 건너뛴다(확대 <code>+</code> · 축소 <code>−</code>). 손가락 화면에서는 번호를 숨긴다. 동현삼이 켜고 동현항은 켜지 않았다.</li><li>마우스나 손가락으로 단추를 누르면 초점을 캔버스로 옮긴다. 단추를 누른 뒤에도 키보드가 계속 지도에 듣는다. <code>Tab</code>으로 가서 키보드로 누른 단추는 초점을 지키고, 그 단추가 사라질 때만 캔버스로 옮긴다.</li><li>전체 화면과 저장 메뉴는 엔진이 아니라 페이지(<code>src/app.js</code> · <code>src/style.css</code>)가 맡는다. 페이지가 배치와 지도 폭을 정하고 <code>engine.fit(폭)</code>을 부른다.</li></ul>
 <h3>게임이 얹는 법</h3>
 <pre class="code-example">// 1) 자료를 읽고 검사한다
 const world = DH.Sam.parse(await DH.Data.load('#lab-data'));      // 틀리면 DataError (틀린 곳을 모두 담는다)
 
 // 2) 화면과 엔진을 만든다
-const layout = new DH.Layout(host, { title: '동현삼', width: 480, height: 360 });
+const layout = new DH.Layout(host, { title: '동현삼', width: 480, height: 360, hotkeys: true });   // 단추 번호(숫자 키)
 const engine = new DH.Engine({ canvas: layout.canvas, width: 480, height: 360, seed: 1,
   clock: { unit: 'month', start: world.meta.start } });
 
@@ -441,6 +479,7 @@ engine.start();</pre>
 lang.parse(scriptText)                       // 실행하고 읽기만 한다 → { ok, empty, settings, values, errors, output }
 lang.applyDonghyunLang(scriptText, state)    // 오류가 하나도 없을 때만 state(globalState)에 덮어쓴다 → 같은 보고서 + applied
 lang.compose([[3, 3000], [10, 2000]])        // 그 설정을 출력하는 동현랭 코드를 짓는다 (예제 · 시험)
+lang.applySettings([[3, 3000]], state, ctx)  // 설정 목록을 동현랭을 돌리지 않고 덮어쓴다. 검사는 같다 (저장한 판을 불러올 때)
 lang.describe(state)                         // 설정 번호 표 (번호 · 이름 · 범위 · 기본값)</pre>
 <ul><li>globalState는 게임이 <code>DH.Sam.newState()</code>로 만든다. 그 안에 기본값(fallback)이 먼저 들어 있다. 기본값은 규칙 파일의 <code>RULES</code> · <code>BATTLE</code> · <code>TERRAIN</code>을 베낀 것이고, 시작값은 <code>null</code>이다. <code>null</code>이면 JSON 자료에 적힌 값을 쓴다.</li><li>장면에서는 <code>scene.applyDonghyunLang(scriptText)</code>가 새 globalState를 지어 덮어쓴 뒤 새 판을 연다. 플레이그라운드의 <b>출전</b> 단추가 이것을 부른다. <code>DH.Sam.boot(host, '#lab-data', { script })</code>처럼 처음부터 줄 수도 있다.</li><li>실행기는 <code>src/lang/donghyun.js</code>를 그대로 쓴다(donghyun-lang v1.55의 것. 고치지 않는다). 브라우저에서는 전역 <code>Donghyun</code>, node에서는 <code>require</code>로 찾는다.</li><li>설정 번호 표와 예제 열은 <code>src/sam/sam-lang.js</code>에 있다.</li></ul>
 <h3>JSON 규격</h3>
@@ -463,39 +502,39 @@ lang.describe(state)                         // 설정 번호 표 (번호 · 이
   index.html           묶은 한 파일(글꼴 · 아이콘 · 자료 포함). node build.cjs로 src/에서 만든다
   build.cjs            src/를 한 장으로 묶는다. 설명 탭의 글은 이 README.md에서 가져온다
   src/
-    index.html · style.css · app.js · series.html     페이지 뼈대 · 모양 · 편집기와 출전 · 전체 화면 · 시리즈 띠
+    index.html · style.css · app.js · series.html     페이지 뼈대 · 모양 · 편집기와 출전 · 전체 화면 · 저장 메뉴 · 시리즈 띠
     engine/            공통 엔진 (동현항과 같은 파일)
       dh-core.js         EventBus · RNG · DataError · Checker · Data(읽기·RLE·머리 검사)
       dh-loop.js         Loop: 그리기는 rAF, 논리는 1/60초 고정 틱
       dh-clock.js        Clock: 턴제(월)와 흐르는 날짜(일)를 한 클래스로
       dh-grid.js         SquareGrid · HexGrid · findPath(A*) · moveRange(이동 범위) · Graph(인접 목록)
       dh-tilemap.js      Camera · TileMapRenderer
-      dh-layout.js/.css  Layout: 위 정보 띠 · 가운데 캔버스 · 오른쪽(좁으면 아래) 조작 창
-      dh-engine.js       Scene · MapScene · Engine
+      dh-layout.js/.css  Layout: 위 정보 띠 · 가운데 캔버스 · 오른쪽(좁으면 아래) 조작 창 · 단추 번호(숫자 키)
+      dh-engine.js       Scene · MapScene · Engine · Save(저장 묶음 검사)
       dh-lang.js         DonghyunLangAdapter: 동현랭 코드 실행 → 정수 읽기 → 검사 → globalState에 덮어쓰기
     lang/donghyun.js   동현랭 실행기 (donghyun-lang v1.55의 것 그대로. 고치지 않는다)
     sam/               동현삼 쪽
       donghyun_sam_data.json
       sam-parser.js        자료 읽기와 검사
-      sam-rules.js         내정 명령 · 한 달 넘기기 · AI 군주 (화면을 모른다)
+      sam-rules.js         내정 명령 · 한 달 넘기기 · AI 군주 · 판 적기와 되살리기 (화면을 모른다)
       sam-battle.js        10×10 육각 전투 규칙 (화면을 모른다)
       sam-lang.js          globalState(기본값)와 동현랭 설정 번호 18개 · 예제 열
-      sam-battle-scene.js  전투 장면: 부대 고르기 · 이동 범위 · 공격 · 결과 카드
-      sam-scene.js         지도 장면: 군주 고르기 · 주 고르기 · 명령 메뉴 · 턴 종료
+      sam-battle-scene.js  전투 장면: 부대 고르기 · 이동 범위 · 공격 · 결과 카드 · 칸 커서(키보드)
+      sam-scene.js         지도 장면: 군주 고르기 · 주 고르기 · 명령 메뉴 · 턴 종료 · 키보드 · 저장과 불러오기
   tools/make_data.py   JSON을 만드는 생성기 (표 + Natural Earth 육지 자료)
   qa/                  core-tests.cjs (node) · ui.cjs (Playwright)</pre>
 <ul><li><code>src/engine/</code>은 동현삼(donghyun-lab16)과 동현항(donghyun-lab17)에 같은 파일로 들어 있다. 한쪽에서 고치면 다른 쪽에도 그대로 옮긴다.</li><li><code>DH.VERSION</code>의 <code>0.01-draft</code>는 엔진의 초안 표시일 뿐 실험실 판 번호가 아니다.</li></ul>
 <h3>돌려 보기</h3>
 <pre class="code-example">python3 tools/make_data.py     # JSON을 다시 만든다 (Pillow가 있어야 한다)
-node qa/core-tests.cjs         # 핵심 시험 36개 (엔진 · 파서 · 동현랭 어댑터 · 내정 · AI · 전투)
+node qa/core-tests.cjs         # 핵심 시험 44개 (엔진 · 파서 · 동현랭 어댑터 · 내정 · AI · 전투 · 저장과 불러오기 · 키보드)
 node build.cjs                 # index.html 한 장
-node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱과 휴대폰 390px · 전체 화면)</pre>
+node qa/ui.cjs                 # 화면 시험 27개 (Playwright · 데스크톱과 휴대폰 390px · 전체 화면 · 저장과 불러오기 · 키보드)</pre>
   </section>
 
   <section id="tab-about" class="tab-panel document" hidden>
     <div class="doc-heading"><div class="eyebrow">WHAT IS NEW, WHAT IS BORROWED</div><h2>큰 틀만 참고하고, 지도·자료·규칙·그림·글·코드는 새로 만들었다.</h2><p>동현삼은 1989년 Koei(光栄)의 턴제 전략 게임 「삼국지 II」(PC-8801 · PC-9801로 처음 발매)의 큰 틀(41개 주로 나뉜 땅에서 군주 하나를 골라 세력을 넓히는 구성)을 참고한 팬 실험이다.</p></div>
     <div class="science-block"><span class="index">01</span><div><h3>원작의 그림·소리·글·수치는 담지 않았다.</h3><p>원작의 그래픽, 음악·효과음, 글, 자료 수치는 하나도 쓰지 않는다. 지도는 Natural Earth의 공공 영역 육지 자료에서 뽑아 육각 칸으로 옮겼고, 주와 장수의 수치는 동현삼이 정한 시험 값이다. 원작 파일은 이 저장소에 없고, 원작 파일에서 그림이나 자료를 꺼내 쓰지도 않았다. 소리는 없다.</p></div></div>
-    <div class="science-block"><span class="index">02</span><div><h3>동현삼에 있는 것과 없는 것.</h3><p>시작값과 규칙 수치를 동현랭으로 정한다. 명령은 다섯(농지 개발 · 징병 · 이동 · 수색 · 침공)뿐이고 전투는 10×10 육각 전장에서 치른다. 외교 · 계략 · 시나리오 고르기 · 저장과 불러오기는 없다. 주의 인접과 내정 · AI · 전투의 규칙과 수치는 동현삼이 정한 것이고, 원작의 규칙·수치와 맞춰 보지 않았다.</p></div></div>
+    <div class="science-block"><span class="index">02</span><div><h3>동현삼에 있는 것과 없는 것.</h3><p>시작값과 규칙 수치를 동현랭으로 정한다. 명령은 다섯(농지 개발 · 징병 · 이동 · 수색 · 침공)뿐이고 전투는 10×10 육각 전장에서 치른다. 외교 · 계략 · 시나리오 고르기는 없다. 판은 브라우저 칸 세 개와 <code>.dhsave</code> 파일에 저장하고 불러올 수 있다. 주의 인접과 내정 · AI · 전투의 규칙과 수치는 동현삼이 정한 것이고, 원작의 규칙·수치와 맞춰 보지 않았다.</p></div></div>
     <div class="science-block"><span class="index">03</span><div><h3>인물과 지명은 역사에서 왔다.</h3><p>군주 아홉과 장수 마흔의 이름, 주 41곳의 이름과 자리는 후한 말의 역사 인물과 실제 지명이다. 능력치와 시작 배치(200년 1월 무렵을 본떴다)는 시험 값이다.</p></div></div>
     <div class="science-block"><span class="index">04</span><div><h3>상표와 관계</h3><p>「삼국지 II」를 비롯한 원작 시리즈의 이름과 권리는 코에이 테크모 게임스(Koei Tecmo Games)에 있다. 동현삼은 이들과 관계가 없고, 승인이나 후원을 받지 않았다.</p></div></div>
     <div class="science-block"><span class="index">05</span><div><h3>코드와 글꼴의 이용 조건</h3><p>동현삼 코드와 문서는 MIT, 글꼴(검은고딕 Black Han Sans · Pretendard · 나눔고딕코딩)은 SIL Open Font License를 따른다. 동현랭 실행기는 동현랭 저장소의 MIT 코드를 그대로 쓴다. 육지와 바다를 뽑은 Natural Earth 자료는 공공 영역이다.</p></div></div>
@@ -506,7 +545,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
     <aside class="maker-note"><span class="eyebrow">만든 사람</span><a class="sponsor-btn" href="https://github.com/sponsors/Raspberry-Kim" target="_blank" rel="noopener" aria-label="GitHub Sponsors로 동현랭 후원하기" title="GitHub Sponsors로 후원하기"><svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.655 14.916v-.001h-.002l-.006-.003-.018-.01a22.066 22.066 0 0 1-3.744-2.584C2.045 10.731 0 8.35 0 5.5 0 2.836 2.086 1 4.25 1 5.797 1 7.153 1.802 8 3.02 8.847 1.802 10.203 1 11.75 1 13.914 1 16 2.836 16 5.5c0 2.85-2.044 5.231-3.886 6.818a22.094 22.094 0 0 1-3.433 2.414 7.152 7.152 0 0 1-.31.17l-.018.01-.008.004a.75.75 0 0 1-.69 0Z"></path></svg>후원</a><p>인하대학교 의과대학 김동현 교수는 백신학·감염학을 연구한다. 명랑하고 따뜻한 개발을 지향한다.</p></aside>
   </section>
 </main>
-<footer><span>동현삼 v0.02 · 인하대학교 의과대학 교수 김동현</span><span>1인용 · 주 41 · 군주 9 · 장수 40</span><span><a href="https://raspberry-kim.github.io/donghyun-lang/" target="_blank" rel="noopener">동현랭</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lang" target="_blank" rel="noopener">동현랭 GitHub</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lab16" target="_blank" rel="noopener">동현삼 GitHub</a> · <a href="https://raspberry-kim.github.io/donghyun-lab1/" target="_blank" rel="noopener">동현초</a> · <a href="https://raspberry-kim.github.io/donghyun-lab2/" target="_blank" rel="noopener">동현파</a> · <a href="https://raspberry-kim.github.io/donghyun-lab3/" target="_blank" rel="noopener">동현빌</a> · <a href="https://raspberry-kim.github.io/donghyun-lab4/" target="_blank" rel="noopener">동현전</a> · <a href="https://raspberry-kim.github.io/donghyun-lab5/" target="_blank" rel="noopener">동현콥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab6/" target="_blank" rel="noopener">동현텐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab7/" target="_blank" rel="noopener">동현워</a> · <a href="https://raspberry-kim.github.io/donghyun-lab8/" target="_blank" rel="noopener">동현둠</a> · <a href="https://raspberry-kim.github.io/donghyun-lab9/" target="_blank" rel="noopener">동현크</a> · <a href="https://raspberry-kim.github.io/donghyun-lab10/" target="_blank" rel="noopener">동현몬</a> · <a href="https://raspberry-kim.github.io/donghyun-lab11/" target="_blank" rel="noopener">동현주</a> · <a href="https://raspberry-kim.github.io/donghyun-lab12/" target="_blank" rel="noopener">동현심</a> · <a href="https://raspberry-kim.github.io/donghyun-lab13/" target="_blank" rel="noopener">동현램</a> · <a href="https://raspberry-kim.github.io/donghyun-lab14/" target="_blank" rel="noopener">동현큐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab15/" target="_blank" rel="noopener">동현닥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab17/" target="_blank" rel="noopener">동현항</a></span></footer>
+<footer><span>동현삼 v0.03 · 인하대학교 의과대학 교수 김동현</span><span>1인용 · 주 41 · 군주 9 · 장수 40</span><span><a href="https://raspberry-kim.github.io/donghyun-lang/" target="_blank" rel="noopener">동현랭</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lang" target="_blank" rel="noopener">동현랭 GitHub</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lab16" target="_blank" rel="noopener">동현삼 GitHub</a> · <a href="https://raspberry-kim.github.io/donghyun-lab1/" target="_blank" rel="noopener">동현초</a> · <a href="https://raspberry-kim.github.io/donghyun-lab2/" target="_blank" rel="noopener">동현파</a> · <a href="https://raspberry-kim.github.io/donghyun-lab3/" target="_blank" rel="noopener">동현빌</a> · <a href="https://raspberry-kim.github.io/donghyun-lab4/" target="_blank" rel="noopener">동현전</a> · <a href="https://raspberry-kim.github.io/donghyun-lab5/" target="_blank" rel="noopener">동현콥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab6/" target="_blank" rel="noopener">동현텐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab7/" target="_blank" rel="noopener">동현워</a> · <a href="https://raspberry-kim.github.io/donghyun-lab8/" target="_blank" rel="noopener">동현둠</a> · <a href="https://raspberry-kim.github.io/donghyun-lab9/" target="_blank" rel="noopener">동현크</a> · <a href="https://raspberry-kim.github.io/donghyun-lab10/" target="_blank" rel="noopener">동현몬</a> · <a href="https://raspberry-kim.github.io/donghyun-lab11/" target="_blank" rel="noopener">동현주</a> · <a href="https://raspberry-kim.github.io/donghyun-lab12/" target="_blank" rel="noopener">동현심</a> · <a href="https://raspberry-kim.github.io/donghyun-lab13/" target="_blank" rel="noopener">동현램</a> · <a href="https://raspberry-kim.github.io/donghyun-lab14/" target="_blank" rel="noopener">동현큐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab15/" target="_blank" rel="noopener">동현닥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab17/" target="_blank" rel="noopener">동현항</a></span></footer>
 <script type="application/json" id="lab-data">{"format":"donghyun-sam-data","version":1,"meta":{"title":"동현삼 샘플 자료","scenario":"200년 1월 무렵을 본뜬 시험 배치","start":{"year":200,"month":1},"note":"41개 주는 후한 말 실제 지명과 위치에서 골랐고 인접은 동현삼이 정했다. 원작의 주 번호·인접·능력치를 옮긴 것이 아니다. 인구·금·쌀·병력·충성도·농지·능력치는 시험 값이다. 해안선은 오늘날 기준이다.","sources":["Natural Earth 110m land (public domain) https://www.naturalearthdata.com/"]},"map":{"grid":"hex","layout":"pointy-odd-r","cols":32,"rows":33,"origin":{"lon":99,"lat":43.4},"rowStepDeg":0.6,"tiles":{"~":"sea","#":"land"},"rle":["32#","32#","32#","32#","27#~4#","25#2~5#","25#3~#3~","22#10~","23#9~","24#2~#5~","29#3~","26#6~","26#6~","24#8~","25#7~","26#6~","26#6~","26#6~","27#5~","28#4~","28#4~","27#5~","28#4~","28#4~","28#4~","26#6~","26#6~","26#6~","26#6~","25#7~","25#2~#4~","23#3~#5~","23#3~2#4~"]},"factions":[{"id":"cao","name":"조조","color":"#3566c4","leader":101},{"id":"yuan","name":"원소","color":"#c9a227","leader":111},{"id":"liubei","name":"유비","color":"#3f9a52","leader":121},{"id":"liubiao","name":"유표","color":"#8b5fc7","leader":131},{"id":"sun","name":"손책","color":"#d0483a","leader":141},{"id":"liuzhang","name":"유장","color":"#c77a2a","leader":151},{"id":"zhanglu","name":"장로","color":"#6b7b8c","leader":161},{"id":"mateng","name":"마등","color":"#2f9aa0","leader":171},{"id":"gongsundu","name":"공손도","color":"#9a6b4b","leader":181}],"provinces":[{"id":1,"name":"양평","hanja":"襄平","lon":123.2,"lat":41.3,"hex":[29,3],"owner":"gongsundu","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[2]},{"id":2,"name":"북평","hanja":"北平","lon":118.9,"lat":39.9,"hex":[23,5],"owner":"yuan","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[1,3]},{"id":3,"name":"계","hanja":"薊","lon":116.4,"lat":39.9,"hex":[20,5],"owner":"yuan","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[2,4,7]},{"id":4,"name":"남피","hanja":"南皮","lon":116.7,"lat":38,"hex":[21,8],"owner":"yuan","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[3,5,6]},{"id":5,"name":"평원","hanja":"平原","lon":116.4,"lat":37.2,"hex":[21,10],"owner":"yuan","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[4,9,10]},{"id":6,"name":"업","hanja":"鄴","lon":114.6,"lat":36.3,"hex":[18,11],"owner":"yuan","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[4,8,10]},{"id":7,"name":"진양","hanja":"晉陽","lon":112.5,"lat":37.9,"hex":[16,8],"owner":"yuan","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[3,8]},{"id":8,"name":"상당","hanja":"上黨","lon":113.1,"lat":36.2,"hex":[16,11],"owner":"yuan","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[6,7,17]},{"id":9,"name":"북해","hanja":"北海","lon":119.1,"lat":36.7,"hex":[24,10],"owner":"yuan","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[5,13]},{"id":10,"name":"복양","hanja":"濮陽","lon":115,"lat":35.7,"hex":[19,13],"owner":"cao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[5,6,11,12]},{"id":11,"name":"진류","hanja":"陳留","lon":114.5,"lat":34.7,"hex":[18,14],"owner":"cao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[10,12,14,17]},{"id":12,"name":"소패","hanja":"小沛","lon":116.9,"lat":34.7,"hex":[21,14],"owner":"liubei","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[10,11,13,16]},{"id":13,"name":"하비","hanja":"下邳","lon":118,"lat":34.1,"hex":[22,15],"owner":"liubei","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[9,12,16,30]},{"id":14,"name":"허창","hanja":"許昌","lon":113.8,"lat":34,"hex":[18,16],"owner":"cao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[11,15,17,24]},{"id":15,"name":"여남","hanja":"汝南","lon":114.4,"lat":33,"hex":[19,17],"owner":"cao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[14,16,24,26]},{"id":16,"name":"수춘","hanja":"壽春","lon":116.8,"lat":32.6,"hex":[21,17],"owner":"cao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[12,13,15,29]},{"id":17,"name":"낙양","hanja":"洛陽","lon":112.4,"lat":34.7,"hex":[16,14],"owner":"cao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[8,11,14,18,24]},{"id":18,"name":"홍농","hanja":"弘農","lon":110.9,"lat":34.5,"hex":[14,14],"owner":"cao","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[17,19]},{"id":19,"name":"장안","hanja":"長安","lon":108.9,"lat":34.3,"hex":[11,15],"owner":"cao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[18,20,23]},{"id":20,"name":"천수","hanja":"天水","lon":105.7,"lat":34.6,"hex":[8,14],"owner":"mateng","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[19,21,23]},{"id":21,"name":"금성","hanja":"金城","lon":103.8,"lat":36.1,"hex":[5,11],"owner":"mateng","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[20,22]},{"id":22,"name":"무위","hanja":"武威","lon":102.6,"lat":37.9,"hex":[4,8],"owner":"mateng","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[21]},{"id":23,"name":"한중","hanja":"漢中","lon":107,"lat":33.1,"hex":[9,17],"owner":"zhanglu","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[19,20,25,38]},{"id":24,"name":"완","hanja":"宛","lon":112.5,"lat":33,"hex":[16,16],"owner":"cao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[14,15,17,25]},{"id":25,"name":"양양","hanja":"襄陽","lon":112.1,"lat":32,"hex":[16,18],"owner":"liubiao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[23,24,26,27]},{"id":26,"name":"강하","hanja":"江夏","lon":114.3,"lat":30.6,"hex":[18,21],"owner":"liubiao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[15,25,27,29,33]},{"id":27,"name":"강릉","hanja":"江陵","lon":112.2,"lat":30.3,"hex":[15,21],"owner":"liubiao","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[25,26,28,34,35]},{"id":28,"name":"영안","hanja":"永安","lon":109.5,"lat":31,"hex":[12,20],"owner":"liuzhang","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[27,40]},{"id":29,"name":"여강","hanja":"廬江","lon":117,"lat":31.3,"hex":[21,19],"owner":"sun","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[16,26,30,33]},{"id":30,"name":"건업","hanja":"建業","lon":118.8,"lat":32.1,"hex":[24,18],"owner":"sun","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[13,29,31]},{"id":31,"name":"오","hanja":"吳","lon":120.6,"lat":31.3,"hex":[26,20],"owner":"sun","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[30,32]},{"id":32,"name":"회계","hanja":"會稽","lon":120.6,"lat":30,"hex":[26,22],"owner":"sun","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[31]},{"id":33,"name":"시상","hanja":"柴桑","lon":116,"lat":29.7,"hex":[20,22],"owner":"sun","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[26,29,34]},{"id":34,"name":"장사","hanja":"長沙","lon":113,"lat":28.2,"hex":[16,25],"owner":"liubiao","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[27,33,35,36,37]},{"id":35,"name":"무릉","hanja":"武陵","lon":111.7,"lat":29,"hex":[15,23],"owner":"liubiao","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[27,34,36]},{"id":36,"name":"영릉","hanja":"零陵","lon":111.6,"lat":26.4,"hex":[15,28],"owner":"liubiao","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[34,35,37]},{"id":37,"name":"계양","hanja":"桂陽","lon":113,"lat":25.8,"hex":[16,29],"owner":"liubiao","pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[34,36]},{"id":38,"name":"자동","hanja":"梓潼","lon":105.2,"lat":31.6,"hex":[7,19],"owner":"liuzhang","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[23,39]},{"id":39,"name":"성도","hanja":"成都","lon":104.1,"lat":30.7,"hex":[5,21],"owner":"liuzhang","pop":420000,"gold":900,"rice":2400,"troops":8000,"loyalty":70,"farm":60,"adj":[38,40,41]},{"id":40,"name":"강주","hanja":"江州","lon":106.5,"lat":29.6,"hex":[9,22],"owner":"liuzhang","pop":260000,"gold":550,"rice":1500,"troops":5000,"loyalty":65,"farm":45,"adj":[28,39,41]},{"id":41,"name":"건녕","hanja":"建寧","lon":103.8,"lat":25.5,"hex":[5,29],"owner":null,"pop":120000,"gold":300,"rice":800,"troops":2500,"loyalty":60,"farm":30,"adj":[39,40]}],"officers":[{"id":101,"name":"조조","war":80,"int":95,"cha":95,"faction":"cao","status":"active","province":14},{"id":102,"name":"하후돈","war":90,"int":60,"cha":80,"faction":"cao","status":"active","province":11},{"id":103,"name":"순욱","war":30,"int":95,"cha":90,"faction":"cao","status":"active","province":14},{"id":104,"name":"곽가","war":20,"int":95,"cha":75,"faction":"cao","status":"active","province":14},{"id":105,"name":"허저","war":95,"int":35,"cha":60,"faction":"cao","status":"active","province":14},{"id":106,"name":"종요","war":35,"int":80,"cha":80,"faction":"cao","status":"active","province":19},{"id":111,"name":"원소","war":70,"int":75,"cha":90,"faction":"yuan","status":"active","province":6},{"id":112,"name":"안량","war":90,"int":40,"cha":55,"faction":"yuan","status":"active","province":6},{"id":113,"name":"문추","war":90,"int":35,"cha":55,"faction":"yuan","status":"active","province":6},{"id":114,"name":"전풍","war":30,"int":95,"cha":70,"faction":"yuan","status":"active","province":6},{"id":115,"name":"원담","war":65,"int":50,"cha":60,"faction":"yuan","status":"active","province":5},{"id":116,"name":"고간","war":65,"int":60,"cha":60,"faction":"yuan","status":"active","province":7},{"id":121,"name":"유비","war":75,"int":75,"cha":100,"faction":"liubei","status":"active","province":12},{"id":122,"name":"관우","war":95,"int":75,"cha":90,"faction":"liubei","status":"active","province":13},{"id":123,"name":"장비","war":95,"int":40,"cha":45,"faction":"liubei","status":"active","province":12},{"id":131,"name":"유표","war":45,"int":75,"cha":85,"faction":"liubiao","status":"active","province":25},{"id":132,"name":"채모","war":70,"int":70,"cha":55,"faction":"liubiao","status":"active","province":25},{"id":133,"name":"황조","war":65,"int":50,"cha":45,"faction":"liubiao","status":"active","province":26},{"id":134,"name":"황충","war":90,"int":60,"cha":75,"faction":"liubiao","status":"active","province":34},{"id":141,"name":"손책","war":90,"int":75,"cha":95,"faction":"sun","status":"active","province":31},{"id":142,"name":"주유","war":75,"int":95,"cha":90,"faction":"sun","status":"active","province":31},{"id":143,"name":"손권","war":65,"int":80,"cha":90,"faction":"sun","status":"active","province":31},{"id":144,"name":"태사자","war":90,"int":65,"cha":75,"faction":"sun","status":"active","province":33},{"id":151,"name":"유장","war":30,"int":55,"cha":70,"faction":"liuzhang","status":"active","province":39},{"id":152,"name":"장임","war":85,"int":75,"cha":70,"faction":"liuzhang","status":"active","province":39},{"id":153,"name":"엄안","war":80,"int":65,"cha":70,"faction":"liuzhang","status":"active","province":40},{"id":161,"name":"장로","war":45,"int":70,"cha":80,"faction":"zhanglu","status":"active","province":23},{"id":171,"name":"마등","war":80,"int":55,"cha":85,"faction":"mateng","status":"active","province":22},{"id":172,"name":"한수","war":70,"int":80,"cha":70,"faction":"mateng","status":"active","province":21},{"id":173,"name":"마초","war":95,"int":45,"cha":75,"faction":"mateng","status":"active","province":22},{"id":181,"name":"공손도","war":70,"int":65,"cha":65,"faction":"gongsundu","status":"active","province":1},{"id":201,"name":"조운","war":95,"int":75,"cha":85,"faction":null,"status":"free","province":6},{"id":202,"name":"제갈량","war":35,"int":100,"cha":95,"faction":null,"status":"free","province":25},{"id":203,"name":"서서","war":65,"int":95,"cha":80,"faction":null,"status":"free","province":24},{"id":204,"name":"방통","war":35,"int":98,"cha":70,"faction":null,"status":"free","province":27},{"id":205,"name":"마량","war":25,"int":90,"cha":85,"faction":null,"status":"free","province":26},{"id":206,"name":"육손","war":70,"int":95,"cha":90,"faction":null,"status":"free","province":31},{"id":207,"name":"위연","war":90,"int":65,"cha":50,"faction":null,"status":"free","province":34},{"id":208,"name":"노숙","war":45,"int":90,"cha":90,"faction":null,"status":"free","province":29},{"id":209,"name":"미축","war":30,"int":70,"cha":85,"faction":null,"status":"free","province":13}]}</script>
 <script>/*! 동현랭 (Donghyun-lang) runtime — 브라우저와 Node 양쪽에서 동작한다.
  *  <script src="donghyun.js"><\/script>
@@ -1230,16 +1269,18 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
 /* 동현 공통 엔진 · 6/7 layout — 화면 나누기: 위 정보 띠 · 가운데 캔버스 · 오른쪽(좁은 화면에서는 아래) 조작 창.
  * DOM을 한 번 짓고, 그 뒤로는 글자만 바꾼다. 자료에서 온 글은 textContent로만 넣는다(HTML로 풀지 않는다).
  *   setInfo([{label,value}]) 위 띠 · setDetail({title,rows:[[이름,값]],note}) 조작 창 위쪽 설명
- *   setMenu([{id,label,hint,disabled,primary}], onSelect) 조작 단추 · log(글) 기록 한 줄 */
+ *   setMenu([{id,label,hint,disabled,primary,key}], onSelect) 조작 단추 · log(글) 기록 한 줄
+ *   press(n) · pressPrimary() 키보드로 단추 누르기(hotkeys를 켠 게임) */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
   const el = (tag, cls, text) => { const e = root.document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
   class Layout {
-    /** @param {HTMLElement} host @param {{title:string, width:number, height:number, panel?:'auto'|'right'|'bottom'}} o */
+    /** @param {HTMLElement} host @param {{title:string, width:number, height:number, panel?:'auto'|'right'|'bottom', hotkeys?:boolean}} o
+     *  hotkeys를 켜면 조작 단추에 번호(1~9)가 붙고, 장면이 press(n)으로 그 단추를 누를 수 있다(키보드로 노는 게임). */
     constructor(host, o) {
-      this.host = host;
+      this.host = host; this.hotkeys = !!o.hotkeys;
       const app = this.root = el('div', 'dh-app'); app.dataset.panel = o.panel || 'auto';
       const top = el('header', 'dh-top');
       this.titleEl = el('strong', 'dh-title', o.title);
@@ -1259,7 +1300,8 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       body.append(stage, panel); app.append(top, body);
       host.replaceChildren(app);
       this._info = [];
-      this.menuEl.addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b && !b.disabled && this._onSelect) this._onSelect(b.dataset.id); });
+      this.menuEl.addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (!b || b.disabled || !this._onSelect) return; this._onSelect(b.dataset.id);
+        if (e.detail > 0) this.canvas.focus({ preventScroll: true }); });      // 마우스나 손가락으로 누른 뒤에는 키보드가 다시 지도에 듣는다(키보드로 누른 단추는 초점을 지킨다)
     }
     setInfo(items) {
       if (items.length !== this._info.length) {
@@ -1275,8 +1317,20 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
     }
     setMenu(items, onSelect) {
       this._onSelect = onSelect;
-      this.menuEl.replaceChildren(...items.map(it => { const b = el('button', it.primary ? 'dh-btn dh-primary' : 'dh-btn', it.label); b.type = 'button'; b.dataset.id = it.id; if (it.hint) b.title = it.hint; b.disabled = !!it.disabled; return b; }));
+      const doc = root.document, lost = doc.activeElement && this.menuEl.contains(doc.activeElement); let n = 0;
+      this.menuEl.replaceChildren(...items.map(it => {
+        const b = el('button', it.primary ? 'dh-btn dh-primary' : 'dh-btn', it.label); b.type = 'button'; b.dataset.id = it.id; if (it.hint) b.title = it.hint; b.disabled = !!it.disabled;
+        if (this.hotkeys && it.key !== false) {                 // 번호는 자리대로 붙는다(흐린 단추도 센다). key를 주면 그 글자를 적고 번호는 건너뛴다
+          const k = it.key || (n < 9 ? String(++n) : '');
+          if (k) { const mark = el('kbd', 'dh-key', k); mark.setAttribute('aria-hidden', 'true'); b.prepend(mark); if (!it.key) b.dataset.key = k; b.setAttribute('aria-keyshortcuts', k); }
+        }
+        return b; }));
+      if (lost) this.canvas.focus({ preventScroll: true });     // 누른 단추가 사라져도 키보드가 지도에 남는다
     }
+    /** 번호 n(1~9)이 붙은 단추를 누른다. 없거나 흐리면 false */
+    press(n) { const b = this.menuEl.querySelector(`button[data-key="${n}"]`); if (!b || b.disabled || !this._onSelect) return false; this._onSelect(b.dataset.id); return true; }
+    /** 강조된(노란) 단추를 누른다. 없거나 흐리면 false */
+    pressPrimary() { const b = this.menuEl.querySelector('button.dh-primary'); if (!b || b.disabled || !this._onSelect) return false; this._onSelect(b.dataset.id); return true; }
     log(text) { this.logEl.prepend(el('li', null, text)); while (this.logEl.children.length > 30) this.logEl.lastChild.remove(); }
     destroy() { this.root.remove(); }
   }
@@ -1395,10 +1449,30 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
     }
     /** 저장용 묶음: 틱·달력·난수·맨 위 장면 상태. */
     snapshot() { return { engine: DH.VERSION, tick: this.loop.tick, clock: this.clock.toJSON(), rng: this.rng.state, scene: this.scene ? this.scene.save() : null }; }
+    /** 저장 묶음의 달력과 난수가 이 엔진에 맞는지 본다. 맞지 않으면 까닭을 담아 던진다(아무것도 바꾸지 않는다). */
+    checkSnapshot(s) {
+      const c = s && s.clock, I = Save.int, num = v => typeof v === 'number' && isFinite(v);
+      Save.need(c && typeof c === 'object' && c.unit === this.clock.unit && I(c.year, 1, 9999) && I(c.month, 1, 12) && I(c.day, 1, DH.Clock.daysIn(c.year, c.month)) && I(c.serial, 0) && I(c.turn, 1) && Array.isArray(c.actors) && c.actors.every(a => typeof a === 'string')
+        && I(c.index, 0, Math.max(0, c.actors.length - 1)) && num(c.speed) && c.speed > 0 && c.speed <= 8 && (c.acc === undefined || (num(c.acc) && c.acc >= 0 && c.acc < 1e6)), '날짜 정보가 맞지 않는다.');
+      Save.need(I(s.rng, 0, 4294967295), '난수 정보가 맞지 않는다.');
+    }
+    /** 저장 묶음의 달력과 난수를 되돌린다. 흐르는 날짜는 멈춘 채로 돌아온다. 장면과 판은 게임이 따로 되돌린다. */
+    restore(s) { this.checkSnapshot(s); this.clock.load(s.clock); this.clock.running = false; this.rng.state = s.rng >>> 0; }
     destroy() { this.stop(); while (this.scenes.length) this.scenes.pop().exit(); if (this._off) this._off.forEach(f => f()); }
   }
 
-  Object.assign(DH, { Scene, MapScene, Engine });
+  /** 저장 묶음을 검사할 때 쓰는 작은 도구. 맞지 않으면 까닭을 담아 던진다. */
+  const Save = {
+    need(ok, why) { if (!ok) throw new Error(why); },
+    int(v, min = -Infinity, max = Infinity) { return Number.isInteger(v) && v >= min && v <= max; },
+    /** 머리말: 어느 게임의 몇 번째 형식인지 */
+    head(d, format, version, name) {
+      Save.need(d && typeof d === 'object' && !Array.isArray(d) && d.format === format, `${name} 저장 파일이 아니다.`);
+      Save.need(d.version === version, `지원하지 않는 저장 형식 버전이다(${String(d.version).slice(0, 12)}).`);
+    }
+  };
+
+  Object.assign(DH, { Scene, MapScene, Engine, Save });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 ;
@@ -1414,6 +1488,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
  *   lang.parse(scriptText)                       → { ok, empty, settings, values, errors, output }   (상태를 건드리지 않는다)
  *   lang.applyDonghyunLang(scriptText, state)    → 같은 보고서. 오류가 하나도 없을 때만 state에 덮어쓴다
  *   lang.compose([[3, 3000], [10, 2000]])        → 그 설정을 출력하는 동현랭 코드(예제 · 시험)
+ *   lang.applySettings([[3, 3000]], state)       → 설정 목록을 바로 덮어쓴다(저장한 판을 불러올 때. 검사는 같다)
  * 스크립트가 비었으면 아무것도 덮어쓰지 않는다. state에 미리 든 기본값이 그대로 남는다. */
 (function (root) {
   'use strict';
@@ -1488,6 +1563,11 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       rep.output = run.output; rep.steps = run.steps;
       const tok = run.output.split(/\s+/).filter(Boolean);
       if (!tok.length) { rep.empty = true; return rep; }                                            // 아무것도 출력하지 않았다 → 기본값 그대로
+      return this._read(tok, rep, opt);
+    }
+    /** 정수 토큰들을 [설정 번호, 값…] 묶음으로 읽어 보고서에 채운다(parse와 applySettings가 같이 쓴다). */
+    _read(tok, rep, opt = {}) {
+      const fail = msg => { rep.ok = false; rep.errors.push(msg); return rep; };
       for (let i = 0; i < tok.length;) {
         const at = i + 1;
         if (!INT.test(tok[i])) return fail(`${at}번째 출력 '${tok[i].slice(0, 12)}'는 정수가 아니다. 설정은 뿡뿡(정수)으로만 내보내고 뿡뿡뿡(줄바꿈)으로 띄운다.`);
@@ -1521,6 +1601,21 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       const rep = this.parse(scriptText, { ctx });
       rep.applied = [];
       if (!rep.ok || !state) return rep;
+      return this._write(rep, state, ctx);
+    }
+
+    /** 설정 목록 [[번호, 값…], …]을 동현랭을 돌리지 않고 globalState에 덮어쓴다(저장한 판을 불러올 때).
+     *  범위 · 자료 검사는 스크립트로 읽을 때와 같다. 오류가 있으면 하나도 쓰지 않는다. @returns 보고서 {ok, empty, settings, errors, applied} */
+    applySettings(list, state, ctx = {}) {
+      const rep = { ok: true, empty: false, name: this.name, output: '', steps: 0, settings: [], values: {}, errors: [], applied: [] };
+      if (!Array.isArray(list) || list.length > 2000 || list.some(x => !Array.isArray(x) || !x.length || x.some(v => !Number.isInteger(v)))) { rep.ok = false; rep.errors.push('설정 목록은 [번호, 값…] 묶음의 목록이어야 한다.'); return rep; }
+      if (!list.length) { rep.empty = true; return rep; }
+      for (const x of list) { const c = this.commands.get(x[0]); if (c && x.length !== 1 + c.args.length) { rep.ok = false; rep.errors.push(`설정 ${x[0]}(${c.label})의 값은 ${c.args.length}개여야 한다.`); return rep; } }
+      this._read(list.flat().map(String), rep, { ctx });
+      if (!rep.ok || !state) return rep;
+      return this._write(rep, state, ctx);
+    }
+    _write(rep, state, ctx) {
       for (const s of rep.settings) {
         const c = this.commands.get(s.n);
         if (c.set) c.set(state, s.values, ctx); else setPath(state, c.path, s.values.length === 1 ? s.values[0] : s.values);
@@ -1660,7 +1755,8 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
  *   침공       이웃한 남의 주로 쳐들어간다 → 전투(sam-battle.js) → settle()로 결과를 반영한다.
  * 달이 바뀔 때: 세금(인구÷2000 × 충성도%) · 수확(농지 × 4) · 군량(병력÷100) · 충성도 +1(70까지) · 인구 +0.2%.
  *
- * AI 군주(aiDecide): ① 병력 확보 → ② 인접 영지 공격 → ③ 후방 병력을 전선으로 → ④ 농지 개발. */
+ * AI 군주(aiDecide): ① 병력 확보 → ② 인접 영지 공격 → ③ 후방 병력을 전선으로 → ④ 농지 개발.
+ * 저장: toJSON()이 판에서 바뀌는 것만 적고, Game.restore()가 자료에 비춰 검사한 뒤 되살린다. */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
@@ -1904,6 +2000,34 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       }
       return { done: true };
     }
+    // ───────── 저장과 불러오기 ─────────
+    /** 판에서 바뀌는 것만 적는다(이름 · 이웃 · 색은 자료에 있다). 설정(globalState)과 난수는 장면이 따로 적는다. */
+    toJSON() {
+      return { player: this.player, months: this.months, over: this.over, overWhy: this.overWhy,
+        factions: [...this.factions.values()].map(f => ({ id: f.id, alive: f.alive })),
+        provinces: [...this.provinces.values()].map(p => ({ id: p.id, owner: p.owner, pop: p.pop, gold: p.gold, rice: p.rice, troops: p.troops, loyalty: p.loyalty, farm: p.farm, acted: p.acted })),
+        officers: [...this.officers.values()].map(o => ({ id: o.id, province: o.province, faction: o.faction, status: o.status, war: o.war, int: o.int, cha: o.cha })) };
+    }
+    /** toJSON()이 적은 것으로 판을 되살린다. 자료와 맞지 않으면 까닭을 담아 던진다(아무것도 바꾸지 않는다).
+     *  @param world 자료 @param d toJSON()의 결과 @param {{rng?:DH.RNG, state?:object}} o */
+    static restore(world, d, o = {}) {
+      const need = (ok, why) => { if (!ok) throw new Error(why); }, I = (v, min = 0, max = 1e12) => Number.isInteger(v) && v >= min && v <= max;
+      need(d && typeof d === 'object' && Array.isArray(d.factions) && Array.isArray(d.provinces) && Array.isArray(d.officers), '판 정보가 없다.');
+      need(typeof d.player === 'string' && world.factions.has(d.player), '군주가 자료에 없다.');
+      need(I(d.months, 0, 1e6) && [null, 'won', 'lost'].includes(d.over) && [null, 'all', 'goal', 'time', 'fall'].includes(d.overWhy) && (d.over === null) === (d.overWhy === null), '진행 정보가 맞지 않는다.');
+      const owner = f => f === null || (typeof f === 'string' && world.factions.has(f)), uniq = list => new Set(list.map(x => x && x.id)).size === list.length;
+      need(d.factions.length === world.factions.size && uniq(d.factions) && d.factions.every(f => f && world.factions.has(f.id) && typeof f.alive === 'boolean'), '세력 정보가 자료와 맞지 않는다.');
+      need(d.provinces.length === world.provinces.size && uniq(d.provinces) && d.provinces.every(p => p && world.provinces.has(p.id) && owner(p.owner) && I(p.pop) && I(p.gold) && I(p.rice) && I(p.troops) && I(p.loyalty, 0, 100) && I(p.farm, 0, 1000) && typeof p.acted === 'boolean'), '주 정보가 자료와 맞지 않는다.');
+      need(d.officers.length === world.officers.size && uniq(d.officers) && d.officers.every(x => { const w = x && world.officers.get(x.id);      // 현역 · 재야가 아닌 장수(포로 · 사망)는 자료 그대로여야 한다
+        return w && owner(x.faction) && I(x.war, 1, 100) && I(x.int, 1, 100) && I(x.cha, 1, 100) && (((x.status === 'active' && x.faction !== null) || (x.status === 'free' && x.faction === null)) ? world.provinces.has(x.province) : x.status === w.status && x.province === w.province && x.faction === w.faction); }), '장수 정보가 자료와 맞지 않는다.');
+      const g = new Game(world, { player: d.player, rng: o.rng, state: o.state });
+      for (const f of d.factions) g.factions.get(f.id).alive = f.alive;
+      for (const p of d.provinces) Object.assign(g.P(p.id), { owner: p.owner, pop: p.pop, gold: p.gold, rice: p.rice, troops: p.troops, loyalty: p.loyalty, farm: p.farm, acted: p.acted });
+      for (const x of d.officers) Object.assign(g.officers.get(x.id), { province: x.province, faction: x.faction, status: x.status, war: x.war, int: x.int, cha: x.cha });
+      g.months = d.months; g.over = d.over; g.overWhy = d.overWhy; g.queue = [];
+      return g;
+    }
+
     /** 화면 없이 AI 차례를 끝까지 돌린다(사람이 없는 판 · 시험). 사람의 주가 공격받으면 그 전투도 AI가 대신 싸운다. */
     runAIAll() { const log = []; this.beginAI(); for (;;) { const s = this.nextAI(); if (s.done) break; if (s.battle) { const out = this.settle(s.pending, s.battle.auto()); log.push(`${s.text} → ${out.text}`); } else if (!s.quiet && s.text) log.push(s.text); } return log; }
   }
@@ -2166,6 +2290,8 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
  *   우리 부대를 찍는다 → 갈 수 있는 칸이 노랗게 → 칸을 찍어 옮긴다 → 붉은 테의 적을 찍어 친다.
  *   옮긴 뒤 칠 적이 없으면 그 부대는 그날 일을 마친다. 모두 마치면 차례가 저절로 넘어간다.
  *   조작 창: 대기 · 차례 넘기기 · 맡기기(남은 싸움을 AI에게) · 퇴각(한 번 더 묻는다).
+ * 키보드: 방향키 칸 커서 · Enter 커서가 놓인 칸 찍기(손으로 찍는 것과 같다) · Space 아직 일을 마치지 않은 다음 우리 부대 ·
+ *   숫자 키 조작 창의 단추 · Esc 고른 부대 놓기. 결과 카드와 퇴각을 되묻는 창에서는 Enter가 노란 단추를 누른다.
  * 끝나면 결과 카드를 보이고, 지도로 돌아가면서 onDone(result)를 부른다. 소유권은 지도 쪽(Game.settle)이 옮긴다. */
 (function (root) {
   'use strict';
@@ -2177,12 +2303,15 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
   /** 바탕색 위에 얹을 글자색(밝으면 먹, 어두우면 흰) */
   const textOn = hex => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)); return l > 150 ? INK : '#fff'; };
   const SIDE = { att: '공격', def: '수비' };
+  const ARROW = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  const digit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(code); return m ? Number(m[1]) : 0; };
 
   class SamBattleScene extends DH.MapScene {
     /** @param {{side:'att'|'def', onDone:(result)=>void}} o side는 사람이 맡는 쪽 */
     constructor(engine, layout, battle, o) {
       super(engine); this.layout = layout; this.b = battle; this.me = o.side; this.onDone = o.onDone;
       this.sel = null; this.reach = new Map(); this.look = null; this.fx = []; this.wait = 30; this.idle = 0; this.auto = false; this.ask = false; this.mode = 'fight'; this.res = null;
+      this.cur = null; this.curX = 0;                // 키보드 커서 칸과, 위아래로 갈 때 지키는 가로 자리. 키를 쓰기 전에는 보이지 않는다
     }
     enter() {
       const b = this.b;
@@ -2191,7 +2320,44 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       this.refresh();
     }
     onDrag() {} onWheel() {}                       // 전장은 한 화면에 다 들어온다
-    onKey(code) { if (code === 'Escape') { this.sel = null; this.ask = false; this.refresh(); } }
+    onKey(code, ev) {
+      if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return;
+      const d = ARROW[code], n = digit(code), used = () => { if (ev) ev.preventDefault(); };
+      if (code === 'Escape') { this.select(null); this.ask = false; return this.refresh(); }
+      if (d) { used(); return this.moveCursor(d); }
+      if (ev && ev.repeat) return;                                 // 누르고 있어도 한 번만 누른 것으로 친다
+      if (n) { used(); this.layout.press(n); }
+      else if (code === 'Enter' || code === 'NumpadEnter') {
+        used();
+        if (this.mode === 'result') { if (this.engine.tick - this.doneAt > 30) this.command('back'); }
+        else if (this.ask) this.layout.pressPrimary();
+        else if (!this.cur) this.nextUnit(1);                      // 커서가 아직 없으면 우리 부대부터 잡는다
+        else if (this.myTurn) this.tapCell(this.cur);
+      }
+      else if (code === 'Space') { used(); this.nextUnit(ev && ev.shiftKey ? -1 : 1); }
+    }
+    /** 커서를 한 칸 옮긴다. 위아래는 엇갈린 줄에서 가로 자리가 가장 가까운 칸으로 간다. */
+    moveCursor(d) {
+      const g = this.grid, b = this.b;
+      if (!this.cur) { const u = this.sel || b.alive(this.me).find(x => !x.done) || b.alive(this.me)[0]; this.cur = u ? { c: u.c, r: u.r } : { c: g.cols >> 1, r: g.rows >> 1 }; this.curX = g.center(this.cur.c, this.cur.r).x; return this.peek(); }
+      let { c, r } = this.cur;
+      if (d[0]) { c = Math.min(g.cols - 1, Math.max(0, c + d[0])); this.curX = g.center(c, r).x; }
+      else {
+        const nr = r + d[1]; if (nr < 0 || nr >= g.rows) return;
+        const opts = (r & 1 ? [c, c + 1] : [c - 1, c]).filter(x => x >= 0 && x < g.cols);
+        c = opts.sort((a, z) => Math.abs(g.center(a, nr).x - this.curX) - Math.abs(g.center(z, nr).x - this.curX))[0]; r = nr;
+      }
+      this.cur = { c, r }; this.peek();
+    }
+    /** 커서가 놓인 칸의 사정을 정보 창에 보인다(고른 부대가 없을 때). */
+    peek() { if (!this.sel && this.mode === 'fight') this.look = this.cur; this.refresh(); }
+    /** Space: 아직 일을 마치지 않은 우리 부대를 차례로 고르고 커서를 그리로 옮긴다. */
+    nextUnit(dir = 1) {
+      if (!this.myTurn) return;
+      const list = this.b.alive(this.me).filter(u => !u.done); if (!list.length) return;
+      const i = list.indexOf(this.sel), u = list[i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length];
+      this.ask = false; this.select(u); this.cur = { c: u.c, r: u.r }; this.curX = this.grid.center(u.c, u.r).x; this.refresh();
+    }
     get myTurn() { return this.mode === 'fight' && !this.auto && !this.b.winner && this.b.side === this.me; }
 
     select(u) { this.sel = u; this.reach = u ? this.b.range(u) : new Map(); this.look = null; }
@@ -2233,7 +2399,12 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       const b = this.b;
       if (this.mode === 'result') { if (this.engine.tick - this.doneAt > 30) this.command('back'); return; }      // 싸우던 손이 그대로 카드를 넘기지 않게 반 초 둔다
       if (!this.myTurn) return;
-      const cell = this.cellAt(x, y); this.ask = false;
+      this.cur = null;                                             // 손으로 찍으면 키보드 커서는 숨는다
+      this.tapCell(this.cellAt(x, y));
+    }
+    /** 칸 하나를 찍는다(손가락 · 마우스 · 키보드 Enter가 같이 쓴다). */
+    tapCell(cell) {
+      const b = this.b; this.ask = false;
       if (!cell) { this.select(null); return this.refresh(); }
       const u = b.unitAt(cell.c, cell.r), s = this.sel, k = cell.c + ',' + cell.r;
       if (s && u && u.side !== this.me && b.targets(s).includes(u)) { this.show(b.attack(s, u)); this.select(null); }
@@ -2324,6 +2495,8 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
         g.globalAlpha = 1;
       }
       if (s && this.myTurn) for (const x of b.targets(s)) { const p = grid.center(x.c, x.r), pulse = 1 + 0.08 * Math.sin(t / 6); g.beginPath(); g.arc(p.x, p.y, S * 0.98 * pulse, 0, Math.PI * 2); g.strokeStyle = RED; g.lineWidth = 3; g.stroke(); }
+      // 키보드 커서
+      if (this.cur && this.mode === 'fight') { g.beginPath(); grid.trace(g, this.cur.c, this.cur.r); g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.lineWidth = 4.6; g.stroke(); g.strokeStyle = INK; g.lineWidth = 2; g.stroke(); }
       // 떠오르는 피해 숫자
       for (const f of this.fx) if (f.kind === 'hit') {
         const q = (t - f.t0) / FX, y = f.y - 18 - q * 16; g.globalAlpha = Math.min(1, 2.2 * (1 - q)); g.font = `800 13px ${FONT}`;
@@ -2352,14 +2525,21 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
  *   군주를 고른다 → 우리 주를 찍는다 → 농지 개발 · 징병 · 이동 · 수색 · 침공 가운데 하나 → 턴 종료.
  *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다.
  *   턴 종료를 누르면 다른 군주들이 움직인다. 우리 주가 침공받으면 전투 화면으로 넘어간다(sam-battle-scene.js).
- *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다. */
+ *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다.
+ * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 단추 · Enter 노란 단추 · Esc 그만두기 ·
+ *   Shift+방향키(또는 W A S D) 지도 옮기기 · + − 확대와 축소. 이동·침공에서 '어디로'를 고를 때는 방향키로 대상을 옮기고 Enter로 정한다.
+ * 저장: saveGame()이 설정 목록 · 달력 · 난수 · 판을 한 묶음으로 내고, loadGame()이 검사한 뒤 되살린다. 우리 차례의 지도에서만 저장한다. */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
   const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   const NEUTRAL = '#b9b0a2', INK = '#26211c', ACCENT = '#f2b705', RED = '#c0321f';
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const ZOOM = [{ id: 'zin', label: '확대' }, { id: 'zout', label: '축소' }];
+  const ZOOM = [{ id: 'zin', label: '확대', key: '+' }, { id: 'zout', label: '축소', key: '−' }];
+  const SAVE = { format: 'donghyunsam-save', version: 1, name: '동현삼', slot: 'donghyunsam:slot', file: 'donghyunsam', word: '판' };
+  const ARROW = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }, PAN = { KeyA: 'ArrowLeft', KeyD: 'ArrowRight', KeyW: 'ArrowUp', KeyS: 'ArrowDown' };
+  const digit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(code); return m ? Number(m[1]) : 0; };
+  const NO = why => ({ ok: false, why });
 
   class SamMapScene extends DH.MapScene {
     constructor(engine, world, layout) {
@@ -2367,6 +2547,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       this.state = DH.Sam.newState();                             // globalState: 기본값. 동현랭 설정이 오면 새로 지어 덮어쓴다
       this.game = this.newGame(null);                              // 군주를 고르기 전에는 구경만 한다
       this.mode = 'pick'; this.selected = null; this.sub = null; this.pause = 0; this.flash = null;
+      this.settings = [];                                          // 지금 판에 적용된 동현랭 설정 [[번호, 값…]] (저장할 때 함께 적는다)
     }
     newGame(player) { return new DH.Sam.Game(this.world, { player, rng: this.engine.rng, state: this.state }); }
     /** 동현랭 설정을 받아 globalState를 새로 짓고 판을 다시 연다. 오류가 있으면 지금 판을 그대로 둔다.
@@ -2374,7 +2555,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
     applyDonghyunLang(scriptText) {
       const st = DH.Sam.newState(), rep = DH.Sam.applyDonghyunLang(scriptText, st, { world: this.world });
       if (!rep.ok) return rep;
-      this.state = st;
+      this.state = st; this.settings = rep.settings.map(x => [x.n, ...x.values]);
       while (this.engine.scene && this.engine.scene !== this) this.engine.popScene();          // 전투 중이었으면 접는다
       this.layout.log(rep.empty ? '동현랭 설정이 없다. 기본값으로 새 판을 연다' : `동현랭 설정 ${rep.settings.length}개를 적용했다: ${rep.applied.join(' · ')}`);
       this.restart();
@@ -2427,6 +2608,53 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       if (best !== null && this.candidates().some(q => q.id === best)) return this.command('to:' + best);   // 고르는 중이면 그 주가 대상이 된다
       this.sub = null; this.selected = best; this.refresh();
     }
+    /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 단추를 누른다. */
+    onKey(code, ev) {
+      if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return;
+      const d = ARROW[code], shift = !!(ev && ev.shiftKey), n = digit(code), used = () => { if (ev) ev.preventDefault(); };
+      if ((d && shift) || PAN[code]) return super.onKey(PAN[code] || code, ev);              // 지도 옮기기
+      if (d) { used(); return this.step(d); }
+      if (code === 'Escape') { if (this.mode === 'busy') return; if (this.sub) this.sub = null; else this.selected = null; return this.refresh(); }
+      if (ev && ev.repeat) return;                                                            // 누르고 있어도 단추는 한 번만 눌린다
+      if (n) { used(); this.layout.press(n); }
+      else if (code === 'Enter' || code === 'NumpadEnter') { used(); const s = this.sub; if (s && s.step === 'to' && s.aim != null) this.command('to:' + s.aim); else this.layout.pressPrimary(); }
+      else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
+      else super.onKey(code, ev);                                                             // + − 확대 · 축소
+    }
+    /** from에서 d 방향으로 가장 가까운 주(pool 가운데). 그 방향의 56° 안쪽을 먼저 보고, 없으면 그쪽 절반에서 찾는다. 없으면 null */
+    toward(from, d, pool) {
+      const P = this.pos.get(from); let best = null, bs = Infinity, wide = null, ws = Infinity;
+      for (const q of pool) {
+        if (q.id === from) continue;
+        const Q = this.pos.get(q.id), vx = Q.x - P.x, vy = Q.y - P.y, along = vx * d[0] + vy * d[1], side = Math.abs(vx * d[1] - vy * d[0]), sc = along + side * 2;
+        if (along <= 0.01) continue;
+        if (side <= along * 1.5) { if (sc < bs) { bs = sc; best = q.id; } } else if (sc < ws) { ws = sc; wide = q.id; }
+      }
+      return best ?? wide;
+    }
+    /** 방향키 한 번. 고른 주가 없으면 우리 본거지(없으면 화면 가운데에서 가까운 주)부터 시작한다. */
+    step(d) {
+      if (this.mode === 'busy') return;
+      const g = this.game, s = this.sub, all = [...g.provinces.values()];
+      if (s && s.step === 'to') { const c = this.candidates(), next = s.aim == null ? this.toward(this.selected, d, c) ?? (c[0] && c[0].id) : this.toward(s.aim, d, c); if (next != null) { s.aim = next; this.reveal(next); } return this.refresh(); }
+      if (s) return;
+      let next;
+      if (this.selected === null) {
+        const own = g.player ? g.provincesOf(g.player) : [], home = g.player && g.officers.get(g.factions.get(g.player).leader), mid = this.cam.toWorld(this.engine.width / 2, this.engine.height / 2);
+        next = home && own.some(p => p.id === home.province) ? home.province : own.length ? own[0].id : all.map(p => ({ id: p.id, d: Math.hypot(this.pos.get(p.id).x - mid.x, this.pos.get(p.id).y - mid.y) })).sort((a, b) => a.d - b.d)[0].id;
+      } else next = this.toward(this.selected, d, all);
+      if (next == null) return;
+      this.selected = next; this.reveal(next); this.refresh();
+    }
+    /** Space: 명령이 남은 우리 주를 번호 순서로 돈다. 남은 주가 없으면 우리 주를 모두 돈다. */
+    nextOwn(dir = 1) {
+      const g = this.game; if (this.mode !== 'play' || this.sub) return;
+      const own = g.provincesOf(g.player).sort((a, b) => a.id - b.id), left = own.filter(p => !p.acted), list = left.length ? left : own; if (!list.length) return;
+      const cur = this.selected ?? (dir > 0 ? -Infinity : Infinity), next = dir > 0 ? list.find(p => p.id > cur) || list[0] : [...list].reverse().find(p => p.id < cur) || list[list.length - 1];
+      this.selected = next.id; this.reveal(next.id); this.refresh();
+    }
+    /** 그 주가 화면 가장자리 밖에 있으면 화면 가운데로 데려온다. */
+    reveal(id) { const P = this.pos.get(id), q = this.cam.toScreen(P.x, P.y), m = 28, e = this.engine; if (q.x < m || q.x > e.width - m || q.y < m || q.y > e.height - m) { this.cam.centerOn(P.x, P.y); this.cam.clampTo(this.grid); } }
 
     command(id) {
       if (id === 'zin') return this.zoomBy(1.25);
@@ -2499,7 +2727,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
       if (!sel) {
-        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다.' });
+        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 단추를 누른다.' });
         else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음']], note: this.note(null) });
         return pick();
       }
@@ -2536,7 +2764,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }, ...ZOOM];
       if (p && s) {
         if (s.step === 'who') return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${o.name} 무${o.war}` })), { id: 'who:none', label: '병력만', disabled: p.troops <= 0 }, cancel];
-        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, label: s.type === 'move' ? `${q.name} ${fmt(q.troops)}` : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
+        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? `${q.name} ${fmt(q.troops)}` : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
         const half = Math.floor(p.troops / 2), min = g.rules.attackMin;
         if (s.type === 'move') return [...(s.officer !== null ? [{ id: 'n:0', label: '병력 없이' }] : []), { id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half <= 0 }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, disabled: p.troops <= 0 }, cancel];
         return [{ id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half < min, hint: half < min ? `병력 ${fmt(min)}부터 보낼 수 있다` : '' }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, primary: true }, cancel];
@@ -2564,6 +2792,7 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       for (const p of gm.provinces.values()) {
         const P = this.pos.get(p.id), r = p.id === sel ? 5.2 : 4.2;
         if (cand.has(p.id)) { g.beginPath(); g.arc(P.x, P.y, r + 2.6 + 0.7 * Math.sin(t / 7), 0, Math.PI * 2); g.strokeStyle = candCol; g.lineWidth = 1.8; g.stroke(); }
+        if (cand.has(p.id) && this.sub.aim === p.id) { g.beginPath(); g.arc(P.x, P.y, r + 6.2, 0, Math.PI * 2); g.strokeStyle = INK; g.lineWidth = 1.6; g.stroke(); }      // 방향키로 겨눈 대상
         g.beginPath(); g.arc(P.x, P.y, r, 0, Math.PI * 2); g.fillStyle = this.colorOf(p); g.fill();
         g.lineWidth = p.id === sel ? 2 : near.has(p.id) ? 1.6 : 0.9; g.strokeStyle = p.id === sel ? ACCENT : near.has(p.id) ? '#fff' : INK; g.stroke();
         if (me && p.owner === me && !p.acted && this.mode === 'play') { g.beginPath(); g.arc(P.x, P.y, 1.5, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); }      // 아직 명령을 내리지 않은 우리 주
@@ -2585,7 +2814,43 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
       g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK; g.font = `800 20px ${FONT}`; g.fillText(this.overTitle(), W / 2, y + 40);
       g.font = `500 12px ${FONT}`; g.fillStyle = '#6e6356'; g.fillText(`${this.engine.clock.label} · ‘다시 하기’를 누르면 군주를 다시 고른다`, W / 2, y + 68);
     }
-    save() { return { selected: this.selected, mode: this.mode, player: this.game.player, months: this.game.months }; }
+    // ───────── 저장과 불러오기 ─────────
+    save() { return { selected: this.selected, mode: this.mode, cam: { x: this.cam.x, y: this.cam.y, zoom: this.cam.zoom } }; }
+    /** 지금 저장할 수 있는지. 우리 차례의 지도에서만 된다. {ok:true} 또는 {ok:false, why} */
+    saveInfo() {
+      if (this.engine.scene !== this) return NO('전투가 끝난 뒤에 저장할 수 있다.');
+      if (this.mode === 'pick') return NO('군주를 고른 뒤에 저장할 수 있다.');
+      if (this.mode === 'busy') return NO('다른 군주들의 차례가 끝난 뒤에 저장할 수 있다.');
+      return { ok: true };
+    }
+    /** 저장 묶음: 머리말 · 한 줄 요약 · 적용된 설정 목록 · 달력 · 난수 · 판. JSON으로 그대로 적을 수 있다. */
+    saveGame() {
+      const g = this.game, own = g.provincesOf(g.player);
+      return { format: SAVE.format, version: SAVE.version, summary: { title: g.fname(g.player), date: this.engine.clock.label, line: `주 ${own.length} · 병력 ${fmt(own.reduce((n, p) => n + p.troops, 0))}` },
+        settings: this.settings.map(x => [...x]), ...this.engine.snapshot(), game: g.toJSON() };
+    }
+    /** 저장 묶음으로 판을 되살린다. 하나라도 맞지 않으면 하던 판을 그대로 둔다. 전투 중이었으면 전투를 접는다.
+     *  @returns {{ok:true, text, applied:string[]} | {ok:false, why}} */
+    loadGame(d) {
+      const e = this.engine, w = this.world; let st, game, rep;
+      try {
+        DH.Save.head(d, SAVE.format, SAVE.version, SAVE.name);
+        st = DH.Sam.newState(); rep = DH.Sam.lang.applySettings(d.settings, st, { world: w });
+        DH.Save.need(rep.ok, '저장된 설정이 맞지 않는다. ' + rep.errors.join(' '));
+        e.checkSnapshot(d);
+        game = DH.Sam.Game.restore(w, d.game, { rng: e.rng, state: st });
+        DH.Save.need(d.clock.actors.length === 1 && d.clock.actors[0] === game.player, '날짜 정보가 맞지 않는다.');
+      } catch (err) { return NO(err.message); }
+      while (e.scene && e.scene !== this) e.popScene();
+      this.state = st; this.settings = d.settings.map(x => [...x]); this.game = game; e.restore(d);
+      this.mode = game.over ? 'over' : 'play'; this.sub = null; this.flash = null; this.pause = 0;
+      const v = d.scene || {}, c = v.cam, num = x => typeof x === 'number' && isFinite(x);
+      this.selected = w.provinces.has(v.selected) ? v.selected : null;
+      if (c && num(c.x) && num(c.y) && num(c.zoom)) { this.cam.zoom = Math.min(this.cam.maxZoom, Math.max(this.cam.minZoom, c.zoom)); this.cam.x = c.x; this.cam.y = c.y; this.cam.clampTo(this.grid); }
+      const text = `저장한 판을 불러왔다 · ${game.fname(game.player)} · ${e.clock.label}`;
+      this.layout.log(text); this.refresh();
+      return { ok: true, text, applied: rep.applied };
+    }
   }
   const josaGa = w => DH.Sam.josa(w, '이', '가').slice(w.length);
 
@@ -2593,22 +2858,23 @@ node qa/ui.cjs                 # 화면 시험 19개 (Playwright · 데스크톱
   async function boot(host, src, opt = {}) {
     const world = DH.Sam.parse(await DH.Data.load(src));
     const W = 480, H = 360;
-    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H });
+    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 단추에 번호가 붙는다(숫자 키)
     const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: '#a9cbe0', clock: { unit: 'month', start: world.meta.start } });
     const scene = new SamMapScene(engine, world, layout); engine.setScene(scene);
     if (opt.script) scene.applyDonghyunLang(opt.script);                      // 동현랭 설정을 주면 그 값으로 연다
     if (opt.player) scene.start(opt.player);
     if (opt.autostart !== false) engine.start();
     return { engine, layout, scene, world, get game() { return scene.game; }, lang: DH.Sam.lang, examples: DH.Sam.examples(world), convention: DH.Sam.lang.describe(DH.Sam.newState()),
-      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text) };
+      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text), save: SAVE };
   }
 
-  DH.Sam = Object.assign(DH.Sam || {}, { SamMapScene, boot });
+  DH.Sam = Object.assign(DH.Sam || {}, { SamMapScene, boot, SAVE });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 ;
 /* 동현삼 앱: 공통 엔진의 지도 장면을 A 칸에 띄우고, B 칸의 동현랭 편집기가 설정을 읽어 새 판을 연다.
- * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다. */
+ * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다.
+ * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다. */
 (function () {
 'use strict';
 const GAME = DH.Sam;
@@ -2725,14 +2991,14 @@ function exitFull() { if (isPseudo()) return setPseudo(false); if (fullEl() === 
 let hintTimer = 0;
 function onFull() {
   const on = isFull(); stageFull.classList.toggle('fs', on);
-  $('#exit-full').hidden = !on; $('#full').textContent = on ? '전체 화면 닫기' : '전체 화면';
+  $('#exit-full').hidden = !on; $('#fs-save').hidden = !on; $('#fs-load').hidden = !on; $('#full').textContent = on ? '전체 화면 닫기' : '전체 화면';
   clearTimeout(hintTimer); $('#full-hint').hidden = !on; if (on) hintTimer = setTimeout(() => { $('#full-hint').hidden = true; }, 5000);
   fit(); setTimeout(fit, 60);
   if (on) { $('#full').blur(); const cv = host.querySelector('.dh-canvas'); if (cv) cv.focus({ preventScroll: true }); }   // 방향키가 바로 듣게
 }
 document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
 addEventListener('resize', () => { if (isFull()) fit(); });
-addEventListener('keydown', e => { if (e.key === 'Escape' && isPseudo()) setPseudo(false); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && isPseudo() && !menu) setPseudo(false); });
 $('#exit-full').onclick = exitFull;
 $('#full').onclick = () => {
   if (isFull()) return exitFull(); if (!current) return;
@@ -2741,10 +3007,97 @@ $('#full').onclick = () => {
 };
 window.__dhFull = { fit, setPseudo, isFull };            // 시험용 손잡이
 
+/* ---------- 저장 · 불러오기(동현심과 같은 규칙): 브라우저 칸 3개 + .dhsave 파일. 저절로 저장하지 않는다 ----------
+   메뉴는 화면 가운데 뜨고(전체 화면에서도), 떠 있는 동안 판은 멎는다. 칸은 이 기기의 이 브라우저에만 남는다 */
+const SAVE = GAME.SAVE, SLOTS = 3, menuBack = $('#menu-back'), menuEl = $('#menu');
+let menu = null, menuResume = false;
+const status = (text, kind) => { $('#status').textContent = text; $('#status').dataset.kind = kind || ''; };
+const toast = (text, kind) => { status(text, kind); if (current) current.layout.log(text); };
+const clip = (v, n = 40) => String(v ?? '').slice(0, n);
+const eul = n => (n === 2 ? '를' : '을');                // 칸 1을 · 칸 2를 · 칸 3을
+function snapshot() { return { ...current.scene.saveGame(), lab: (/v([\d.]+)/.exec($('.edition').textContent) || [])[1] || '', savedAt: new Date().toISOString() }; }
+function readSlot(n) { try { const t = localStorage.getItem(SAVE.slot + n), d = t ? JSON.parse(t) : null; return d && d.format === SAVE.format ? d : null; } catch (e) { return null; } }
+function slotNote(d) {
+  if (!d) return '비어 있음';
+  const u = d.summary || {}, t = new Date(d.savedAt), pad = v => String(v).padStart(2, '0'), when = isNaN(t) ? '' : ` · ${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())} 저장`;
+  return [u.title, u.date, u.line].filter(Boolean).map(x => clip(x)).join(' · ') + when;
+}
+function saveToSlot(n) {
+  try { const d = snapshot(); localStorage.setItem(SAVE.slot + n, JSON.stringify(d)); toast(`브라우저 칸 ${n}에 저장했다 · ${d.summary.title} · ${d.summary.date}`); return true; }
+  catch (e) { toast('브라우저 저장에 실패했다. 파일로 내려받아 저장하자.', 'error'); return false; }
+}
+function saveToFile() {
+  const d = snapshot(), a = document.createElement('a'), name = `${SAVE.file}-${d.summary.title}-${d.summary.date}`.replace(/[\\/:*?"<>|\s]+/g, '');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' })); a.download = name + '.dhsave'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`.dhsave 파일로 내려받았다 · ${d.summary.title} · ${d.summary.date}`);
+}
+/** 저장 묶음을 판에 되살린다. 맞지 않으면 까닭을 알리고 하던 판을 그대로 둔다 */
+function loadFrom(d) {
+  const r = current.scene.loadGame(d);
+  if (!r.ok) { toast('불러오기 실패: ' + r.why + ` 하던 ${SAVE.word}은 그대로 두었다.`, 'error'); return false; }
+  status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
+  fit(); return true;
+}
+async function loadFile(input) {
+  const f = input.files[0]; input.value = ''; if (!f || !current) return;
+  let d = null; try { if (f.size <= 4e6) d = JSON.parse(await f.text()); } catch (e) { d = null; }
+  if (!d || typeof d !== 'object' || d.format !== SAVE.format) return toast(`불러오기 실패: ${SAVE.name} 저장 파일이 아니다. 하던 ${SAVE.word}은 그대로 두었다.`, 'error');
+  confirmMenu(`${slotNote(d)}\n이 파일을 불러올까? 저장하지 않은 진행은 사라진다.`, [['불러온다', () => loadFrom(d)], ['그만둔다', loadMenu]], loadMenu);
+}
+/* 메뉴: items = [{label, note, off, fn}] 또는 [label, fn]. 고르면 닫히고 fn을 부른다. Esc와 바깥 누르기는 onCancel(없으면 그냥 닫기) */
+function openMenu(title, items, onCancel, text) {
+  if (!menu) { menuResume = !!current && current.engine.loop.running; if (current) current.engine.stop(); }
+  menu = { items: items.map(it => (Array.isArray(it) ? { label: it[0], fn: it[1] } : it)), onCancel };
+  const h = el('h4', title); h.id = 'menu-title'; menuEl.replaceChildren(h);
+  if (text) { const q = el('p', text); q.className = 'menu-text'; menuEl.append(q); }
+  menu.items.forEach((it, i) => { const b = el('button'); b.type = 'button'; b.className = 'mi'; b.dataset.i = i; b.disabled = !!it.off; b.append(el('span', it.label)); if (it.note) b.append(el('small', it.note)); menuEl.append(b); });
+  menuBack.hidden = false;
+  const first = menuEl.querySelector('.mi:not(:disabled)'); if (first) first.focus({ preventScroll: true });
+}
+function closeMenu() {
+  if (!menu) return; menu = null; menuBack.hidden = true;
+  if (current) { if (menuResume && tab === 'play') current.engine.start(); const cv = host.querySelector('.dh-canvas'); if (cv) cv.focus({ preventScroll: true }); }   // 닫으면 키보드가 다시 지도에 듣는다
+}
+function cancelMenu() { const c = menu && menu.onCancel; closeMenu(); if (c) c(); }
+function confirmMenu(q, opts, back) { const [title, ...rest] = q.split('\n'); openMenu(rest.length ? rest.join(' ') : title, opts, back, rest.length ? title : ''); }
+menuEl.addEventListener('click', e => { const b = e.target.closest('.mi'); if (!b || !menu) return; const it = menu.items[+b.dataset.i]; if (!it || it.off) return; closeMenu(); if (it.fn) it.fn(); });
+menuBack.addEventListener('click', e => { if (e.target === menuBack) cancelMenu(); });
+menuBack.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return cancelMenu(); }
+  const list = [...menuEl.querySelectorAll('.mi:not(:disabled)')], i = list.indexOf(document.activeElement), d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+  if (d && list.length) { e.preventDefault(); list[(i + d + list.length) % list.length].focus(); }
+  else if (e.key === 'Tab' && list.length) { e.preventDefault(); list[(i + (e.shiftKey ? -1 : 1) + list.length) % list.length].focus(); }      // 메뉴 밖으로 나가지 않는다
+});
+function saveMenu() {
+  if (!current) return;
+  const can = current.scene.saveInfo(); if (!can.ok) return openMenu('지금은 저장할 수 없다', [['돌아가기', null]], null, can.why);
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), fn: () => (d ? confirmMenu(`칸 ${n}에 덮어쓸까?`, [['덮어쓴다', () => saveToSlot(n)], ['그만둔다', saveMenu]], saveMenu) : saveToSlot(n)) }); }
+  items.push({ label: '파일로 내려받기', note: '.dhsave', fn: saveToFile }, { label: '칸 지우기', fn: deleteMenu }, ['돌아가기', null]);
+  openMenu('저장', items, null, '칸은 이 기기의 이 브라우저에만 남는다. 다른 기기로 옮기려면 파일로 내려받는다.');
+}
+function deleteMenu() {
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), off: !d,
+    fn: () => confirmMenu(`칸 ${n}${eul(n)} 지울까? 되돌릴 수 없다.`, [['지운다', () => { try { localStorage.removeItem(SAVE.slot + n); } catch (e) {} toast(`브라우저 칸 ${n}${eul(n)} 지웠다`); deleteMenu(); }], ['그만둔다', deleteMenu]], deleteMenu) }); }
+  items.push(['돌아가기', saveMenu]); openMenu('칸 지우기', items, saveMenu);
+}
+function loadMenu() {
+  if (!current) return;
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), off: !d,
+    fn: () => confirmMenu(`지금 ${SAVE.word}을 두고 칸 ${n}${eul(n)} 불러올까? 저장하지 않은 진행은 사라진다.`, [['불러온다', () => loadFrom(readSlot(n))], ['그만둔다', loadMenu]], loadMenu) }); }
+  items.push({ label: '파일에서 불러오기', note: '.dhsave', fn: () => $('#load-file').click() }, ['돌아가기', null]);
+  openMenu('불러오기', items);
+}
+for (const id of ['#game-save', '#fs-save']) $(id).onclick = saveMenu;
+for (const id of ['#game-load', '#fs-load']) $(id).onclick = loadMenu;
+$('#load-file').onchange = e => loadFile(e.target);
+
 /* ---------- 시작: 자료를 읽고 기본값으로 판을 연다 ---------- */
 GAME.boot($('#host'), '#lab-data').then(g => {
   current = g; window.__dh = g;                          // 시험용 손잡이
-  $('#run').disabled = false; $('#full').disabled = false; $('#status').textContent = '기본값으로 열었다';
+  $('#run').disabled = false; $('#full').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '기본값으로 열었다';
   fillLang();
 }).catch(e => {
   const p = el('pre', e.message); p.className = 'boot-error'; $('#host').replaceChildren(p);

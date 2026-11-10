@@ -21,6 +21,8 @@
 .dh-btn:hover:not(:disabled){background:var(--surface2,#efe7d8)}
 .dh-btn:disabled{opacity:.5;cursor:not-allowed}
 .dh-btn.dh-primary{background:var(--accent,#f2b705);border-color:#a77915;color:#26211c;font-weight:700}
+.dh-key{display:inline-block;min-width:1.35em;margin-right:6px;padding:0 3px;border:1px solid currentColor;border-radius:4px;font:600 .6875rem/1.45 var(--mono,ui-monospace,monospace);text-align:center;opacity:.62;vertical-align:1px}
+@media (hover:none) and (pointer:coarse){.dh-key{display:none}}
 .dh-log{list-style:none;margin:0;padding:8px 0 0;border-top:1px solid var(--line,#d9cdb8);max-height:9.5em;overflow:auto;font-size:.8125rem;color:var(--muted,#6e6356);line-height:1.5}
 .dh-log li:first-child{color:var(--ink,#26211c)}
 /* 좁은 화면: 조작 창이 캔버스 아래로 내려간다. data-panel로 고정할 수도 있다 */

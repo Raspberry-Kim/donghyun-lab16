@@ -10,6 +10,7 @@
  *   lang.parse(scriptText)                       → { ok, empty, settings, values, errors, output }   (상태를 건드리지 않는다)
  *   lang.applyDonghyunLang(scriptText, state)    → 같은 보고서. 오류가 하나도 없을 때만 state에 덮어쓴다
  *   lang.compose([[3, 3000], [10, 2000]])        → 그 설정을 출력하는 동현랭 코드(예제 · 시험)
+ *   lang.applySettings([[3, 3000]], state)       → 설정 목록을 바로 덮어쓴다(저장한 판을 불러올 때. 검사는 같다)
  * 스크립트가 비었으면 아무것도 덮어쓰지 않는다. state에 미리 든 기본값이 그대로 남는다. */
 (function (root) {
   'use strict';
@@ -84,6 +85,11 @@
       rep.output = run.output; rep.steps = run.steps;
       const tok = run.output.split(/\s+/).filter(Boolean);
       if (!tok.length) { rep.empty = true; return rep; }                                            // 아무것도 출력하지 않았다 → 기본값 그대로
+      return this._read(tok, rep, opt);
+    }
+    /** 정수 토큰들을 [설정 번호, 값…] 묶음으로 읽어 보고서에 채운다(parse와 applySettings가 같이 쓴다). */
+    _read(tok, rep, opt = {}) {
+      const fail = msg => { rep.ok = false; rep.errors.push(msg); return rep; };
       for (let i = 0; i < tok.length;) {
         const at = i + 1;
         if (!INT.test(tok[i])) return fail(`${at}번째 출력 '${tok[i].slice(0, 12)}'는 정수가 아니다. 설정은 뿡뿡(정수)으로만 내보내고 뿡뿡뿡(줄바꿈)으로 띄운다.`);
@@ -117,6 +123,21 @@
       const rep = this.parse(scriptText, { ctx });
       rep.applied = [];
       if (!rep.ok || !state) return rep;
+      return this._write(rep, state, ctx);
+    }
+
+    /** 설정 목록 [[번호, 값…], …]을 동현랭을 돌리지 않고 globalState에 덮어쓴다(저장한 판을 불러올 때).
+     *  범위 · 자료 검사는 스크립트로 읽을 때와 같다. 오류가 있으면 하나도 쓰지 않는다. @returns 보고서 {ok, empty, settings, errors, applied} */
+    applySettings(list, state, ctx = {}) {
+      const rep = { ok: true, empty: false, name: this.name, output: '', steps: 0, settings: [], values: {}, errors: [], applied: [] };
+      if (!Array.isArray(list) || list.length > 2000 || list.some(x => !Array.isArray(x) || !x.length || x.some(v => !Number.isInteger(v)))) { rep.ok = false; rep.errors.push('설정 목록은 [번호, 값…] 묶음의 목록이어야 한다.'); return rep; }
+      if (!list.length) { rep.empty = true; return rep; }
+      for (const x of list) { const c = this.commands.get(x[0]); if (c && x.length !== 1 + c.args.length) { rep.ok = false; rep.errors.push(`설정 ${x[0]}(${c.label})의 값은 ${c.args.length}개여야 한다.`); return rep; } }
+      this._read(list.flat().map(String), rep, { ctx });
+      if (!rep.ok || !state) return rep;
+      return this._write(rep, state, ctx);
+    }
+    _write(rep, state, ctx) {
       for (const s of rep.settings) {
         const c = this.commands.get(s.n);
         if (c.set) c.set(state, s.values, ctx); else setPath(state, c.path, s.values.length === 1 ? s.values[0] : s.values);

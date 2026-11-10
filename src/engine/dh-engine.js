@@ -108,8 +108,28 @@
     }
     /** 저장용 묶음: 틱·달력·난수·맨 위 장면 상태. */
     snapshot() { return { engine: DH.VERSION, tick: this.loop.tick, clock: this.clock.toJSON(), rng: this.rng.state, scene: this.scene ? this.scene.save() : null }; }
+    /** 저장 묶음의 달력과 난수가 이 엔진에 맞는지 본다. 맞지 않으면 까닭을 담아 던진다(아무것도 바꾸지 않는다). */
+    checkSnapshot(s) {
+      const c = s && s.clock, I = Save.int, num = v => typeof v === 'number' && isFinite(v);
+      Save.need(c && typeof c === 'object' && c.unit === this.clock.unit && I(c.year, 1, 9999) && I(c.month, 1, 12) && I(c.day, 1, DH.Clock.daysIn(c.year, c.month)) && I(c.serial, 0) && I(c.turn, 1) && Array.isArray(c.actors) && c.actors.every(a => typeof a === 'string')
+        && I(c.index, 0, Math.max(0, c.actors.length - 1)) && num(c.speed) && c.speed > 0 && c.speed <= 8 && (c.acc === undefined || (num(c.acc) && c.acc >= 0 && c.acc < 1e6)), '날짜 정보가 맞지 않는다.');
+      Save.need(I(s.rng, 0, 4294967295), '난수 정보가 맞지 않는다.');
+    }
+    /** 저장 묶음의 달력과 난수를 되돌린다. 흐르는 날짜는 멈춘 채로 돌아온다. 장면과 판은 게임이 따로 되돌린다. */
+    restore(s) { this.checkSnapshot(s); this.clock.load(s.clock); this.clock.running = false; this.rng.state = s.rng >>> 0; }
     destroy() { this.stop(); while (this.scenes.length) this.scenes.pop().exit(); if (this._off) this._off.forEach(f => f()); }
   }
 
-  Object.assign(DH, { Scene, MapScene, Engine });
+  /** 저장 묶음을 검사할 때 쓰는 작은 도구. 맞지 않으면 까닭을 담아 던진다. */
+  const Save = {
+    need(ok, why) { if (!ok) throw new Error(why); },
+    int(v, min = -Infinity, max = Infinity) { return Number.isInteger(v) && v >= min && v <= max; },
+    /** 머리말: 어느 게임의 몇 번째 형식인지 */
+    head(d, format, version, name) {
+      Save.need(d && typeof d === 'object' && !Array.isArray(d) && d.format === format, `${name} 저장 파일이 아니다.`);
+      Save.need(d.version === version, `지원하지 않는 저장 형식 버전이다(${String(d.version).slice(0, 12)}).`);
+    }
+  };
+
+  Object.assign(DH, { Scene, MapScene, Engine, Save });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

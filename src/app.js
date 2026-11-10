@@ -1,5 +1,6 @@
 /* 동현삼 앱: 공통 엔진의 지도 장면을 A 칸에 띄우고, B 칸의 동현랭 편집기가 설정을 읽어 새 판을 연다.
- * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다. */
+ * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다.
+ * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다. */
 (function () {
 'use strict';
 const GAME = DH.Sam;
@@ -116,14 +117,14 @@ function exitFull() { if (isPseudo()) return setPseudo(false); if (fullEl() === 
 let hintTimer = 0;
 function onFull() {
   const on = isFull(); stageFull.classList.toggle('fs', on);
-  $('#exit-full').hidden = !on; $('#full').textContent = on ? '전체 화면 닫기' : '전체 화면';
+  $('#exit-full').hidden = !on; $('#fs-save').hidden = !on; $('#fs-load').hidden = !on; $('#full').textContent = on ? '전체 화면 닫기' : '전체 화면';
   clearTimeout(hintTimer); $('#full-hint').hidden = !on; if (on) hintTimer = setTimeout(() => { $('#full-hint').hidden = true; }, 5000);
   fit(); setTimeout(fit, 60);
   if (on) { $('#full').blur(); const cv = host.querySelector('.dh-canvas'); if (cv) cv.focus({ preventScroll: true }); }   // 방향키가 바로 듣게
 }
 document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
 addEventListener('resize', () => { if (isFull()) fit(); });
-addEventListener('keydown', e => { if (e.key === 'Escape' && isPseudo()) setPseudo(false); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && isPseudo() && !menu) setPseudo(false); });
 $('#exit-full').onclick = exitFull;
 $('#full').onclick = () => {
   if (isFull()) return exitFull(); if (!current) return;
@@ -132,10 +133,97 @@ $('#full').onclick = () => {
 };
 window.__dhFull = { fit, setPseudo, isFull };            // 시험용 손잡이
 
+/* ---------- 저장 · 불러오기(동현심과 같은 규칙): 브라우저 칸 3개 + .dhsave 파일. 저절로 저장하지 않는다 ----------
+   메뉴는 화면 가운데 뜨고(전체 화면에서도), 떠 있는 동안 판은 멎는다. 칸은 이 기기의 이 브라우저에만 남는다 */
+const SAVE = GAME.SAVE, SLOTS = 3, menuBack = $('#menu-back'), menuEl = $('#menu');
+let menu = null, menuResume = false;
+const status = (text, kind) => { $('#status').textContent = text; $('#status').dataset.kind = kind || ''; };
+const toast = (text, kind) => { status(text, kind); if (current) current.layout.log(text); };
+const clip = (v, n = 40) => String(v ?? '').slice(0, n);
+const eul = n => (n === 2 ? '를' : '을');                // 칸 1을 · 칸 2를 · 칸 3을
+function snapshot() { return { ...current.scene.saveGame(), lab: (/v([\d.]+)/.exec($('.edition').textContent) || [])[1] || '', savedAt: new Date().toISOString() }; }
+function readSlot(n) { try { const t = localStorage.getItem(SAVE.slot + n), d = t ? JSON.parse(t) : null; return d && d.format === SAVE.format ? d : null; } catch (e) { return null; } }
+function slotNote(d) {
+  if (!d) return '비어 있음';
+  const u = d.summary || {}, t = new Date(d.savedAt), pad = v => String(v).padStart(2, '0'), when = isNaN(t) ? '' : ` · ${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())} 저장`;
+  return [u.title, u.date, u.line].filter(Boolean).map(x => clip(x)).join(' · ') + when;
+}
+function saveToSlot(n) {
+  try { const d = snapshot(); localStorage.setItem(SAVE.slot + n, JSON.stringify(d)); toast(`브라우저 칸 ${n}에 저장했다 · ${d.summary.title} · ${d.summary.date}`); return true; }
+  catch (e) { toast('브라우저 저장에 실패했다. 파일로 내려받아 저장하자.', 'error'); return false; }
+}
+function saveToFile() {
+  const d = snapshot(), a = document.createElement('a'), name = `${SAVE.file}-${d.summary.title}-${d.summary.date}`.replace(/[\\/:*?"<>|\s]+/g, '');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' })); a.download = name + '.dhsave'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`.dhsave 파일로 내려받았다 · ${d.summary.title} · ${d.summary.date}`);
+}
+/** 저장 묶음을 판에 되살린다. 맞지 않으면 까닭을 알리고 하던 판을 그대로 둔다 */
+function loadFrom(d) {
+  const r = current.scene.loadGame(d);
+  if (!r.ok) { toast('불러오기 실패: ' + r.why + ` 하던 ${SAVE.word}은 그대로 두었다.`, 'error'); return false; }
+  status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
+  fit(); return true;
+}
+async function loadFile(input) {
+  const f = input.files[0]; input.value = ''; if (!f || !current) return;
+  let d = null; try { if (f.size <= 4e6) d = JSON.parse(await f.text()); } catch (e) { d = null; }
+  if (!d || typeof d !== 'object' || d.format !== SAVE.format) return toast(`불러오기 실패: ${SAVE.name} 저장 파일이 아니다. 하던 ${SAVE.word}은 그대로 두었다.`, 'error');
+  confirmMenu(`${slotNote(d)}\n이 파일을 불러올까? 저장하지 않은 진행은 사라진다.`, [['불러온다', () => loadFrom(d)], ['그만둔다', loadMenu]], loadMenu);
+}
+/* 메뉴: items = [{label, note, off, fn}] 또는 [label, fn]. 고르면 닫히고 fn을 부른다. Esc와 바깥 누르기는 onCancel(없으면 그냥 닫기) */
+function openMenu(title, items, onCancel, text) {
+  if (!menu) { menuResume = !!current && current.engine.loop.running; if (current) current.engine.stop(); }
+  menu = { items: items.map(it => (Array.isArray(it) ? { label: it[0], fn: it[1] } : it)), onCancel };
+  const h = el('h4', title); h.id = 'menu-title'; menuEl.replaceChildren(h);
+  if (text) { const q = el('p', text); q.className = 'menu-text'; menuEl.append(q); }
+  menu.items.forEach((it, i) => { const b = el('button'); b.type = 'button'; b.className = 'mi'; b.dataset.i = i; b.disabled = !!it.off; b.append(el('span', it.label)); if (it.note) b.append(el('small', it.note)); menuEl.append(b); });
+  menuBack.hidden = false;
+  const first = menuEl.querySelector('.mi:not(:disabled)'); if (first) first.focus({ preventScroll: true });
+}
+function closeMenu() {
+  if (!menu) return; menu = null; menuBack.hidden = true;
+  if (current) { if (menuResume && tab === 'play') current.engine.start(); const cv = host.querySelector('.dh-canvas'); if (cv) cv.focus({ preventScroll: true }); }   // 닫으면 키보드가 다시 지도에 듣는다
+}
+function cancelMenu() { const c = menu && menu.onCancel; closeMenu(); if (c) c(); }
+function confirmMenu(q, opts, back) { const [title, ...rest] = q.split('\n'); openMenu(rest.length ? rest.join(' ') : title, opts, back, rest.length ? title : ''); }
+menuEl.addEventListener('click', e => { const b = e.target.closest('.mi'); if (!b || !menu) return; const it = menu.items[+b.dataset.i]; if (!it || it.off) return; closeMenu(); if (it.fn) it.fn(); });
+menuBack.addEventListener('click', e => { if (e.target === menuBack) cancelMenu(); });
+menuBack.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return cancelMenu(); }
+  const list = [...menuEl.querySelectorAll('.mi:not(:disabled)')], i = list.indexOf(document.activeElement), d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+  if (d && list.length) { e.preventDefault(); list[(i + d + list.length) % list.length].focus(); }
+  else if (e.key === 'Tab' && list.length) { e.preventDefault(); list[(i + (e.shiftKey ? -1 : 1) + list.length) % list.length].focus(); }      // 메뉴 밖으로 나가지 않는다
+});
+function saveMenu() {
+  if (!current) return;
+  const can = current.scene.saveInfo(); if (!can.ok) return openMenu('지금은 저장할 수 없다', [['돌아가기', null]], null, can.why);
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), fn: () => (d ? confirmMenu(`칸 ${n}에 덮어쓸까?`, [['덮어쓴다', () => saveToSlot(n)], ['그만둔다', saveMenu]], saveMenu) : saveToSlot(n)) }); }
+  items.push({ label: '파일로 내려받기', note: '.dhsave', fn: saveToFile }, { label: '칸 지우기', fn: deleteMenu }, ['돌아가기', null]);
+  openMenu('저장', items, null, '칸은 이 기기의 이 브라우저에만 남는다. 다른 기기로 옮기려면 파일로 내려받는다.');
+}
+function deleteMenu() {
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), off: !d,
+    fn: () => confirmMenu(`칸 ${n}${eul(n)} 지울까? 되돌릴 수 없다.`, [['지운다', () => { try { localStorage.removeItem(SAVE.slot + n); } catch (e) {} toast(`브라우저 칸 ${n}${eul(n)} 지웠다`); deleteMenu(); }], ['그만둔다', deleteMenu]], deleteMenu) }); }
+  items.push(['돌아가기', saveMenu]); openMenu('칸 지우기', items, saveMenu);
+}
+function loadMenu() {
+  if (!current) return;
+  const items = [];
+  for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), off: !d,
+    fn: () => confirmMenu(`지금 ${SAVE.word}을 두고 칸 ${n}${eul(n)} 불러올까? 저장하지 않은 진행은 사라진다.`, [['불러온다', () => loadFrom(readSlot(n))], ['그만둔다', loadMenu]], loadMenu) }); }
+  items.push({ label: '파일에서 불러오기', note: '.dhsave', fn: () => $('#load-file').click() }, ['돌아가기', null]);
+  openMenu('불러오기', items);
+}
+for (const id of ['#game-save', '#fs-save']) $(id).onclick = saveMenu;
+for (const id of ['#game-load', '#fs-load']) $(id).onclick = loadMenu;
+$('#load-file').onchange = e => loadFile(e.target);
+
 /* ---------- 시작: 자료를 읽고 기본값으로 판을 연다 ---------- */
 GAME.boot($('#host'), '#lab-data').then(g => {
   current = g; window.__dh = g;                          // 시험용 손잡이
-  $('#run').disabled = false; $('#full').disabled = false; $('#status').textContent = '기본값으로 열었다';
+  $('#run').disabled = false; $('#full').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '기본값으로 열었다';
   fillLang();
 }).catch(e => {
   const p = el('pre', e.message); p.className = 'boot-error'; $('#host').replaceChildren(p);

@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
-title: "Donghyunsam (동현삼): a single-player turn-based strategy laboratory on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
+title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.02"
+version: "0.03"
 doi: "10.5281/zenodo.24106052"
 date-released: "2026-11-10"
 authors:
@@ -32,11 +32,15 @@ abstract: >-
   not checked against the original game. No graphic, sound, text, number or
   code of the original game is used or extracted. Romance of the Three
   Kingdoms is a series of Koei Tecmo Games; this work is unaffiliated. Input
-  is mouse or touch, with a fullscreen mode; there is no save yet. The MIT
+  is keyboard, mouse or touch, with a fullscreen mode; the whole game can be
+  played from the keyboard alone. A game can be saved by hand to three
+  browser slots or to a .dhsave file and loaded back, together with the
+  applied settings, the calendar and the random-number state. The MIT
   license applies to the Donghyunsam code and documentation; the page fonts
   are under the SIL Open Font License. See LICENSE and CREDITS.md.
 keywords:
   - turn-based strategy
+  - strategy simulation game
   - Romance of the Three Kingdoms
   - hex grid
   - esoteric programming language

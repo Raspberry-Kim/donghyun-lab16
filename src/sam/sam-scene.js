@@ -2,14 +2,21 @@
  *   군주를 고른다 → 우리 주를 찍는다 → 농지 개발 · 징병 · 이동 · 수색 · 침공 가운데 하나 → 턴 종료.
  *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다.
  *   턴 종료를 누르면 다른 군주들이 움직인다. 우리 주가 침공받으면 전투 화면으로 넘어간다(sam-battle-scene.js).
- *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다. */
+ *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다.
+ * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 단추 · Enter 노란 단추 · Esc 그만두기 ·
+ *   Shift+방향키(또는 W A S D) 지도 옮기기 · + − 확대와 축소. 이동·침공에서 '어디로'를 고를 때는 방향키로 대상을 옮기고 Enter로 정한다.
+ * 저장: saveGame()이 설정 목록 · 달력 · 난수 · 판을 한 묶음으로 내고, loadGame()이 검사한 뒤 되살린다. 우리 차례의 지도에서만 저장한다. */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
   const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   const NEUTRAL = '#b9b0a2', INK = '#26211c', ACCENT = '#f2b705', RED = '#c0321f';
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const ZOOM = [{ id: 'zin', label: '확대' }, { id: 'zout', label: '축소' }];
+  const ZOOM = [{ id: 'zin', label: '확대', key: '+' }, { id: 'zout', label: '축소', key: '−' }];
+  const SAVE = { format: 'donghyunsam-save', version: 1, name: '동현삼', slot: 'donghyunsam:slot', file: 'donghyunsam', word: '판' };
+  const ARROW = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }, PAN = { KeyA: 'ArrowLeft', KeyD: 'ArrowRight', KeyW: 'ArrowUp', KeyS: 'ArrowDown' };
+  const digit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(code); return m ? Number(m[1]) : 0; };
+  const NO = why => ({ ok: false, why });
 
   class SamMapScene extends DH.MapScene {
     constructor(engine, world, layout) {
@@ -17,6 +24,7 @@
       this.state = DH.Sam.newState();                             // globalState: 기본값. 동현랭 설정이 오면 새로 지어 덮어쓴다
       this.game = this.newGame(null);                              // 군주를 고르기 전에는 구경만 한다
       this.mode = 'pick'; this.selected = null; this.sub = null; this.pause = 0; this.flash = null;
+      this.settings = [];                                          // 지금 판에 적용된 동현랭 설정 [[번호, 값…]] (저장할 때 함께 적는다)
     }
     newGame(player) { return new DH.Sam.Game(this.world, { player, rng: this.engine.rng, state: this.state }); }
     /** 동현랭 설정을 받아 globalState를 새로 짓고 판을 다시 연다. 오류가 있으면 지금 판을 그대로 둔다.
@@ -24,7 +32,7 @@
     applyDonghyunLang(scriptText) {
       const st = DH.Sam.newState(), rep = DH.Sam.applyDonghyunLang(scriptText, st, { world: this.world });
       if (!rep.ok) return rep;
-      this.state = st;
+      this.state = st; this.settings = rep.settings.map(x => [x.n, ...x.values]);
       while (this.engine.scene && this.engine.scene !== this) this.engine.popScene();          // 전투 중이었으면 접는다
       this.layout.log(rep.empty ? '동현랭 설정이 없다. 기본값으로 새 판을 연다' : `동현랭 설정 ${rep.settings.length}개를 적용했다: ${rep.applied.join(' · ')}`);
       this.restart();
@@ -77,6 +85,53 @@
       if (best !== null && this.candidates().some(q => q.id === best)) return this.command('to:' + best);   // 고르는 중이면 그 주가 대상이 된다
       this.sub = null; this.selected = best; this.refresh();
     }
+    /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 단추를 누른다. */
+    onKey(code, ev) {
+      if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return;
+      const d = ARROW[code], shift = !!(ev && ev.shiftKey), n = digit(code), used = () => { if (ev) ev.preventDefault(); };
+      if ((d && shift) || PAN[code]) return super.onKey(PAN[code] || code, ev);              // 지도 옮기기
+      if (d) { used(); return this.step(d); }
+      if (code === 'Escape') { if (this.mode === 'busy') return; if (this.sub) this.sub = null; else this.selected = null; return this.refresh(); }
+      if (ev && ev.repeat) return;                                                            // 누르고 있어도 단추는 한 번만 눌린다
+      if (n) { used(); this.layout.press(n); }
+      else if (code === 'Enter' || code === 'NumpadEnter') { used(); const s = this.sub; if (s && s.step === 'to' && s.aim != null) this.command('to:' + s.aim); else this.layout.pressPrimary(); }
+      else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
+      else super.onKey(code, ev);                                                             // + − 확대 · 축소
+    }
+    /** from에서 d 방향으로 가장 가까운 주(pool 가운데). 그 방향의 56° 안쪽을 먼저 보고, 없으면 그쪽 절반에서 찾는다. 없으면 null */
+    toward(from, d, pool) {
+      const P = this.pos.get(from); let best = null, bs = Infinity, wide = null, ws = Infinity;
+      for (const q of pool) {
+        if (q.id === from) continue;
+        const Q = this.pos.get(q.id), vx = Q.x - P.x, vy = Q.y - P.y, along = vx * d[0] + vy * d[1], side = Math.abs(vx * d[1] - vy * d[0]), sc = along + side * 2;
+        if (along <= 0.01) continue;
+        if (side <= along * 1.5) { if (sc < bs) { bs = sc; best = q.id; } } else if (sc < ws) { ws = sc; wide = q.id; }
+      }
+      return best ?? wide;
+    }
+    /** 방향키 한 번. 고른 주가 없으면 우리 본거지(없으면 화면 가운데에서 가까운 주)부터 시작한다. */
+    step(d) {
+      if (this.mode === 'busy') return;
+      const g = this.game, s = this.sub, all = [...g.provinces.values()];
+      if (s && s.step === 'to') { const c = this.candidates(), next = s.aim == null ? this.toward(this.selected, d, c) ?? (c[0] && c[0].id) : this.toward(s.aim, d, c); if (next != null) { s.aim = next; this.reveal(next); } return this.refresh(); }
+      if (s) return;
+      let next;
+      if (this.selected === null) {
+        const own = g.player ? g.provincesOf(g.player) : [], home = g.player && g.officers.get(g.factions.get(g.player).leader), mid = this.cam.toWorld(this.engine.width / 2, this.engine.height / 2);
+        next = home && own.some(p => p.id === home.province) ? home.province : own.length ? own[0].id : all.map(p => ({ id: p.id, d: Math.hypot(this.pos.get(p.id).x - mid.x, this.pos.get(p.id).y - mid.y) })).sort((a, b) => a.d - b.d)[0].id;
+      } else next = this.toward(this.selected, d, all);
+      if (next == null) return;
+      this.selected = next; this.reveal(next); this.refresh();
+    }
+    /** Space: 명령이 남은 우리 주를 번호 순서로 돈다. 남은 주가 없으면 우리 주를 모두 돈다. */
+    nextOwn(dir = 1) {
+      const g = this.game; if (this.mode !== 'play' || this.sub) return;
+      const own = g.provincesOf(g.player).sort((a, b) => a.id - b.id), left = own.filter(p => !p.acted), list = left.length ? left : own; if (!list.length) return;
+      const cur = this.selected ?? (dir > 0 ? -Infinity : Infinity), next = dir > 0 ? list.find(p => p.id > cur) || list[0] : [...list].reverse().find(p => p.id < cur) || list[list.length - 1];
+      this.selected = next.id; this.reveal(next.id); this.refresh();
+    }
+    /** 그 주가 화면 가장자리 밖에 있으면 화면 가운데로 데려온다. */
+    reveal(id) { const P = this.pos.get(id), q = this.cam.toScreen(P.x, P.y), m = 28, e = this.engine; if (q.x < m || q.x > e.width - m || q.y < m || q.y > e.height - m) { this.cam.centerOn(P.x, P.y); this.cam.clampTo(this.grid); } }
 
     command(id) {
       if (id === 'zin') return this.zoomBy(1.25);
@@ -149,7 +204,7 @@
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
       if (!sel) {
-        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다.' });
+        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 단추를 누른다.' });
         else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음']], note: this.note(null) });
         return pick();
       }
@@ -186,7 +241,7 @@
       if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }, ...ZOOM];
       if (p && s) {
         if (s.step === 'who') return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${o.name} 무${o.war}` })), { id: 'who:none', label: '병력만', disabled: p.troops <= 0 }, cancel];
-        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, label: s.type === 'move' ? `${q.name} ${fmt(q.troops)}` : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
+        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? `${q.name} ${fmt(q.troops)}` : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
         const half = Math.floor(p.troops / 2), min = g.rules.attackMin;
         if (s.type === 'move') return [...(s.officer !== null ? [{ id: 'n:0', label: '병력 없이' }] : []), { id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half <= 0 }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, disabled: p.troops <= 0 }, cancel];
         return [{ id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half < min, hint: half < min ? `병력 ${fmt(min)}부터 보낼 수 있다` : '' }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, primary: true }, cancel];
@@ -214,6 +269,7 @@
       for (const p of gm.provinces.values()) {
         const P = this.pos.get(p.id), r = p.id === sel ? 5.2 : 4.2;
         if (cand.has(p.id)) { g.beginPath(); g.arc(P.x, P.y, r + 2.6 + 0.7 * Math.sin(t / 7), 0, Math.PI * 2); g.strokeStyle = candCol; g.lineWidth = 1.8; g.stroke(); }
+        if (cand.has(p.id) && this.sub.aim === p.id) { g.beginPath(); g.arc(P.x, P.y, r + 6.2, 0, Math.PI * 2); g.strokeStyle = INK; g.lineWidth = 1.6; g.stroke(); }      // 방향키로 겨눈 대상
         g.beginPath(); g.arc(P.x, P.y, r, 0, Math.PI * 2); g.fillStyle = this.colorOf(p); g.fill();
         g.lineWidth = p.id === sel ? 2 : near.has(p.id) ? 1.6 : 0.9; g.strokeStyle = p.id === sel ? ACCENT : near.has(p.id) ? '#fff' : INK; g.stroke();
         if (me && p.owner === me && !p.acted && this.mode === 'play') { g.beginPath(); g.arc(P.x, P.y, 1.5, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); }      // 아직 명령을 내리지 않은 우리 주
@@ -235,7 +291,43 @@
       g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK; g.font = `800 20px ${FONT}`; g.fillText(this.overTitle(), W / 2, y + 40);
       g.font = `500 12px ${FONT}`; g.fillStyle = '#6e6356'; g.fillText(`${this.engine.clock.label} · ‘다시 하기’를 누르면 군주를 다시 고른다`, W / 2, y + 68);
     }
-    save() { return { selected: this.selected, mode: this.mode, player: this.game.player, months: this.game.months }; }
+    // ───────── 저장과 불러오기 ─────────
+    save() { return { selected: this.selected, mode: this.mode, cam: { x: this.cam.x, y: this.cam.y, zoom: this.cam.zoom } }; }
+    /** 지금 저장할 수 있는지. 우리 차례의 지도에서만 된다. {ok:true} 또는 {ok:false, why} */
+    saveInfo() {
+      if (this.engine.scene !== this) return NO('전투가 끝난 뒤에 저장할 수 있다.');
+      if (this.mode === 'pick') return NO('군주를 고른 뒤에 저장할 수 있다.');
+      if (this.mode === 'busy') return NO('다른 군주들의 차례가 끝난 뒤에 저장할 수 있다.');
+      return { ok: true };
+    }
+    /** 저장 묶음: 머리말 · 한 줄 요약 · 적용된 설정 목록 · 달력 · 난수 · 판. JSON으로 그대로 적을 수 있다. */
+    saveGame() {
+      const g = this.game, own = g.provincesOf(g.player);
+      return { format: SAVE.format, version: SAVE.version, summary: { title: g.fname(g.player), date: this.engine.clock.label, line: `주 ${own.length} · 병력 ${fmt(own.reduce((n, p) => n + p.troops, 0))}` },
+        settings: this.settings.map(x => [...x]), ...this.engine.snapshot(), game: g.toJSON() };
+    }
+    /** 저장 묶음으로 판을 되살린다. 하나라도 맞지 않으면 하던 판을 그대로 둔다. 전투 중이었으면 전투를 접는다.
+     *  @returns {{ok:true, text, applied:string[]} | {ok:false, why}} */
+    loadGame(d) {
+      const e = this.engine, w = this.world; let st, game, rep;
+      try {
+        DH.Save.head(d, SAVE.format, SAVE.version, SAVE.name);
+        st = DH.Sam.newState(); rep = DH.Sam.lang.applySettings(d.settings, st, { world: w });
+        DH.Save.need(rep.ok, '저장된 설정이 맞지 않는다. ' + rep.errors.join(' '));
+        e.checkSnapshot(d);
+        game = DH.Sam.Game.restore(w, d.game, { rng: e.rng, state: st });
+        DH.Save.need(d.clock.actors.length === 1 && d.clock.actors[0] === game.player, '날짜 정보가 맞지 않는다.');
+      } catch (err) { return NO(err.message); }
+      while (e.scene && e.scene !== this) e.popScene();
+      this.state = st; this.settings = d.settings.map(x => [...x]); this.game = game; e.restore(d);
+      this.mode = game.over ? 'over' : 'play'; this.sub = null; this.flash = null; this.pause = 0;
+      const v = d.scene || {}, c = v.cam, num = x => typeof x === 'number' && isFinite(x);
+      this.selected = w.provinces.has(v.selected) ? v.selected : null;
+      if (c && num(c.x) && num(c.y) && num(c.zoom)) { this.cam.zoom = Math.min(this.cam.maxZoom, Math.max(this.cam.minZoom, c.zoom)); this.cam.x = c.x; this.cam.y = c.y; this.cam.clampTo(this.grid); }
+      const text = `저장한 판을 불러왔다 · ${game.fname(game.player)} · ${e.clock.label}`;
+      this.layout.log(text); this.refresh();
+      return { ok: true, text, applied: rep.applied };
+    }
   }
   const josaGa = w => DH.Sam.josa(w, '이', '가').slice(w.length);
 
@@ -243,15 +335,15 @@
   async function boot(host, src, opt = {}) {
     const world = DH.Sam.parse(await DH.Data.load(src));
     const W = 480, H = 360;
-    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H });
+    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 단추에 번호가 붙는다(숫자 키)
     const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: '#a9cbe0', clock: { unit: 'month', start: world.meta.start } });
     const scene = new SamMapScene(engine, world, layout); engine.setScene(scene);
     if (opt.script) scene.applyDonghyunLang(opt.script);                      // 동현랭 설정을 주면 그 값으로 연다
     if (opt.player) scene.start(opt.player);
     if (opt.autostart !== false) engine.start();
     return { engine, layout, scene, world, get game() { return scene.game; }, lang: DH.Sam.lang, examples: DH.Sam.examples(world), convention: DH.Sam.lang.describe(DH.Sam.newState()),
-      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text) };
+      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text), save: SAVE };
   }
 
-  DH.Sam = Object.assign(DH.Sam || {}, { SamMapScene, boot });
+  DH.Sam = Object.assign(DH.Sam || {}, { SamMapScene, boot, SAVE });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

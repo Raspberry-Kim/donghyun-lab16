@@ -8,7 +8,8 @@
  *   침공       이웃한 남의 주로 쳐들어간다 → 전투(sam-battle.js) → settle()로 결과를 반영한다.
  * 달이 바뀔 때: 세금(인구÷2000 × 충성도%) · 수확(농지 × 4) · 군량(병력÷100) · 충성도 +1(70까지) · 인구 +0.2%.
  *
- * AI 군주(aiDecide): ① 병력 확보 → ② 인접 영지 공격 → ③ 후방 병력을 전선으로 → ④ 농지 개발. */
+ * AI 군주(aiDecide): ① 병력 확보 → ② 인접 영지 공격 → ③ 후방 병력을 전선으로 → ④ 농지 개발.
+ * 저장: toJSON()이 판에서 바뀌는 것만 적고, Game.restore()가 자료에 비춰 검사한 뒤 되살린다. */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
@@ -252,6 +253,34 @@
       }
       return { done: true };
     }
+    // ───────── 저장과 불러오기 ─────────
+    /** 판에서 바뀌는 것만 적는다(이름 · 이웃 · 색은 자료에 있다). 설정(globalState)과 난수는 장면이 따로 적는다. */
+    toJSON() {
+      return { player: this.player, months: this.months, over: this.over, overWhy: this.overWhy,
+        factions: [...this.factions.values()].map(f => ({ id: f.id, alive: f.alive })),
+        provinces: [...this.provinces.values()].map(p => ({ id: p.id, owner: p.owner, pop: p.pop, gold: p.gold, rice: p.rice, troops: p.troops, loyalty: p.loyalty, farm: p.farm, acted: p.acted })),
+        officers: [...this.officers.values()].map(o => ({ id: o.id, province: o.province, faction: o.faction, status: o.status, war: o.war, int: o.int, cha: o.cha })) };
+    }
+    /** toJSON()이 적은 것으로 판을 되살린다. 자료와 맞지 않으면 까닭을 담아 던진다(아무것도 바꾸지 않는다).
+     *  @param world 자료 @param d toJSON()의 결과 @param {{rng?:DH.RNG, state?:object}} o */
+    static restore(world, d, o = {}) {
+      const need = (ok, why) => { if (!ok) throw new Error(why); }, I = (v, min = 0, max = 1e12) => Number.isInteger(v) && v >= min && v <= max;
+      need(d && typeof d === 'object' && Array.isArray(d.factions) && Array.isArray(d.provinces) && Array.isArray(d.officers), '판 정보가 없다.');
+      need(typeof d.player === 'string' && world.factions.has(d.player), '군주가 자료에 없다.');
+      need(I(d.months, 0, 1e6) && [null, 'won', 'lost'].includes(d.over) && [null, 'all', 'goal', 'time', 'fall'].includes(d.overWhy) && (d.over === null) === (d.overWhy === null), '진행 정보가 맞지 않는다.');
+      const owner = f => f === null || (typeof f === 'string' && world.factions.has(f)), uniq = list => new Set(list.map(x => x && x.id)).size === list.length;
+      need(d.factions.length === world.factions.size && uniq(d.factions) && d.factions.every(f => f && world.factions.has(f.id) && typeof f.alive === 'boolean'), '세력 정보가 자료와 맞지 않는다.');
+      need(d.provinces.length === world.provinces.size && uniq(d.provinces) && d.provinces.every(p => p && world.provinces.has(p.id) && owner(p.owner) && I(p.pop) && I(p.gold) && I(p.rice) && I(p.troops) && I(p.loyalty, 0, 100) && I(p.farm, 0, 1000) && typeof p.acted === 'boolean'), '주 정보가 자료와 맞지 않는다.');
+      need(d.officers.length === world.officers.size && uniq(d.officers) && d.officers.every(x => { const w = x && world.officers.get(x.id);      // 현역 · 재야가 아닌 장수(포로 · 사망)는 자료 그대로여야 한다
+        return w && owner(x.faction) && I(x.war, 1, 100) && I(x.int, 1, 100) && I(x.cha, 1, 100) && (((x.status === 'active' && x.faction !== null) || (x.status === 'free' && x.faction === null)) ? world.provinces.has(x.province) : x.status === w.status && x.province === w.province && x.faction === w.faction); }), '장수 정보가 자료와 맞지 않는다.');
+      const g = new Game(world, { player: d.player, rng: o.rng, state: o.state });
+      for (const f of d.factions) g.factions.get(f.id).alive = f.alive;
+      for (const p of d.provinces) Object.assign(g.P(p.id), { owner: p.owner, pop: p.pop, gold: p.gold, rice: p.rice, troops: p.troops, loyalty: p.loyalty, farm: p.farm, acted: p.acted });
+      for (const x of d.officers) Object.assign(g.officers.get(x.id), { province: x.province, faction: x.faction, status: x.status, war: x.war, int: x.int, cha: x.cha });
+      g.months = d.months; g.over = d.over; g.overWhy = d.overWhy; g.queue = [];
+      return g;
+    }
+
     /** 화면 없이 AI 차례를 끝까지 돌린다(사람이 없는 판 · 시험). 사람의 주가 공격받으면 그 전투도 AI가 대신 싸운다. */
     runAIAll() { const log = []; this.beginAI(); for (;;) { const s = this.nextAI(); if (s.done) break; if (s.battle) { const out = this.settle(s.pending, s.battle.auto()); log.push(`${s.text} → ${out.text}`); } else if (!s.quiet && s.text) log.push(s.text); } return log; }
   }

@@ -196,7 +196,9 @@ sup.tm{font-size:.55em;line-height:0;vertical-align:super;margin-left:.08em;lett
 /* ---- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄우고 오른쪽 위에 닫기 단추.
    요소 전체 화면을 못 쓰는 기기(iPhone Safari)는 창을 가득 채우는 유사 전체 화면. 크기는 app.js의 fit()이 --fs-*로 정한다 ---- */
 .stage-full{position:relative}
-.board-bar{display:flex;justify-content:flex-end;margin-top:8px}
+.board-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+.save-note{flex:1 1 200px;font-size:var(--text-xs);line-height:1.5;color:var(--muted);word-break:keep-all}.save-note b{color:var(--ink);font-weight:600}
+@media (max-width:560px){.save-note{flex-basis:100%}}
 .small-btn{min-height:32px;font-size:var(--text-xs);padding:0 10px}
 .board-bar .small-btn:disabled{opacity:.45;cursor:default}
 .stage-full:fullscreen{width:100vw;height:100vh;background:#0e0d0b}
@@ -221,13 +223,29 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .stage-full.fs.side .dh-panel{grid-area:2/2/3/3;min-height:0;overflow:auto;overscroll-behavior:contain}
 .stage-full.fs.side .dh-info{margin-left:0;width:100%}
 .stage-full.fs.side .dh-title{display:none}
-.exit-full{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:5;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
+.full-tools{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:5;display:flex;gap:6px}
+.stage-full.fs.stack .exit-full .long,.stage-full.fs.side .exit-full .long{display:none}      /* 좁은 화면에서는 '✕ 닫기'로 줄인다 */
+.exit-full{min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
 .exit-full:hover,.exit-full:focus-visible{opacity:1;background:rgba(20,18,16,.9)!important}
 /* 안내는 5초 동안 뜬다. 정보 띠를 가리지 않게 닫기 단추 왼쪽의 빈 띠에 둔다(가로로 든 휴대폰에서는 지도 아래쪽) */
-.full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 172px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
+.full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 318px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
 .full-hint[hidden]{display:none}.full-hint>span{display:block}
+.stage-full.fs.stack .full-hint{top:auto;bottom:calc(14px + env(safe-area-inset-bottom));max-width:calc(100% - 28px)}
 .stage-full.fs.side .full-hint{top:auto;bottom:calc(22px + env(safe-area-inset-bottom));left:calc(24px + env(safe-area-inset-left));max-width:min(440px,calc(100% - 320px))}
 .stage-full,.board-bar{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* ---- 저장 · 불러오기 메뉴(동현심과 같은 모양): 화면 가운데 뜨고, 전체 화면에서도 같은 자리다 ---- */
+.menu-back{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(14,13,11,.5)}
+.menu-back[hidden]{display:none}
+.game-menu{box-sizing:border-box;width:min(380px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:8px;box-shadow:4px 4px 0 rgba(0,0,0,.35);padding:8px;line-height:1.4;text-align:left}
+.game-menu h4{margin:4px 8px 6px;font:700 var(--text-sm) var(--body);line-height:1.5;word-break:keep-all}
+.game-menu .menu-text{margin:0 8px 8px;font-size:var(--text-xs);line-height:1.6;color:var(--muted);word-break:keep-all}
+.game-menu .mi{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;min-height:44px;padding:8px 10px;border:0;border-radius:5px;background:none;color:inherit;font:var(--text-sm) var(--body);text-align:left;cursor:pointer}
+.game-menu .mi:hover,.game-menu .mi:focus-visible{background:var(--surface2)}
+.game-menu .mi:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.game-menu .mi:active{background:var(--accent);color:#26211c}
+.game-menu .mi:disabled{opacity:.45;cursor:default;background:none}
+.game-menu .mi span{white-space:nowrap}
+.game-menu .mi small{font-size:var(--text-xs);color:var(--muted);text-align:right;word-break:keep-all}
 /* 설정 번호 표: 편집기 아래에 접어 둔다 */
 .lang-rule{margin-top:10px;border-top:1px solid var(--line)}
 .lang-rule summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm);font-weight:700;list-style:none}
