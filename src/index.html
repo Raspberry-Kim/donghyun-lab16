@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="동현랭으로 시작값과 규칙 수치를 정하고, 41개 주를 잇는 지도에서 달마다 명령을 내리고 10×10 육각 전장에서 싸우는 1인용 삼국 전략 실험실이다.">
+  <title>동현삼™ · 동현랭으로 여는 삼국 전략</title>
+  <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="header">
+  <a class="brand" href="#" aria-label="동현삼 첫 화면으로"><span class="brand-main"><img class="brand-icon" src="__BRAND_ICON__" alt="" width="96" height="96">동현<span>삼</span><sup>TM</sup></span><i class="brand-divider"></i><span class="brand-sub">THREE KINGDOMS<small>코드로 여는 삼국 전략</small></span></a>
+  <div class="edition">v__VERSION__<button id="theme" class="icon-btn" aria-label="밝은 화면과 어두운 화면 전환" title="화면 전환" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+</header>
+<main>
+__SERIES_NAV__
+  <section class="intro">
+    <div><div class="eyebrow">THREE KINGDOMS × ESOTERIC LANGUAGE</div><h1>삼국 실험실: <span class="title-brand">동현<span>삼</span><sup>TM</sup></span></h1><p><strong>동현랭</strong>으로 시작값과 규칙 수치를 정하는 1인용 삼국 전략이다. 후한 말의 <strong>41개 주</strong>를 잇는 지도에서 군주 아홉 가운데 하나를 골라, 달마다 주 하나에 명령 하나(농지 개발 · 징병 · 이동 · 수색 · 침공)를 내린다. 침공하면 <strong>10×10 육각 전장</strong>에서 부대를 움직여 싸운다. 모든 주(또는 코드로 정한 수의 주)를 차지하면 이긴다. 마우스나 손가락으로 논다.</p></div>
+    <div class="model-stamp"><strong>41 <span>주</span></strong><strong>9 <span>군주</span></strong><small>1인용 · 주 41 · 군주 9 · 장수 40 · 마우스·손가락</small><div class="input-marks" role="group" aria-label="입력 표식 · 쓸 수 있는 것: 마우스(손가락)"><span class="mark off kb" tabindex="0" data-tip="키보드 없음 · 명령은 마우스와 손가락으로 내린다. 지도를 한 번 누른 뒤 방향키로 지도를 옮기고 +·−로 확대·축소하는 것만 된다." aria-label="키보드 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path class="dots" d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13h.01M9.5 13h.01M13 13h.01M16.5 13h.01"/><path d="M8 16h8"/></svg></span><span class="mark on ms" tabindex="0" data-tip="마우스·손가락 가능 · 지도에서 주를 누르고 조작 창의 단추로 명령한다. 끌면 지도가 움직이고 바퀴로 확대·축소한다." aria-label="마우스·손가락 가능"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg></span><span class="mark off gp" tabindex="0" data-tip="게임패드 없음 · 이 실험실은 게임패드를 읽지 않는다." aria-label="게임패드 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="4.5"/><path d="M7 9.6v4.8M4.6 12h4.8"/><circle cx="16.6" cy="9.6" r=".85"/><circle cx="14.4" cy="12" r=".85"/><circle cx="18.8" cy="12" r=".85"/><circle cx="16.6" cy="14.4" r=".85"/><path class="dots" d="M11.3 13.4h.01M12.9 13.4h.01"/></svg></span><span class="mark off fs" tabindex="0" data-tip="전체 화면 없음 · 이 실험실에는 전체 화면이 없다." aria-label="전체 화면 없음"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><text class="full" x="12" y="14.6" text-anchor="middle">FULL</text></svg></span></div></div>
+  </section>
+  <nav class="tabs" aria-label="동현삼 메뉴"><button class="active" data-tab="play" aria-current="page">지도</button><button data-tab="protocol">동현삼 출전 규약</button><button data-tab="rules">규칙</button><button data-tab="engine">엔진과 자료</button><button data-tab="about">모델과 출처</button><span>시작값과 규칙은 동현랭으로, 명령은 마우스와 손가락으로</span></nav>
+  <div class="getting-started"><p><strong>처음이라면?</strong> 지도는 기본값으로 이미 열려 있다. 조작 창에서 군주를 고르면 시작한다. 예제 <b>넉넉한 유비</b>를 고르고 <b>출전</b>을 누르면 그 설정으로 새 판이 열린다. 시작값과 규칙 수치는 모두 <b>동현랭</b>이 출력한 정수로만 바꾼다.</p><a href="https://raspberry-kim.github.io/donghyun-lang/" target="_blank" rel="noopener">동현랭 배우기 · 실행기 ↗</a></div>
+
+  <section id="tab-play" class="tab-panel">
+    <div class="play-grid" id="play-grid">
+      <div class="field-col">
+        <div class="section-title"><h2><span>A</span> 지도</h2><span id="status" role="status">자료를 읽는 중</span></div>
+        <div id="host"></div>
+      </div>
+      <div class="side-col">
+        <section class="setup-panel" id="setup-panel">
+          <div class="section-title"><h2><span>B</span> 동현랭 출전 코드</h2><span>sortie.dh</span></div>
+          <div class="ed-panel">
+            <div class="ed-head"><select id="example" aria-label="동현랭 출전 예제 선택"></select><span class="ed-spacer"></span><button id="run" class="ed-btn ed-run" title="Ctrl/⌘ + Enter" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>출전 <kbd>⌘↵</kbd></button></div>
+            <div class="code-wrap"><div id="lines" aria-hidden="true"></div><textarea id="code" aria-label="동현랭 출전 코드" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea></div>
+            <div class="code-meta ed-status"><span id="line-count"></span><span>정수 출력 → 설정 번호 · 값 · ⌘/Ctrl ↵ 출전</span></div>
+          </div>
+          <p id="example-note"></p>
+          <p id="result" aria-live="polite">판은 기본값으로 열려 있다. 예제를 고르고 출전을 누르면 그 설정으로 새 판이 열린다.</p>
+          <div class="file-row"><button id="save">.dh 저장</button><label class="file-label">.dh 열기<input id="open" type="file" accept=".dh,.txt,text/plain" hidden></label></div>
+          <details class="lang-rule"><summary>설정 번호 표</summary><div class="table-wrap"><table><thead><tr><th>번호</th><th>설정</th><th>값</th><th>기본값</th></tr></thead><tbody id="lang-rows"></tbody></table></div></details>
+        </section>
+      </div>
+    </div>
+    <div class="workflow"><span>동현랭 코드</span><b>→</b><span>시작값 · 규칙 수치 · 스테이지</span><b>→</b><span>출전</span><b>→</b><span>달마다 주 하나에 명령 하나</span><b>→</b><span>침공하면 10×10 육각 전투</span><b>→</b><span>정한 수의 주를 차지하면 승리</span></div>
+  </section>
+
+  <section id="tab-protocol" class="tab-panel document" hidden>
+    <div class="doc-heading"><div class="eyebrow">SORTIE I/O · v__VERSION__</div><h2>시작값과 규칙 수치는 동현랭으로, 명령은 마우스와 손가락으로.</h2></div>
+<!--README:동현삼 출전 규약-->
+  </section>
+
+  <section id="tab-rules" class="tab-panel document" hidden>
+    <div class="doc-heading"><div class="eyebrow">HOW TO PLAY</div><h2>달마다 주 하나에 명령 하나, 침공하면 육각 전장.</h2><p class="input-note">머리글 오른쪽에 붙은 네 아이콘(키보드·마우스·게임패드·전체 화면 FULL)은 입력 표식이다. 이 실험실은 <b>마우스(손가락)만 켜져 있다</b>. 키보드는 지도를 옮기고 확대·축소하는 데만 쓰고, 동현랭 코드를 쓸 때 쓴다. 아이콘에 마우스를 올리거나 손을 대면 풍선 도움말이 뜬다.</p></div>
+<!--README+:놀이 방법|조작|동현삼 규칙-->
+  </section>
+
+  <section id="tab-engine" class="tab-panel document" hidden>
+    <div class="doc-heading"><div class="eyebrow">COMMON ENGINE · DATA</div><h2>동현삼과 동현항은 같은 엔진 위에 자료와 장면만 바꿔 얹는다.</h2><p>기술은 HTML5 Canvas와 Vanilla JS뿐이다. 묶는 도구도 바깥 라이브러리도 쓰지 않는다. 엔진(<code>src/engine/</code>)은 두 저장소에 같은 파일로 들어 있고, 게임마다 다른 것은 JSON 자료와 규칙·장면 파일(<code>src/sam/</code>)뿐이다.</p></div>
+<!--README+:엔진의 층|게임이 얹는 법|동현랭 어댑터|JSON 규격|파일|돌려 보기-->
+  </section>
+
+  <section id="tab-about" class="tab-panel document" hidden>
+    <div class="doc-heading"><div class="eyebrow">WHAT IS NEW, WHAT IS BORROWED</div><h2>큰 틀만 참고하고, 지도·자료·규칙·그림·글·코드는 새로 만들었다.</h2><p>동현삼은 1989년 Koei(光栄)의 턴제 전략 게임 「삼국지 II」(PC-8801 · PC-9801로 처음 발매)의 큰 틀(41개 주로 나뉜 땅에서 군주 하나를 골라 세력을 넓히는 구성)을 참고한 팬 실험이다.</p></div>
+    <div class="science-block"><span class="index">01</span><div><h3>원작의 그림·소리·글·수치는 담지 않았다.</h3><p>원작의 그래픽, 음악·효과음, 글, 자료 수치는 하나도 쓰지 않는다. 지도는 Natural Earth의 공공 영역 육지 자료에서 뽑아 육각 칸으로 옮겼고, 주와 장수의 수치는 동현삼이 정한 시험 값이다. 원작 파일은 이 저장소에 없고, 원작 파일에서 그림이나 자료를 꺼내 쓰지도 않았다. 소리는 없다.</p></div></div>
+    <div class="science-block"><span class="index">02</span><div><h3>동현삼에 있는 것과 없는 것.</h3><p>시작값과 규칙 수치를 동현랭으로 정한다. 명령은 다섯(농지 개발 · 징병 · 이동 · 수색 · 침공)뿐이고 전투는 10×10 육각 전장에서 치른다. 외교 · 계략 · 시나리오 고르기 · 저장과 불러오기는 없다. 주의 인접과 내정 · AI · 전투의 규칙과 수치는 동현삼이 정한 것이고, 원작의 규칙·수치와 맞춰 보지 않았다.</p></div></div>
+    <div class="science-block"><span class="index">03</span><div><h3>인물과 지명은 역사에서 왔다.</h3><p>군주 아홉과 장수 마흔의 이름, 주 41곳의 이름과 자리는 후한 말의 역사 인물과 실제 지명이다. 능력치와 시작 배치(200년 1월 무렵을 본떴다)는 시험 값이다.</p></div></div>
+    <div class="science-block"><span class="index">04</span><div><h3>상표와 관계</h3><p>「삼국지 II」를 비롯한 원작 시리즈의 이름과 권리는 코에이 테크모 게임스(Koei Tecmo Games)에 있다. 동현삼은 이들과 관계가 없고, 승인이나 후원을 받지 않았다.</p></div></div>
+    <div class="science-block"><span class="index">05</span><div><h3>코드와 글꼴의 이용 조건</h3><p>동현삼 코드와 문서는 MIT, 글꼴(검은고딕 Black Han Sans · Pretendard · 나눔고딕코딩)은 SIL Open Font License를 따른다. 동현랭 실행기는 동현랭 저장소의 MIT 코드를 그대로 쓴다. 육지와 바다를 뽑은 Natural Earth 자료는 공공 영역이다.</p></div></div>
+<!--README+:이 자료가 무엇이고 무엇이 아닌지|자료 출처-->
+    <aside class="maker-note"><span class="eyebrow">만든 사람</span><a class="sponsor-btn" href="https://github.com/sponsors/Raspberry-Kim" target="_blank" rel="noopener" aria-label="GitHub Sponsors로 동현랭 후원하기" title="GitHub Sponsors로 후원하기"><svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.655 14.916v-.001h-.002l-.006-.003-.018-.01a22.066 22.066 0 0 1-3.744-2.584C2.045 10.731 0 8.35 0 5.5 0 2.836 2.086 1 4.25 1 5.797 1 7.153 1.802 8 3.02 8.847 1.802 10.203 1 11.75 1 13.914 1 16 2.836 16 5.5c0 2.85-2.044 5.231-3.886 6.818a22.094 22.094 0 0 1-3.433 2.414 7.152 7.152 0 0 1-.31.17l-.018.01-.008.004a.75.75 0 0 1-.69 0Z"></path></svg>후원</a><p>인하대학교 의과대학 김동현 교수는 백신학·감염학을 연구한다. 명랑하고 따뜻한 개발을 지향한다.</p></aside>
+  </section>
+</main>
+<footer><span>동현삼 v__VERSION__ · 인하대학교 의과대학 교수 김동현</span><span>1인용 · 주 41 · 군주 9 · 장수 40</span><span><a href="https://raspberry-kim.github.io/donghyun-lang/" target="_blank" rel="noopener">동현랭</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lang" target="_blank" rel="noopener">동현랭 GitHub</a> · <a href="https://github.com/Raspberry-Kim/donghyun-lab16" target="_blank" rel="noopener">동현삼 GitHub</a> · <a href="https://raspberry-kim.github.io/donghyun-lab1/" target="_blank" rel="noopener">동현초</a> · <a href="https://raspberry-kim.github.io/donghyun-lab2/" target="_blank" rel="noopener">동현파</a> · <a href="https://raspberry-kim.github.io/donghyun-lab3/" target="_blank" rel="noopener">동현빌</a> · <a href="https://raspberry-kim.github.io/donghyun-lab4/" target="_blank" rel="noopener">동현전</a> · <a href="https://raspberry-kim.github.io/donghyun-lab5/" target="_blank" rel="noopener">동현콥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab6/" target="_blank" rel="noopener">동현텐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab7/" target="_blank" rel="noopener">동현워</a> · <a href="https://raspberry-kim.github.io/donghyun-lab8/" target="_blank" rel="noopener">동현둠</a> · <a href="https://raspberry-kim.github.io/donghyun-lab9/" target="_blank" rel="noopener">동현크</a> · <a href="https://raspberry-kim.github.io/donghyun-lab10/" target="_blank" rel="noopener">동현몬</a> · <a href="https://raspberry-kim.github.io/donghyun-lab11/" target="_blank" rel="noopener">동현주</a> · <a href="https://raspberry-kim.github.io/donghyun-lab12/" target="_blank" rel="noopener">동현심</a> · <a href="https://raspberry-kim.github.io/donghyun-lab13/" target="_blank" rel="noopener">동현램</a> · <a href="https://raspberry-kim.github.io/donghyun-lab14/" target="_blank" rel="noopener">동현큐</a> · <a href="https://raspberry-kim.github.io/donghyun-lab15/" target="_blank" rel="noopener">동현닥</a> · <a href="https://raspberry-kim.github.io/donghyun-lab17/" target="_blank" rel="noopener">동현항</a></span></footer>
+<script type="application/json" id="lab-data">__DATA_JSON__</script>
+<script src="./game.js"></script>
+<script>
+/* 입력 표식 풍선 도움말 */
+(function(){var tip=null,timer=0,cur=null;
+function el(){ if(!tip){ tip=document.createElement('div'); tip.className='mark-tip'; tip.setAttribute('role','tooltip'); document.body.appendChild(tip);} return tip; }
+function show(m){ var t=el(); clearTimeout(timer); cur=m; t.innerHTML=m.getAttribute('data-tip'); t.classList.add('show');
+  var r=m.getBoundingClientRect(); t.style.left='0px'; t.style.top='0px'; var w=t.offsetWidth, x=r.left+r.width/2-w/2; x=Math.max(12,Math.min(x,innerWidth-w-12));
+  t.style.left=x+'px'; t.style.top=(r.bottom+10)+'px'; t.style.setProperty('--ax',(r.left+r.width/2-x)+'px'); }
+function hide(ms){ clearTimeout(timer); timer=setTimeout(function(){ if(tip) tip.classList.remove('show'); cur=null; },ms||0); }
+document.querySelectorAll('.input-marks .mark').forEach(function(m){
+  m.addEventListener('pointerenter',function(e){ if(e.pointerType==='mouse') show(m); });
+  m.addEventListener('pointerleave',function(e){ if(e.pointerType==='mouse') hide(120); });
+  m.addEventListener('pointerdown',function(e){ if(e.pointerType!=='mouse') show(m); });
+  m.addEventListener('pointerup',function(e){ if(e.pointerType!=='mouse') hide(3000); });
+  m.addEventListener('pointercancel',function(e){ if(e.pointerType!=='mouse') hide(3000); });
+  m.addEventListener('focus',function(){ if(m.matches(':focus-visible')) show(m); }); m.addEventListener('blur',function(){ hide(0); });
+});
+addEventListener('scroll',function(){ if(cur) hide(0); },{passive:true});
+})();
+</script>
+</body></html>

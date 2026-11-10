@@ -1,0 +1,29 @@
+/* 동현 공통 엔진 · 화면 나누기. 색은 시리즈 변수(--paper·--ink·--line·--accent …)를 쓴다. 변수가 없으면 뒤의 값을 쓴다. */
+.dh-app{display:grid;grid-template-rows:auto 1fr;gap:10px;color:var(--ink,#26211c);font-family:var(--body,system-ui,sans-serif);min-width:0}
+.dh-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px;background:var(--paper,#fbf7ef);border:1px solid var(--line,#d9cdb8);border-radius:8px}
+.dh-title{font-family:var(--display,inherit);font-weight:400;font-size:1.15rem;letter-spacing:.02em}
+.dh-info{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0;margin-left:auto;font-variant-numeric:tabular-nums}
+.dh-info-item{display:flex;align-items:baseline;gap:6px;min-width:0}
+.dh-info dt{font-size:.75rem;color:var(--muted,#6e6356)}
+.dh-info dd{margin:0;font-weight:700;font-size:.9375rem}
+.dh-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px;align-items:start;min-width:0}
+.dh-stage{position:relative;width:100%;background:var(--dark,#221e1a);border:1px solid var(--line,#d9cdb8);border-radius:8px;overflow:hidden}
+.dh-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer;image-rendering:auto;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dh-canvas:focus-visible{outline:3px solid #a77915;outline-offset:-3px}
+.dh-panel{display:grid;gap:10px;align-content:start;padding:12px;background:var(--paper,#fbf7ef);border:1px solid var(--line,#d9cdb8);border-radius:8px;min-width:0}
+.dh-detail-title{margin:0 0 6px;font-size:1.05rem;line-height:1.3}
+.dh-rows{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:.875rem;font-variant-numeric:tabular-nums}
+.dh-rows dt{color:var(--muted,#6e6356)}
+.dh-rows dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.dh-note{margin:8px 0 0;font-size:.8125rem;color:var(--muted,#6e6356);line-height:1.5}
+.dh-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.dh-btn{min-height:44px;padding:0 10px;border:1px solid var(--line,#d9cdb8);border-radius:6px;background:var(--bg,#f4eee2);color:inherit;font:inherit;font-size:.875rem;cursor:pointer}
+.dh-btn:hover:not(:disabled){background:var(--surface2,#efe7d8)}
+.dh-btn:disabled{opacity:.5;cursor:not-allowed}
+.dh-btn.dh-primary{background:var(--accent,#f2b705);border-color:#a77915;color:#26211c;font-weight:700}
+.dh-log{list-style:none;margin:0;padding:8px 0 0;border-top:1px solid var(--line,#d9cdb8);max-height:9.5em;overflow:auto;font-size:.8125rem;color:var(--muted,#6e6356);line-height:1.5}
+.dh-log li:first-child{color:var(--ink,#26211c)}
+/* 좁은 화면: 조작 창이 캔버스 아래로 내려간다. data-panel로 고정할 수도 있다 */
+@media (max-width:860px){.dh-app[data-panel=auto] .dh-body{grid-template-columns:minmax(0,1fr)}}
+.dh-app[data-panel=bottom] .dh-body{grid-template-columns:minmax(0,1fr)}
+@media (max-width:860px){.dh-info{margin-left:0;width:100%}}

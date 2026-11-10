@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Donghyunsam (동현삼): a single-player turn-based strategy laboratory on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
+type: software
+version: "0.01"
+date-released: "2026-11-10"
+authors:
+  - family-names: Kim
+    given-names: Dong Hyun
+    orcid: "https://orcid.org/0000-0001-9883-0229"
+    affiliation: "Inha University College of Medicine"
+license: MIT
+repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
+url: "https://raspberry-kim.github.io/donghyun-lab16/"
+abstract: >-
+  Donghyunsam is a browser-based, noncommercial toy that follows only the
+  broad frame of Romance of the Three Kingdoms II (Koei, 1989): the player
+  picks one of nine rulers on a node map of 41 provinces of late Han China
+  and gives one order per province per month (develop farmland, draft, move,
+  search, invade). An invasion opens a 10x10 hex battlefield with terrain
+  movement costs and defence modifiers; the other rulers are played by a
+  simple priority-based AI. Starting values, rule numbers, the victory
+  condition and time limit are set through a program written in the esoteric
+  programming language Donghyun-lang, whose integer output is read as pairs
+  of setting number and value by a shared adapter. The game runs on a small
+  common engine (fixed 60-tick loop, calendar, square and hex grids with A*
+  path finding, tile map renderer, scene stack) written in HTML5 Canvas and
+  vanilla JavaScript and shared with Donghyunhang. The land and sea tiles
+  are derived from Natural Earth 110m land data (public domain); province
+  adjacency and all numbers are test values chosen for this work and were
+  not checked against the original game. No graphic, sound, text, number or
+  code of the original game is used or extracted. Romance of the Three
+  Kingdoms is a series of Koei Tecmo Games; this work is unaffiliated. Input
+  is mouse or touch; there is no save yet. The MIT license applies to the
+  Donghyunsam code and documentation; the page fonts are under the SIL Open
+  Font License. See LICENSE and CREDITS.md.
+keywords:
+  - turn-based strategy
+  - Romance of the Three Kingdoms
+  - hex grid
+  - esoteric programming language
+  - JavaScript
+references:
+  - type: software
+    title: "Donghyun-lang (동현랭): a Korean esoteric programming language with a browser playground"
+    authors:
+      - family-names: Kim
+        given-names: Dong Hyun
+        orcid: "https://orcid.org/0000-0001-9883-0229"
+        affiliation: "Inha University College of Medicine"
+    version: "1.55"
+    license: MIT
+    repository-code: "https://github.com/Raspberry-Kim/donghyun-lang"
