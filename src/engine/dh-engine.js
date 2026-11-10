@@ -12,6 +12,8 @@
     render(g, alpha) {}             // 그리기. 좌표는 논리 크기(engine.width × engine.height)
     onTap(x, y) {} onDrag(dx, dy, x, y) {} onWheel(delta, x, y) {} onKey(code, ev) {}
     save() { return null; }         // 저장할 장면 상태(없으면 null)
+    /** 효과음을 청한다. 엔진은 소리를 내지 않고 'sfx' 사건만 알린다(앱이 받아 튼다. node 시험에서는 아무 일도 없다). */
+    sfx(k, delay = 0) { this.engine.bus.emit('sfx', { k, delay }); }
   }
 
   /** 지도 장면의 공통 바탕: 격자 + 카메라 + 타일 렌더러, 끌어서 옮기기 · 바퀴/+−로 확대 · 화살표로 옮기기.

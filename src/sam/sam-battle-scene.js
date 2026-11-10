@@ -10,7 +10,8 @@
   const DH = root.DH = root.DH || {};
   const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const STYLE = { plain: { fill: '#d5dcae' }, mountain: { fill: '#b9a47f' }, river: { fill: '#8dbfe2' }, castle: { fill: '#e3d3ad' } };
+  /** 전장 색: 들은 두 가지 풀빛을 엇갈려 깔고(픽셀 지도의 결), 강은 큰 지도의 바다와 같은 물빛이다. */
+  const STYLE = { plain: { fill: '#d6dbb0' }, plain2: { fill: '#cfd5a7' }, mountain: { fill: '#bba987' }, river: { fill: '#9fc4d9' }, castle: { fill: '#e6d6ae' } };
   const BG = '#efe6d2', INK = '#26211c', ACCENT = '#f2b705', RED = '#c0321f', STEP = 18, FX = 54;
   /** 바탕색 위에 얹을 글자색(밝으면 먹, 어두우면 흰) */
   const textOn = hex => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)); return l > 150 ? INK : '#fff'; };
@@ -27,7 +28,7 @@
     }
     enter() {
       const b = this.b;
-      this.setupMap({ grid: b.grid, tileAt: (c, r) => b.at(c, r), styles: STYLE, line: 'rgba(38,33,28,.2)', minZoom: 1, maxZoom: 1 });
+      this.setupMap({ grid: b.grid, tileAt: (c, r) => { const k = b.at(c, r); return k === 'plain' && (c + (r >> 1)) % 3 === 0 ? 'plain2' : k; }, styles: STYLE, line: 'rgba(38,33,28,.2)', minZoom: 1, maxZoom: 1 });
       this.layout.log(`${b.province.name} 전투가 벌어졌다 · ${b.sides.att.name} ${fmt(b.total('att'))} 대 ${b.sides.def.name} ${fmt(b.total('def'))}`);
       this.refresh();
     }
@@ -68,7 +69,7 @@
       if (!this.myTurn) return;
       const list = this.b.alive(this.me).filter(u => !u.done); if (!list.length) return;
       const i = list.indexOf(this.sel), u = list[i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length];
-      this.ask = false; this.select(u); this.cur = { c: u.c, r: u.r }; this.curX = this.grid.center(u.c, u.r).x; this.refresh();
+      this.ask = false; this.select(u); this.cur = { c: u.c, r: u.r }; this.curX = this.grid.center(u.c, u.r).x; this.sfx('tick'); this.refresh();
     }
     get myTurn() { return this.mode === 'fight' && !this.auto && !this.b.winner && this.b.side === this.me; }
 
@@ -78,7 +79,8 @@
       if (!rec) return;
       const g = this.grid, t = this.engine.tick;
       if (rec.from && rec.to && (rec.from[0] !== rec.to[0] || rec.from[1] !== rec.to[1])) this.fx.push({ kind: 'trail', a: g.center(rec.from[0], rec.from[1]), b: g.center(rec.to[0], rec.to[1]), t0: t });
-      if (rec.type === 'attack' && rec.target) { const x = this.b.units.find(u => u.id === rec.target), p = g.center(x.c, x.r); this.fx.push({ kind: 'hit', x: p.x, y: p.y, text: '−' + fmt(rec.damage), t0: t }); this.layout.log(rec.text); }
+      if (rec.type === 'attack' && rec.target) { const x = this.b.units.find(u => u.id === rec.target), p = g.center(x.c, x.r); this.fx.push({ kind: 'hit', x: p.x, y: p.y, text: '−' + fmt(rec.damage), t0: t }); this.layout.log(rec.text); this.sfx('clash'); if (!rec.left) this.sfx('fall', 0.35); }
+      else if (rec.from && rec.to && (rec.from[0] !== rec.to[0] || rec.from[1] !== rec.to[1])) this.sfx('horse');
     }
     endSide() {
       const b = this.b; b.endSide(); this.sel = null; this.reach = new Map(); this.ask = false; this.idle = 0; this.wait = STEP;
@@ -88,7 +90,7 @@
     finish() {
       if (this.mode === 'result') return;
       this.mode = 'result'; this.res = this.b.result(); this.doneAt = this.engine.tick; this.sel = null; this.reach = new Map();
-      this.layout.log(`${this.b.province.name} 전투가 끝났다 · ${this.res.reason}`); this.refresh();
+      this.layout.log(`${this.b.province.name} 전투가 끝났다 · ${this.res.reason}`); this.sfx(this.res.winner === this.me ? 'win' : 'lose', 0.4); this.refresh();
     }
 
     update() {
@@ -124,7 +126,7 @@
         const from = [s.c, s.r]; b.move(s, cell.c, cell.r); this.show({ type: 'move', from, to: [s.c, s.r] });
         if (b.targets(s).length) this.select(s); else { b.wait(s); this.select(null); }      // 칠 적이 없으면 그날 일을 마친다
       }
-      else if (u && u.side === this.me && !u.done && u !== s) this.select(u);
+      else if (u && u.side === this.me && !u.done && u !== s) { this.select(u); this.sfx('tick'); }
       else { this.select(null); this.look = cell; }
       if (b.winner) this.finish(); else this.refresh();
     }

@@ -1,6 +1,7 @@
 /* 동현삼 앱: 공통 엔진의 지도 장면을 A 칸에 띄우고, B 칸의 동현랭 편집기가 설정을 읽어 새 판을 연다.
  * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다.
- * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다. */
+ * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다.
+ * 효과음은 장면이 엔진에 알리는 'sfx' 사건을 여기서 받아 튼다(sfx.js · 동현큐와 같은 소리). 첫 출전 전에는 지도 위에 시작 카드를 얹고 판을 멈춘다. */
 (function () {
 'use strict';
 const GAME = DH.Sam;
@@ -9,8 +10,13 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const el = (tag, text) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; };
 let current = null;            // boot()이 돌려준 묶음: engine · layout · scene · world · lang · examples · convention · applyDonghyunLang
 
-/* ---------- 화면 전환 · 탭 ---------- */
+/* ---------- 화면 전환 · 소리 · 탭 ---------- */
 $('#theme').onclick = () => { const dark = document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme = dark ? 'dark' : 'light'; $('#theme').setAttribute('aria-pressed', String(dark)); };
+const SND = DHSFX(GAME.SAVE.file + ':sound'), sounds = [];              // sounds: 시험용 기록(최근 50개)
+function sndUI() { const b = $('#sound'); b.setAttribute('aria-pressed', String(SND.on)); b.classList.toggle('muted', !SND.on); b.title = SND.on ? '효과음 끄기 (M)' : '효과음 켜기 (M)'; }
+$('#sound').onclick = () => { SND.set(!SND.on); sndUI(); }; sndUI();
+document.addEventListener('keydown', e => { if (e.code !== 'KeyM' || e.metaKey || e.ctrlKey || e.altKey || menu) return; const a = document.activeElement; if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT' || a.tagName === 'SELECT')) return; SND.set(!SND.on); sndUI(); });
+function playSfx(s) { sounds.push(s.k); if (sounds.length > 50) sounds.shift(); SND.play(s.k, s.delay); }
 let tab = 'play', resume = false;
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
   const next = b.dataset.tab; if (next === tab) return;
@@ -47,15 +53,16 @@ code.addEventListener('compositionend', () => codeChanged());
 function codeLead() { const a = code.selectionStart, v = code.value, ls = v.lastIndexOf('\n', a - 1) + 1, le = v.indexOf('\n', ls); return { a, ls, lead: /^[ \t]*/.exec(v.slice(ls, le < 0 ? v.length : le))[0].length }; }
 document.addEventListener('selectionchange', () => { if (document.activeElement !== code || code.selectionStart !== code.selectionEnd) return; const { a, ls, lead } = codeLead(); if (a - ls < lead) code.setSelectionRange(ls + lead, ls + lead); });
 code.addEventListener('beforeinput', e => { const { a, ls, lead } = codeLead(); if (a !== code.selectionEnd) return; if (e.inputType === 'deleteContentBackward' && ls > 0 && a > ls && a - ls <= lead) { e.preventDefault(); code.setRangeText('', ls - 1, a, 'end'); codeChanged(); } });
-code.oninput = codeChanged;
+let picked = '';                                       // 시작 카드에 적을 코드 이름(예제 이름 · 파일 이름 · 직접 고친 코드)
+code.oninput = e => { picked = ''; codeChanged(e); };
 code.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sortie(); } });
 function selectExample() {
   const ex = current && current.examples.find(e => e.id === $('#example').value); if (!ex) return;
-  code.value = ex.code; const note = ex.code.split('\n').find(l => l.startsWith('ㅋㅋ ')); $('#example-note').textContent = note ? note.slice(3) : ''; codeChanged();
+  code.value = ex.code; picked = ex.name; const note = ex.code.split('\n').find(l => l.startsWith('ㅋㅋ ')); $('#example-note').textContent = note ? note.slice(3) : ''; codeChanged();
 }
 $('#example').onchange = selectExample;
 $('#save').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code.value + '\n'], { type: 'text/plain;charset=utf-8' })); a.download = 'sortie.dh'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
-$('#open').onchange = async e => { const f = e.target.files[0]; if (!f) return; code.value = (await f.text()).replace(/\r/g, '').replace(/\n$/, ''); $('#example-note').textContent = ''; codeChanged(); e.target.value = ''; };
+$('#open').onchange = async e => { const f = e.target.files[0]; if (!f) return; code.value = (await f.text()).replace(/\r/g, '').replace(/\n$/, ''); picked = f.name; $('#example-note').textContent = ''; codeChanged(); e.target.value = ''; };
 $('#run').onclick = () => sortie();
 
 /* ---------- 출전 규약: 동현랭이 출력한 정수를 '설정 번호 · 값'으로 읽는다 ---------- */
@@ -73,8 +80,8 @@ function sortie() {
   if (!current) return;
   clearTimeout(previewTimer);
   const rep = current.applyDonghyunLang(code.value);
-  if (!rep.ok) { $('#status').textContent = '출전하지 못했다'; $('#status').dataset.kind = 'error'; return say('error', rep.errors.join(' ') + ' 하던 판은 그대로 두었다.'); }
-  $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
+  if (!rep.ok) { $('#status').textContent = '출전하지 못했다'; $('#status').dataset.kind = 'error'; SND.play('buzz'); return say('error', rep.errors.join(' ') + (waiting ? '' : ' 하던 판은 그대로 두었다.')); }
+  begun(); $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
   say('ok', rep.empty ? '설정이 없다. 기본값으로 새 판을 열었다.' : `설정 ${rep.settings.length}개를 적용하고 새 판을 열었다: ${rep.applied.join(' · ')}`);
 }
 /** 예제 목록과 설정 번호 표를 채운다 */
@@ -161,7 +168,7 @@ function saveToFile() {
 function loadFrom(d) {
   const r = current.scene.loadGame(d);
   if (!r.ok) { toast('불러오기 실패: ' + r.why + ` 하던 ${SAVE.word}은 그대로 두었다.`, 'error'); return false; }
-  status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
+  begun(); status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
   fit(); return true;
 }
 async function loadFile(input) {
@@ -196,6 +203,7 @@ menuBack.addEventListener('keydown', e => {
 });
 function saveMenu() {
   if (!current) return;
+  if (waiting) return openMenu('지금은 저장할 수 없다', [['돌아가기', null]], null, `아직 ${SAVE.word}을 시작하지 않았다. 출전을 누르면 시작한다.`);
   const can = current.scene.saveInfo(); if (!can.ok) return openMenu('지금은 저장할 수 없다', [['돌아가기', null]], null, can.why);
   const items = [];
   for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), fn: () => (d ? confirmMenu(`칸 ${n}에 덮어쓸까?`, [['덮어쓴다', () => saveToSlot(n)], ['그만둔다', saveMenu]], saveMenu) : saveToSlot(n)) }); }
@@ -220,10 +228,41 @@ for (const id of ['#game-save', '#fs-save']) $(id).onclick = saveMenu;
 for (const id of ['#game-load', '#fs-load']) $(id).onclick = loadMenu;
 $('#load-file').onchange = e => loadFile(e.target);
 
-/* ---------- 시작: 자료를 읽고 기본값으로 판을 연다 ---------- */
+/* ---------- 시작 카드: 첫 출전(또는 불러오기) 전까지 지도 위에 얹는다. 아래 판은 멈추고 입력은 카드가 받는다 ---------- */
+let waiting = true;
+const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+class StartCard extends DH.Scene {
+  constructor(engine, layout) { super(engine); this.layout = layout; }
+  enter() {
+    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 지도 아래 불러오기로 이어 한다.` });
+    this.layout.setMenu([{ id: 'go', label: '출전', primary: true, hint: 'B 칸의 코드로 시작한다 (Ctrl/⌘ + Enter)' }], () => sortie());
+  }
+  onKey(code, ev) { if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return; if (code === 'Enter' || code === 'NumpadEnter' || code === 'Digit1' || code === 'Numpad1') { ev && ev.preventDefault(); sortie(); } }
+  render(g) {
+    const W = this.engine.width, H = this.engine.height, w = 280, h = 88, x = (W - w) / 2, y = (H - h) / 2;
+    if (current && this._src !== code.value) { this._src = code.value; this._rep = current.lang.parse(code.value, { ctx: { world: current.world } }); }   // 글이 바뀔 때만 다시 읽는다
+    const rep = this._rep, fit = s => (s.length > 30 ? s.slice(0, 29) + '…' : s);
+    g.fillStyle = 'rgba(38,33,28,.22)'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(74,66,88,.88)'; g.fillRect(x, y, w, h);
+    g.textAlign = 'center'; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `bold 13px ${FONT}`;
+    g.fillText(fit(`${SAVE.name} · ${picked || '직접 쓴 코드'}`), W / 2, y + 12);
+    g.font = `11px ${FONT}`; g.fillText(fit(!rep ? '' : !rep.ok ? '코드에 오류가 있다 · B 칸을 보자' : rep.empty ? '설정 없음 · 기본값으로 연다' : `설정 ${rep.settings.length}개 · ${rep.settings.map(s => s.label).join(' · ')}`), W / 2, y + 34);
+    g.fillStyle = '#f2b705'; g.font = `bold 12px ${FONT}`; g.fillText('출전을 누르면 시작한다', W / 2, y + 60);
+  }
+  save() { return null; }
+}
+/** 첫 출전이나 불러오기가 되면 카드를 걷는다. 장면의 applyDonghyunLang · loadGame이 위에 얹힌 장면을 이미 내렸으면 할 일이 없다 */
+function begun() {
+  if (!waiting) return; waiting = false;
+  const e = current.engine, i = e.scenes.findIndex(s => s instanceof StartCard); if (i >= 0) e.scenes.splice(i, 1)[0].exit();
+}
+
+/* ---------- 시작: 자료를 읽고 기본값의 판 위에 시작 카드를 얹는다 ---------- */
 GAME.boot($('#host'), '#lab-data').then(g => {
-  current = g; window.__dh = g;                          // 시험용 손잡이
-  $('#run').disabled = false; $('#full').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '기본값으로 열었다';
+  current = g; window.__dh = g; g.sounds = sounds;       // 시험용 손잡이
+  g.engine.on('sfx', playSfx);
+  g.engine.pushScene(new StartCard(g.engine, g.layout)); g.waiting = () => waiting;
+  $('#run').disabled = false; $('#full').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '출전 준비';
   fillLang();
 }).catch(e => {
   const p = el('pre', e.message); p.className = 'boot-error'; $('#host').replaceChildren(p);

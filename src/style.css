@@ -38,6 +38,7 @@ p{margin:0}
 .edition>span{font:700 11px var(--body);color:#5a4410;background:#f7e2a4;padding:2px 8px;border-radius:999px}
 [data-theme=dark] .edition>span{background:#4a3b17;color:#f6d77b}
 .icon-btn{width:36px;height:36px;min-height:36px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--muted)}
+.icon-btn .snd-off{display:none}.icon-btn.muted .snd-off{display:inline}.icon-btn.muted .snd-on{display:none}
 main{padding:0 40px}
 /* 시리즈 줄 */
 .series-strip{--series-ink:#42372d;--series-muted:#7c6d5d;--series-line:#d9cbb5;--series-paper:#fbf7ef;display:flex;align-items:center;gap:20px;padding:16px 0 18px;margin:0 0 24px;border-bottom:1px solid var(--series-line);color:var(--series-ink)}

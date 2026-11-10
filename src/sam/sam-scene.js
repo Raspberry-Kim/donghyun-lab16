@@ -11,6 +11,7 @@
   const DH = root.DH = root.DH || {};
   const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   const NEUTRAL = '#b9b0a2', INK = '#26211c', ACCENT = '#f2b705', RED = '#c0321f';
+  const MAP = { shallow: '#b5d6e2', sea: '#9fc4d9', deep: '#93bcd4', land: '#ece2c7', rim: '#c9b48a' };   // 지도 기본 색(동현항과 같은 바다)
   const fmt = n => Number(n).toLocaleString('ko-KR');
   const ZOOM = [{ id: 'zin', label: '확대', key: '+' }, { id: 'zout', label: '축소', key: '−' }];
   const SAVE = { format: 'donghyunsam-save', version: 1, name: '동현삼', slot: 'donghyunsam:slot', file: 'donghyunsam', word: '판' };
@@ -49,7 +50,7 @@
     enter() {
       const w = this.world, e = this.engine;
       const grid = new DH.HexGrid(w.map.cols, w.map.rows, 7);
-      this.setupMap({ grid, tileAt: (c, r) => w.map.at(c, r), styles: { sea: { fill: '#a9cbe0' }, land: { fill: '#eadfc3' } }, line: 'rgba(38,33,28,.07)', minZoom: 1, maxZoom: 3 });
+      this.setupMap({ grid, ...this.palette(grid), line: 'rgba(38,33,28,.07)', minZoom: 1, maxZoom: 3 });
       this.pos = new Map([...w.provinces.values()].map(p => [p.id, grid.center(p.hex[0], p.hex[1])]));
       e.clock.setActors([]);
       this._off = [e.on('clock:turn', d => this.layout.log(`${d.year}년 ${d.month}월이 되었다`))];
@@ -57,6 +58,22 @@
       this.refresh();
     }
     exit() { this._off.forEach(f => f()); }
+    /** 지도 색(레트로 픽셀 지도처럼 몇 가지 평평한 색만 쓴다). 바다는 뭍에서 멀수록 짙어지는 세 단.
+     *  뭍은 가장 가까운 주(걸음 수)의 세력 색을 아주 옅게 머금어 땅의 주인이 한눈에 보이고, 바다에 닿은 칸은 조금 짙게 해 해안선을 세운다. */
+    palette(grid) {
+      const w = this.world, at = (c, r) => w.map.at(c, r), land = (c, r) => at(c, r) === 'land', depth = DH.shoreDistance(grid, land);
+      const own = new Int32Array(grid.cols * grid.rows).fill(-1), q = [];
+      for (const p of w.provinces.values()) { own[p.hex[1] * grid.cols + p.hex[0]] = p.id; q.push(p.hex); }
+      for (let i = 0; i < q.length; i++) { const [c, r] = q[i], id = own[r * grid.cols + c]; for (const [nc, nr] of grid.neighbors(c, r)) { const j = nr * grid.cols + nc; if (own[j] < 0 && land(nc, nr)) { own[j] = id; q.push([nc, nr]); } } }
+      const coast = (c, r) => grid.neighbors(c, r).some(([nc, nr]) => !land(nc, nr));
+      const kind = Array.from({ length: grid.rows }, (_, r) => Array.from({ length: grid.cols }, (_, c) => !land(c, r) ? 's' + Math.min(3, depth[r * grid.cols + c]) : coast(c, r) ? 'c' : 'l'));
+      const styles = { s1: { fill: MAP.shallow }, s2: { fill: MAP.sea }, s3: { fill: MAP.deep }, default: { fill: MAP.land } };
+      for (const [id, color] of [['', NEUTRAL], ...[...w.factions.values()].map(f => [f.id, f.color])]) {
+        const tint = DH.mixColor(MAP.land, color, id ? 0.11 : 0.05);
+        styles['l' + id] = { fill: tint }; styles['c' + id] = { fill: DH.mixColor(tint, MAP.rim, 0.3) };
+      }
+      return { styles, tileAt: (c, r) => { const k = kind[r][c]; if (k[0] === 's') return k; const id = own[r * grid.cols + c], p = id >= 0 && this.game && this.game.P(id); return k + (p && p.owner ? p.owner : ''); } };
+    }
     colorOf(p) { return p.owner ? this.game.factions.get(p.owner).color : NEUTRAL; }
     get mine() { const p = this.game.P(this.selected); return this.mode === 'play' && p && p.owner === this.game.player ? p : null; }
 
@@ -68,7 +85,7 @@
       Object.assign(c, { year: w.meta.start.year, month: w.meta.start.month || 1, serial: 0, turn: 1 }); c.setActors([fid]);
       this.mode = 'play'; this.sub = null; this.flash = null; this.selected = w.officers.get(f.leader).province;
       const g = this.game, all = g.goal >= g.provinces.size;
-      this.layout.log(`${DH.Sam.ro(f.name)} 시작한다. 우리 주를 찍고 한 달에 한 번씩 명령을 내린다`);
+      this.layout.log(`${DH.Sam.ro(f.name)} 시작한다. 우리 주를 찍고 한 달에 한 번씩 명령을 내린다`); this.sfx('zone');
       if (!all || g.stage.months) this.layout.log(`이기는 조건: ${all ? '모든 주' : `주 ${g.goal}개`}를 차지한다` + (g.stage.months ? ` · ${g.stage.months}달 안에` : ''));
       this.settled();
     }
@@ -83,6 +100,7 @@
       const wpt = this.cam.toWorld(x, y); let best = null, bd = 12 / this.cam.zoom + 4;      // 손가락이 조금 빗나가도 잡히게
       for (const [id, p] of this.pos) { const d = Math.hypot(p.x - wpt.x, p.y - wpt.y); if (d < bd) { bd = d; best = id; } }
       if (best !== null && this.candidates().some(q => q.id === best)) return this.command('to:' + best);   // 고르는 중이면 그 주가 대상이 된다
+      if (best !== null && best !== this.selected) this.sfx('tick');
       this.sub = null; this.selected = best; this.refresh();
     }
     /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 단추를 누른다. */
@@ -113,7 +131,7 @@
     step(d) {
       if (this.mode === 'busy') return;
       const g = this.game, s = this.sub, all = [...g.provinces.values()];
-      if (s && s.step === 'to') { const c = this.candidates(), next = s.aim == null ? this.toward(this.selected, d, c) ?? (c[0] && c[0].id) : this.toward(s.aim, d, c); if (next != null) { s.aim = next; this.reveal(next); } return this.refresh(); }
+      if (s && s.step === 'to') { const c = this.candidates(), next = s.aim == null ? this.toward(this.selected, d, c) ?? (c[0] && c[0].id) : this.toward(s.aim, d, c); if (next != null) { if (next !== s.aim) this.sfx('tick'); s.aim = next; this.reveal(next); } return this.refresh(); }
       if (s) return;
       let next;
       if (this.selected === null) {
@@ -121,6 +139,7 @@
         next = home && own.some(p => p.id === home.province) ? home.province : own.length ? own[0].id : all.map(p => ({ id: p.id, d: Math.hypot(this.pos.get(p.id).x - mid.x, this.pos.get(p.id).y - mid.y) })).sort((a, b) => a.d - b.d)[0].id;
       } else next = this.toward(this.selected, d, all);
       if (next == null) return;
+      if (next !== this.selected) this.sfx('tick');
       this.selected = next; this.reveal(next); this.refresh();
     }
     /** Space: 명령이 남은 우리 주를 번호 순서로 돈다. 남은 주가 없으면 우리 주를 모두 돈다. */
@@ -128,6 +147,7 @@
       const g = this.game; if (this.mode !== 'play' || this.sub) return;
       const own = g.provincesOf(g.player).sort((a, b) => a.id - b.id), left = own.filter(p => !p.acted), list = left.length ? left : own; if (!list.length) return;
       const cur = this.selected ?? (dir > 0 ? -Infinity : Infinity), next = dir > 0 ? list.find(p => p.id > cur) || list[0] : [...list].reverse().find(p => p.id < cur) || list[list.length - 1];
+      if (next.id !== this.selected) this.sfx('tick');
       this.selected = next.id; this.reveal(next.id); this.refresh();
     }
     /** 그 주가 화면 가장자리 밖에 있으면 화면 가운데로 데려온다. */
@@ -140,39 +160,40 @@
       if (this.mode === 'pick') { if (key === 'f') this.start(arg); return; }
       if (this.mode === 'over') { if (id === 'again') this.restart(); return; }
       if (this.mode !== 'play') return;
-      if (id === 'end') return this.endTurn();
+      if (id === 'end') { this.sfx('swish'); return this.endTurn(); }
       const p = this.mine; if (!p) return;
       const s = this.sub;
       if (id === 'cancel') this.sub = null;
-      else if (id === 'develop' || id === 'draft' || id === 'search') this.say(g[id](p.id));
+      else if (id === 'develop' || id === 'draft' || id === 'search') this.say(g[id](p.id), { develop: 'pop', draft: 'foot', search: 'ping' }[id]);
       else if (id === 'move') this.sub = g.officersOf(p.id).length ? { type: 'move', step: 'who' } : { type: 'move', step: 'to', officer: null };
       else if (id === 'attack') this.sub = { type: 'attack', step: 'to' };
       else if (key === 'who' && s && s.step === 'who') { s.officer = arg === 'none' ? null : Number(arg); s.step = 'to'; }
       else if (key === 'to' && s && s.step === 'to') { s.to = Number(arg); s.step = 'n'; }
       else if (key === 'n' && s && s.step === 'n') {
         const n = Number(arg); this.sub = null;
-        if (s.type === 'move') this.say(g.move(p.id, s.officer, s.to, n));
+        if (s.type === 'move') this.say(g.move(p.id, s.officer, s.to, n), 'horse');
         else return this.invade(p.id, s.to, n);
       }
       this.refresh();
     }
-    say(r) { this.layout.log(r.ok ? r.text : r.why); }
+    /** 한 일을 기록에 남긴다. 되었으면 그 소리(ok), 안 되었으면 막히는 소리 */
+    say(r, ok) { this.layout.log(r.ok ? r.text : r.why); if (!r.ok) this.sfx('buzz'); else if (ok) this.sfx(ok); }
     invade(from, to, n) {
       const r = this.game.attack(from, to, n);
       if (!r.ok) { this.say(r); return this.refresh(); }
-      this.layout.log(r.text); this.flash = { from, to, t0: this.engine.tick };
+      this.layout.log(r.text); this.flash = { from, to, t0: this.engine.tick }; this.sfx('drum');
       if (r.battle) return this.openBattle(r, 'att');
-      this.layout.log(r.outcome.text); this.selected = to; this.settled();
+      this.layout.log(r.outcome.text); this.selected = to; this.sfx('cheer', 0.5); this.settled();
     }
     /** 전투 화면을 얹는다. 끝나면 결과를 지도에 반영하고 돌아온다. */
     openBattle(r, side) {
       this.engine.pushScene(new DH.Sam.SamBattleScene(this.engine, this.layout, r.battle, { side, onDone: res => {
         const out = this.game.settle(r.pending, res); this.layout.log(out.text);
-        if (side === 'att' && out.winner === 'att') this.selected = r.pending.to;
+        if (side === 'att' && out.winner === 'att') { this.selected = r.pending.to; this.sfx('cheer'); }
         this.pause = 20; this.settled();
       } }));
     }
-    settled() { if (this.game.over) { this.mode = 'over'; this.sub = null; this.layout.log(this.overTitle()); } this.refresh(); }
+    settled() { if (this.game.over && this.mode !== 'over') { this.mode = 'over'; this.sub = null; this.layout.log(this.overTitle()); const w = this.game.overWhy; this.sfx(w === 'all' || w === 'goal' ? 'win' : 'lose', 0.6); } this.refresh(); }
     /** 판이 끝난 까닭에 맞는 한 줄 */
     overTitle() { const w = this.game.overWhy; return w === 'all' ? '온 땅을 하나로 모았다' : w === 'goal' ? '목표한 땅을 모두 차지했다' : w === 'time' ? '기한이 다 되었다' : '세력이 무너졌다'; }
 
@@ -186,14 +207,14 @@
         const s = this.game.nextAI();
         if (s.done) return this.endMonth();
         if (s.quiet) continue;
-        this.flash = { from: s.from, to: s.cmd.to, t0: tick }; this.layout.log(s.text);
+        this.flash = { from: s.from, to: s.cmd.to, t0: tick }; this.layout.log(s.text); this.sfx(s.battle ? 'alert' : 'drum');            // 우리 주가 침공당하면 경보
         if (s.battle) return this.openBattle(s, 'def');
         this.pause = 26; return this.refresh();
       }
     }
     endMonth() {
       if (this.game.over) return this.settled();
-      for (const n of this.game.endMonth()) this.layout.log(n);
+      for (const n of this.game.endMonth()) this.layout.log(n); this.sfx('rows');
       this.engine.clock.endPhase(); this.mode = 'play'; this.refresh();
     }
 
@@ -336,7 +357,7 @@
     const world = DH.Sam.parse(await DH.Data.load(src));
     const W = 480, H = 360;
     const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 단추에 번호가 붙는다(숫자 키)
-    const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: '#a9cbe0', clock: { unit: 'month', start: world.meta.start } });
+    const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: MAP.deep, clock: { unit: 'month', start: world.meta.start } });
     const scene = new SamMapScene(engine, world, layout); engine.setScene(scene);
     if (opt.script) scene.applyDonghyunLang(opt.script);                      // 동현랭 설정을 주면 그 값으로 연다
     if (opt.player) scene.start(opt.player);

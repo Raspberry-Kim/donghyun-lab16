@@ -63,5 +63,21 @@
     }
   }
 
-  Object.assign(DH, { Camera, TileMapRenderer });
+  /** 칸마다 가장 가까운 뭍까지의 걸음 수(뭍은 0, 뭍이 없으면 Infinity). r*cols+c 자리에 담는다. 바다를 깊이로 칠할 때 쓴다. */
+  function shoreDistance(grid, isLand) {
+    const n = grid.cols * grid.rows, d = new Float64Array(n).fill(Infinity), q = [];
+    for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) if (isLand(c, r)) { d[r * grid.cols + c] = 0; q.push(c, r); }
+    for (let i = 0; i < q.length; i += 2) {
+      const c = q[i], r = q[i + 1], k = d[r * grid.cols + c] + 1;
+      for (const [nc, nr] of grid.neighbors(c, r)) { const j = nr * grid.cols + nc; if (d[j] > k) { d[j] = k; q.push(nc, nr); } }
+    }
+    return d;
+  }
+  /** 두 색(#rrggbb)을 t(0~1)만큼 섞는다. */
+  function mixColor(a, b, t) {
+    const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b);
+    return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  }
+
+  Object.assign(DH, { Camera, TileMapRenderer, shoreDistance, mixColor });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
