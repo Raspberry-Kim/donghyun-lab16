@@ -363,7 +363,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await s.selectOption('#example', 'none'); await s.click('#run'); assert.deepStrictEqual([await S(() => __dh.state.rules.draft.troops), (await sInfo()).군주, await S(() => __dh.scene.settings.length)], [1000, '고르는 중', 0]); const code0 = await s.$eval('#code', e => e.value);
   await s.click('#game-load'); await pick('브라우저 칸 2'); await pick('불러온다'); const res = await s.$eval('#result', e => e.textContent);
   assert.deepStrictEqual([await S(() => __dh.state.rules.draft.troops), (await sInfo()).군주, await S(() => __dh.scene.settings), await s.$eval('#code', e => e.value) === code0], [2000, '유비', d2.settings, true]); assert.ok(res.includes('저장될 때의 설정: 군주 유비 · 우리 주 시작 금 5,000 · 우리 주 시작 쌀 20,000 · 징병 수량 2,000. 편집기의 코드는 그대로다.'), res);
-  await s.keyboard.press('Space'); await s.click('button[data-id=draft]'); assert.ok((await s.$$eval('.dh-log li', a => a[0].textContent)).includes('2,000'), '불러온 설정(징병 2,000)으로 논다');
+  await s.keyboard.press('Space'); await s.click('button[data-id=draft]'); assert.ok((await s.$$eval('.dh-log li', a => a[0].textContent)).includes('2,000'), '불러온 설정(징병 2,000)이 적용된다');
   ok('설정도 따라온다: 동현랭으로 연 판(설정 4개)을 저장 → 기본값 새 판 → 불러오면 징병 2,000으로 돌아온다 · 편집기의 코드는 바뀌지 않는다');
 
   // 전투 중 · 다른 군주들의 차례: 저장은 못 하고 불러오기는 된다(전투를 접는다) · 칸 지우기
