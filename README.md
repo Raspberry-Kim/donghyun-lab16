@@ -441,3 +441,7 @@ node qa/ui.cjs                 # 화면 시험 27개 (Playwright · 데스크톱
 ## 출처와 라이선스
 
 `CREDITS.md`를 보라. 코드·문서는 MIT(`LICENSE`), 글꼴은 SIL Open Font License(`licenses/`). 원작 게임의 그림·소리·글·수치·코드는 쓰지 않았다.
+
+## 시리즈 연결
+
+[동현랭](https://raspberry-kim.github.io/donghyun-lang/)과 열여덟 실험실을 상단 메뉴로 오간다. [동현테](https://raspberry-kim.github.io/donghyun-lab18/)는 고정 시점의 1인용 단식 테니스다. 데스크톱 메뉴는 동현랭이 두 줄 높이, 나머지는 9열×2줄이다. 모바일은 두 열이며 홀수 개일 때 동현랭만 두 칸 너비를 쓴다.
