@@ -234,10 +234,10 @@ const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 class StartCard extends DH.Scene {
   constructor(engine, layout) { super(engine); this.layout = layout; }
   enter() {
-    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 지도 아래 불러오기로 이어 한다.` });
-    this.layout.setMenu([{ id: 'go', label: '출전', primary: true, hint: 'B 칸의 코드로 시작한다 (Ctrl/⌘ + Enter)' }], () => sortie());
+    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 지도 아래 불러오기로 이어 한다.` });
+    this.layout.setMenu([], null);   // 출전 단추는 B 칸 하나뿐이다. 코드를 보고 누르게 한다
   }
-  onKey(code, ev) { if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return; if (code === 'Enter' || code === 'NumpadEnter' || code === 'Digit1' || code === 'Numpad1') { ev && ev.preventDefault(); sortie(); } }
+  onKey() {}   // 시작 전에는 지도가 키를 받지 않는다
   render(g) {
     const W = this.engine.width, H = this.engine.height, w = 280, h = 88, x = (W - w) / 2, y = (H - h) / 2;
     if (current && this._src !== code.value) { this._src = code.value; this._rep = current.lang.parse(code.value, { ctx: { world: current.world } }); }   // 글이 바뀔 때만 다시 읽는다
@@ -247,13 +247,13 @@ class StartCard extends DH.Scene {
     g.textAlign = 'center'; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `bold 13px ${FONT}`;
     g.fillText(fit(`${SAVE.name} · ${picked || '직접 쓴 코드'}`), W / 2, y + 12);
     g.font = `11px ${FONT}`; g.fillText(fit(!rep ? '' : !rep.ok ? '코드에 오류가 있다 · B 칸을 보자' : rep.empty ? '설정 없음 · 기본값으로 연다' : `설정 ${rep.settings.length}개 · ${rep.settings.map(s => s.label).join(' · ')}`), W / 2, y + 34);
-    g.fillStyle = '#f2b705'; g.font = `bold 12px ${FONT}`; g.fillText('출전을 누르면 시작한다', W / 2, y + 60);
+    g.fillStyle = '#f2b705'; g.font = `bold 12px ${FONT}`; g.fillText('B 칸의 출전을 누르면 시작한다', W / 2, y + 60);
   }
   save() { return null; }
 }
 /** 첫 출전이나 불러오기가 되면 카드를 걷는다. 장면의 applyDonghyunLang · loadGame이 위에 얹힌 장면을 이미 내렸으면 할 일이 없다 */
 function begun() {
-  if (!waiting) return; waiting = false;
+  if (!waiting) return; waiting = false; $('#full').disabled = false;   // 전체 화면에는 편집기가 따라오지 않으므로 시작한 뒤에 연다
   const e = current.engine, i = e.scenes.findIndex(s => s instanceof StartCard); if (i >= 0) e.scenes.splice(i, 1)[0].exit();
 }
 
@@ -262,7 +262,7 @@ GAME.boot($('#host'), '#lab-data').then(g => {
   current = g; window.__dh = g; g.sounds = sounds;       // 시험용 손잡이
   g.engine.on('sfx', playSfx);
   g.engine.pushScene(new StartCard(g.engine, g.layout)); g.waiting = () => waiting;
-  $('#run').disabled = false; $('#full').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '출전 준비';
+  $('#run').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '출전 준비';
   fillLang();
 }).catch(e => {
   const p = el('pre', e.message); p.className = 'boot-error'; $('#host').replaceChildren(p);

@@ -9,16 +9,17 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await p.waitForFunction(() => window.__dh && !document.querySelector('#run').disabled);
   // 0) 시작 카드: 출전을 누르기 전에는 멈춰 있다 · 효과음 단추와 M 키
   { const C = () => p.evaluate(() => ({ w: __dh.waiting(), top: __dh.engine.scenes.at(-1).constructor.name, title: document.querySelector('.dh-detail-title').textContent, menu: [...document.querySelectorAll('.dh-menu button')].map(e => e.textContent.trim()), st: document.querySelector('#status').textContent, snd: document.querySelector('#sound').getAttribute('aria-pressed') }));
-    const C0 = await C(); assert.deepStrictEqual([C0.w, C0.top, C0.title, C0.st, C0.snd], [true, 'StartCard', '출전 준비', '출전 준비', 'true']); assert.ok(C0.menu.length === 1 && C0.menu[0].includes('출전'), JSON.stringify(C0.menu));
+    const C0 = await C(); assert.deepStrictEqual([C0.w, C0.top, C0.title, C0.st, C0.snd], [true, 'StartCard', '출전 준비', '출전 준비', 'true']); assert.strictEqual(C0.menu.length, 0, JSON.stringify(C0.menu)); assert.strictEqual(await p.$eval('#full', e => e.disabled), true, '시작 전에는 전체 화면을 막는다');
     assert.ok((await p.$eval('.getting-started', e => e.textContent)).includes('출전을 눌러야') && (await p.$eval('#result', e => e.textContent)).includes('출전을 누르면'));
     await p.click('#game-save'); assert.ok((await p.$eval('#menu-title', e => e.parentElement.textContent)).includes('아직 판을 시작하지 않았다')); await p.keyboard.press('Escape');
     await p.click('.dh-canvas'); await p.keyboard.press('KeyM'); assert.strictEqual(await p.$eval('#sound', e => e.getAttribute('aria-pressed')), 'false'); assert.strictEqual(await p.evaluate(() => localStorage.getItem('donghyunsam:sound')), 'off');
     await p.click('#sound'); assert.strictEqual(await p.$eval('#sound', e => e.getAttribute('aria-pressed')), 'true');
     const code0 = await p.$eval('#code', e => e.value); await p.focus('#code'); await p.keyboard.press('End'); await p.keyboard.press('KeyM'); assert.strictEqual(await p.$eval('#sound', e => e.getAttribute('aria-pressed')), 'true', '편집기에서는 M이 글자다'); await p.fill('#code', code0);
-    await p.click('.dh-canvas'); await p.keyboard.press('Enter'); await p.waitForTimeout(200); const C1 = await C(); assert.deepStrictEqual([C1.w, C1.top !== 'StartCard'], [false, true], '카드에서 Enter로 출전');
+    await p.click('.dh-canvas'); for (const k of ['Enter', 'Digit1']) await p.keyboard.press(k); await p.waitForTimeout(200); const C1 = await C(); assert.deepStrictEqual([C1.w, C1.top], [true, 'StartCard'], '카드에서는 Enter · 1로 시작하지 않는다');
+    await p.focus('#code'); await p.keyboard.press('Control+Enter'); await p.waitForTimeout(200); assert.deepStrictEqual([await p.evaluate(() => __dh.waiting()), await p.$eval('#full', e => e.disabled)], [false, false], '편집기에서 Ctrl+Enter로 출전 · 전체 화면이 켜진다');
     await p.reload(); await p.waitForFunction(() => window.__dh && !document.querySelector('#run').disabled); assert.strictEqual(await p.evaluate(() => __dh.waiting()), true);
     await p.click('#run'); await p.waitForTimeout(200); assert.deepStrictEqual([await p.evaluate(() => __dh.waiting()), await p.evaluate(() => __dh.engine.scenes.some(s => s.constructor.name === 'StartCard'))], [false, false]); }
-  ok('시작 카드: 출전 전에는 멈추고 저장을 막는다 · Enter나 출전 단추로 시작 · 효과음 단추와 M 키(편집기에서는 글자) · 이 브라우저가 기억한다');
+  ok('시작 카드: 출전 전에는 멈추고 저장 · 전체 화면을 막는다 · 출전은 편집기 위의 단추와 Ctrl+Enter뿐(카드의 Enter · 1은 듣지 않는다) · 효과음 단추와 M 키(편집기에서는 글자) · 이 브라우저가 기억한다');
   /** 캔버스를 화면 가운데로 올리고, 캔버스 안 (x, y)의 화면 좌표를 준다 */
   const at = (x, y) => p.evaluate(([x, y]) => { const cv = document.querySelector('.dh-canvas'); cv.scrollIntoView({ block: 'center' }); const r = cv.getBoundingClientRect(); return [r.left + x, r.top + y]; }, [x, y]);
   const info = () => p.$$eval('.dh-info-item', a => Object.fromEntries(a.map(e => [e.querySelector('dt').textContent, e.querySelector('dd').textContent])));
