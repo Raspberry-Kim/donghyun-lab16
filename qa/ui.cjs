@@ -185,9 +185,9 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   const NAME = '동현삼', TABS = ['지도', '동현삼 출전 규약', '규칙', '엔진과 자료', '모델과 출처'], HEADS = { protocol: ['설정 번호', '예제 열'], rules: ['놀이 방법', '조작', '동현삼 규칙'], engine: ['엔진의 층', '게임이 얹는 법', '동현랭 어댑터', 'JSON 규격', '파일', '돌려 보기'], about: ['상표와 관계', '이 자료가 무엇이고 무엇이 아닌지', '자료 출처'] };
   const band = await p.evaluate(() => ({ n: document.querySelectorAll('.series-item').length, ctx: document.querySelector('.series-context').textContent, here: [...document.querySelectorAll('.series-item[aria-current=page]')].map(a => a.querySelector('.series-name').textContent), hrefs: [...document.querySelectorAll('a.series-item')].map(a => a.getAttribute('href')),
     ed: document.querySelector('.edition').textContent.trim(), foot: document.querySelector('footer').textContent, title: document.title, left: document.documentElement.innerHTML.match(/__[A-Z_]+__|<!--README/g) }));
-  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [18, [NAME + '™'], 17, null]); assert.ok(band.ctx.includes('열일곱 개의 작은 세계') && band.ed.startsWith('v0.04') && band.foot.includes(NAME + ' v0.04') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
-  assert.ok(band.hrefs.every(h => /^https:\/\/raspberry-kim\.github\.io\/donghyun-(lang|lab\d+)\/$/.test(h)) && new Set(band.hrefs).size === 17, '띠의 주소 열일곱 개가 서로 다르다');
-  ok(`시리즈 띠 18칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v0.04 · 빌드 자리표가 남지 않았다`);
+  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [19, [NAME + '™'], 18, null]); assert.ok(band.ctx.includes('열여덟 개의 작은 세계') && band.ed.startsWith('v0.04') && band.foot.includes(NAME + ' v0.04') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
+  assert.ok(band.hrefs.every(h => /^https:\/\/raspberry-kim\.github\.io\/donghyun-(lang|lab\d+)\/$/.test(h)) && new Set(band.hrefs).size === 18, '띠의 주소 열여덟 개가 서로 다르다');
+  ok(`시리즈 띠 19칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v0.04 · 빌드 자리표가 남지 않았다`);
 
   const tabsNow = () => p.evaluate(() => ({ names: [...document.querySelectorAll('.tabs button')].map(b => b.textContent), on: [...document.querySelectorAll('.tabs button[aria-current=page]')].map(b => b.dataset.tab), shown: [...document.querySelectorAll('.tab-panel')].filter(x => !x.hidden).map(x => x.id), sw: document.documentElement.scrollWidth, run: __dh.engine.loop.running }));
   await G(() => __dh.engine.start()); let T = await tabsNow(); assert.deepStrictEqual([T.names, T.on, T.shown, T.run], [TABS, ['play'], ['tab-play'], true]);
@@ -277,14 +277,14 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await m.evaluate(() => { document.querySelector('.tabs button[data-tab=play]').click(); scrollTo(0, 0); }); await m.evaluate(() => __dh.engine.step(1)); await m.screenshot({ path: shot + '/ui-phone-play.png', fullPage: true });
   const mb = await m.evaluate(() => { const it = [...document.querySelectorAll('.series-item')].map(e => e.getBoundingClientRect()); return { n: it.length, right: Math.max(...it.map(r => r.right)), left: Math.min(...it.map(r => r.left)), h: Math.min(...it.map(r => r.height)), w: [...new Set(it.map(r => Math.round(r.width)))], sw: document.documentElement.scrollWidth,
     ed: ['.ed-panel', '#code', '#example', '#run', '#result', '.file-row', '.lang-rule', '.tabs', '.getting-started'].map(s => [s, Math.round(document.querySelector(s).getBoundingClientRect().right)]).filter(x => x[1] > 390) }; });
-  assert.ok(mb.n === 18 && mb.right <= 390 && mb.left >= 0 && mb.h >= 44 && mb.sw <= 390 && mb.ed.length === 0, JSON.stringify(mb)); assert.strictEqual(mb.w.length, 1, '띠 18칸(짝수)은 모두 같은 폭: ' + mb.w);
+  assert.ok(mb.n === 19 && mb.right <= 390 && mb.left >= 0 && mb.h >= 44 && mb.sw <= 390 && mb.ed.length === 0, JSON.stringify(mb)); assert.strictEqual(mb.w.length, 2, '띠 19칸(홀수): 동현랭만 두 칸 폭: ' + mb.w);
   const mdocs = [];
   for (const id of ['protocol', 'rules', 'engine', 'about']) {
     const h = await m.$(`.tabs button[data-tab=${id}]`); await h.scrollIntoViewIfNeeded(); const r = await h.boundingBox(); assert.ok(r.height >= 44, id + ' 탭 단추 높이 ' + r.height); await m.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2);
     const d = await m.evaluate(id => { const s = document.querySelector('#tab-' + id); return { shown: !s.hidden, sw: document.documentElement.scrollWidth, wide: [...s.querySelectorAll('h2, h3, h4, p, li, a, pre, .table-wrap, .science-block')].filter(e => e.getBoundingClientRect().right > 391).map(e => e.tagName + ':' + e.textContent.slice(0, 20)), scroll: [...s.querySelectorAll('.table-wrap, pre')].filter(e => e.scrollWidth > e.clientWidth + 1).length }; }, id);
     assert.ok(d.shown && d.sw <= 390 && d.wide.length === 0, id + ' ' + JSON.stringify(d)); mdocs.push(id + (d.scroll ? `(옆으로 미는 표·코드 ${d.scroll})` : '')); await m.screenshot({ path: shot + '/ui-phone-' + id + '.png', fullPage: true });
   }
-  ok(`휴대폰 페이지: 시리즈 띠 18칸이 같은 폭(${mb.w[0]}px)으로 390px 안 · 편집기와 저장 줄 넘침 없음 · 설명 탭 넷(${mdocs.join(' · ')}) 가로 넘침 없음`);
+  ok(`휴대폰 페이지: 시리즈 띠 19칸, 동현랭 두 칸 폭(${mb.w[0]}px)으로 390px 안 · 편집기와 저장 줄 넘침 없음 · 설명 탭 넷(${mdocs.join(' · ')}) 가로 넘침 없음`);
 
   // 휴대폰 전체 화면: 세로는 아래로 쌓고, 가로로 눕히면 지도를 왼쪽에 꽉 채운다
   await m.evaluate(() => { document.querySelector('.tabs button[data-tab=play]').click(); document.querySelector('#full').scrollIntoView({ block: 'center' }); });
