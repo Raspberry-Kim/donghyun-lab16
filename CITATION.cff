@@ -2,9 +2,9 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.04"
+version: "0.05"
 doi: "10.5281/zenodo.24106052"
-date-released: "2026-11-10"
+date-released: "2026-11-12"
 authors:
   - family-names: Kim
     given-names: Dong Hyun
