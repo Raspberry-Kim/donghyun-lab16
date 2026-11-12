@@ -2,6 +2,7 @@
  *   우리 부대를 찍는다 → 갈 수 있는 칸이 노랗게 → 칸을 찍어 옮긴다 → 붉은 테의 적을 찍어 친다.
  *   옮긴 뒤 칠 적이 없으면 그 부대는 그날 일을 마친다. 모두 마치면 차례가 저절로 넘어간다.
  *   조작 창: 대기 · 차례 넘기기 · 맡기기(남은 싸움을 AI에게) · 퇴각(한 번 더 묻는다).
+ *   그림: 부대는 말 탄 장수와 이름패, 지형은 산 · 물결 · 성의 픽셀 그림이다(sam-art.js). 그림은 판의 값에 닿지 않는다.
  * 키보드: 방향키 칸 커서 · Enter 커서가 놓인 칸 찍기(손으로 찍는 것과 같다) · Space 아직 일을 마치지 않은 다음 우리 부대 ·
  *   숫자 키 조작 창의 단추 · Esc 고른 부대 놓기. 결과 카드와 퇴각을 되묻는 창에서는 Enter가 노란 단추를 누른다.
  * 끝나면 결과 카드를 보이고, 지도로 돌아가면서 onDone(result)를 부른다. 소유권은 지도 쪽(Game.settle)이 옮긴다. */
@@ -180,12 +181,14 @@
     }
     drawOver(g) {
       const b = this.b, grid = this.grid, t = this.engine.tick, S = grid.size;
-      // 지형 그림
+      // 지형 그림(픽셀 그림): 산 · 강 물결 · 성 · 들의 풀포기. 풀포기는 칸 번호로 정해 늘 같은 자리에 난다
+      const A = DH.Sam.Art, defCol = b.sides.def.color;
       for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) {
-        const k = b.at(c, r), p = grid.center(c, r);
-        if (k === 'mountain') { g.beginPath(); g.moveTo(p.x - 13, p.y + 8); g.lineTo(p.x - 4, p.y - 9); g.lineTo(p.x + 2, p.y + 1); g.lineTo(p.x + 6, p.y - 5); g.lineTo(p.x + 14, p.y + 8); g.closePath(); g.fillStyle = '#8f7a58'; g.fill(); g.beginPath(); g.moveTo(p.x - 7.2, p.y - 3); g.lineTo(p.x - 4, p.y - 9); g.lineTo(p.x - 1.6, p.y - 4.5); g.closePath(); g.fillStyle = '#f3ecdc'; g.fill(); }
-        else if (k === 'river') { g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.4; g.lineCap = 'round'; for (const dy of [-6, 1, 8]) { g.beginPath(); g.moveTo(p.x - 10, p.y + dy); g.quadraticCurveTo(p.x - 5, p.y + dy - 4, p.x, p.y + dy); g.quadraticCurveTo(p.x + 5, p.y + dy + 4, p.x + 10, p.y + dy); g.stroke(); } }
-        else if (k === 'castle') { g.fillStyle = '#7b6a4f'; g.fillRect(p.x - 14, p.y - 4, 28, 14); for (const dx of [-14, -5, 4]) g.fillRect(p.x + dx, p.y - 10, 7, 7); g.fillRect(p.x + 7, p.y - 10, 7, 7); g.fillStyle = '#3c3226'; g.fillRect(p.x - 4, p.y + 1, 8, 9); }
+        const k = b.at(c, r), p = grid.center(c, r), h = A.hash(c, r, b.province.id);
+        if (k === 'mountain') A.draw(g, 'peak', p.x, p.y + 11, 2, A.FIELD);
+        else if (k === 'river') { for (const [dx, dy] of [[-4, -8], [5, 1], [-3, 10]]) A.draw(g, 'ripple', p.x + dx, p.y + dy, 2, A.FIELD); }
+        else if (k === 'castle') A.draw(g, 'fort', p.x, p.y + 11, 2, { ...A.castlePal(defCol), W: '#b9a888', w: '#8f7d5f', R: '#7b6a4f' });
+        else if (h < 0.3) A.draw(g, 'tuft', p.x + (h * 60 - 9), p.y + 6 + (A.hash(r, c, 7) * 10 - 5), 2, A.FIELD);
       }
       // 갈 수 있는 칸 · 칠 수 있는 적
       const s = this.sel;
@@ -195,17 +198,19 @@
       }
       // 자취
       for (const f of this.fx) if (f.kind === 'trail') { const a = 1 - (t - f.t0) / FX; g.beginPath(); g.moveTo(f.a.x, f.a.y); g.lineTo(f.b.x, f.b.y); g.strokeStyle = `rgba(38,33,28,${(0.5 * a).toFixed(3)})`; g.lineWidth = 3; g.setLineDash([5, 5]); g.stroke(); g.setLineDash([]); }
-      // 부대
+      // 부대: 말 탄 장수(장수 없는 부대는 창병 셋) + 이름과 병력을 적은 패. 공격 측은 오른쪽을, 수비 측은 왼쪽을 본다
       g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-      for (const u of b.units) {
+      for (const u of [...b.units].sort((a, z) => a.r - z.r || a.c - z.c)) {
         if (u.troops <= 0) continue;
-        const p = grid.center(u.c, u.r), col = b.sides[u.side].color, w = 34, h = 25, x = p.x - w / 2, y = p.y - h / 2, dim = this.mode === 'fight' && u.side === b.side && u.done;
+        const p = grid.center(u.c, u.r), col = b.sides[u.side].color, w = 34, h = 17, x = p.x - w / 2, y = p.y - 1.5, dim = this.mode === 'fight' && u.side === b.side && u.done;
         g.globalAlpha = dim ? 0.62 : 1;
-        g.beginPath(); g.roundRect(x, y, w, h, 4); g.fillStyle = col; g.fill();
-        g.lineWidth = u === s ? 3 : 1.4; g.strokeStyle = u === s ? ACCENT : INK; g.stroke();
-        if (u.side === 'att') { g.beginPath(); g.moveTo(x + w, y + 4); g.lineTo(x + w + 6, y + h / 2); g.lineTo(x + w, y + h - 4); g.closePath(); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.strokeStyle = INK; g.stroke(); }   // 공격 측은 오른쪽으로 뾰족하다
-        g.fillStyle = textOn(col); g.font = `700 9.5px ${FONT}`; g.fillText(u.name.slice(0, 3), p.x, p.y - 5.5);
-        g.font = `700 9px ${FONT}`; g.fillText(fmt(u.troops), p.x, p.y + 6);
+        if (u === s) { g.beginPath(); g.ellipse(p.x, p.y - 3, 15, 5, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(242,183,5,.75)'; g.fill(); }
+        else { g.beginPath(); g.ellipse(p.x, p.y - 2.5, 12, 3.5, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(38,33,28,.22)'; g.fill(); }
+        A.draw(g, u.officer == null ? 'foot' : 'rider', p.x, p.y + 0.5, 1.75, A.unitPal(col, Number(u.id.slice(-1))), { flip: u.side === 'def' });
+        g.beginPath(); g.roundRect(x, y, w, h, 3.5); g.fillStyle = col; g.fill();
+        g.lineWidth = u === s ? 2.6 : 1.2; g.strokeStyle = u === s ? ACCENT : INK; g.stroke();
+        g.fillStyle = textOn(col); g.font = `700 8.5px ${FONT}`; g.fillText(u.name.slice(0, 3), p.x, y + 4.8);
+        g.font = `700 8px ${FONT}`; g.fillText(fmt(u.troops), p.x, y + 12.4);
         g.globalAlpha = 1;
       }
       if (s && this.myTurn) for (const x of b.targets(s)) { const p = grid.center(x.c, x.r), pulse = 1 + 0.08 * Math.sin(t / 6); g.beginPath(); g.arc(p.x, p.y, S * 0.98 * pulse, 0, Math.PI * 2); g.strokeStyle = RED; g.lineWidth = 3; g.stroke(); }

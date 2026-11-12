@@ -8,7 +8,7 @@
    "year": 200,
    "month": 1
   },
-  "note": "41개 주는 후한 말 실제 지명과 위치에서 골랐고 인접은 동현삼이 정했다. 원작의 주 번호·인접·능력치를 옮긴 것이 아니다. 인구·금·쌀·병력·충성도·농지·능력치는 시험 값이다. 해안선은 오늘날 기준이다.",
+  "note": "41개 주는 후한 말 실제 지명과 위치에서 골랐고 인접은 동현삼이 정했다. 원작의 주 번호·인접·능력치를 옮긴 것이 아니다. 인구·금·쌀·병력·민심·농지·능력치는 시험 값이다. 해안선은 오늘날 기준이다.",
   "sources": [
    "Natural Earth 110m land (public domain) https://www.naturalearthdata.com/"
   ]
@@ -771,7 +771,7 @@
    "pop": 120000,
    "gold": 300,
    "rice": 800,
-   "troops": 2500,
+   "troops": 0,
    "loyalty": 60,
    "farm": 30,
    "adj": [39,40]
@@ -1177,6 +1177,316 @@
    "faction": null,
    "status": "free",
    "province": 13
+  },
+  {
+   "id": 210,
+   "name": "감녕",
+   "war": 90,
+   "int": 65,
+   "cha": 60,
+   "faction": null,
+   "status": "free",
+   "province": 33
+  },
+  {
+   "id": 211,
+   "name": "강유",
+   "war": 85,
+   "int": 90,
+   "cha": 75,
+   "faction": null,
+   "status": "free",
+   "province": 20
+  },
+  {
+   "id": 212,
+   "name": "방덕",
+   "war": 90,
+   "int": 60,
+   "cha": 65,
+   "faction": null,
+   "status": "free",
+   "province": 21
+  },
+  {
+   "id": 213,
+   "name": "순유",
+   "war": 30,
+   "int": 95,
+   "cha": 80,
+   "faction": null,
+   "status": "free",
+   "province": 17
+  },
+  {
+   "id": 214,
+   "name": "전위",
+   "war": 95,
+   "int": 30,
+   "cha": 55,
+   "faction": null,
+   "status": "free",
+   "province": 11
+  },
+  {
+   "id": 215,
+   "name": "맹획",
+   "war": 85,
+   "int": 40,
+   "cha": 70,
+   "faction": null,
+   "status": "free",
+   "province": 41
+  },
+  {
+   "id": 216,
+   "name": "장송",
+   "war": 25,
+   "int": 90,
+   "cha": 60,
+   "faction": null,
+   "status": "free",
+   "province": 39
+  },
+  {
+   "id": 217,
+   "name": "진궁",
+   "war": 50,
+   "int": 90,
+   "cha": 70,
+   "faction": null,
+   "status": "free",
+   "province": 10
+  },
+  {
+   "id": 218,
+   "name": "주태",
+   "war": 90,
+   "int": 50,
+   "cha": 65,
+   "faction": null,
+   "status": "free",
+   "province": 32
+  },
+  {
+   "id": 219,
+   "name": "전예",
+   "war": 75,
+   "int": 80,
+   "cha": 75,
+   "faction": null,
+   "status": "free",
+   "province": 2
+  },
+  {
+   "id": 301,
+   "name": "정욱",
+   "war": 45,
+   "int": 90,
+   "cha": 65,
+   "faction": "cao",
+   "status": "active",
+   "province": 10
+  },
+  {
+   "id": 302,
+   "name": "장료",
+   "war": 95,
+   "int": 80,
+   "cha": 80,
+   "faction": "cao",
+   "status": "active",
+   "province": 15
+  },
+  {
+   "id": 303,
+   "name": "만총",
+   "war": 60,
+   "int": 85,
+   "cha": 75,
+   "faction": "cao",
+   "status": "active",
+   "province": 16
+  },
+  {
+   "id": 304,
+   "name": "하후연",
+   "war": 90,
+   "int": 55,
+   "cha": 70,
+   "faction": "cao",
+   "status": "active",
+   "province": 17
+  },
+  {
+   "id": 305,
+   "name": "서황",
+   "war": 90,
+   "int": 70,
+   "cha": 70,
+   "faction": "cao",
+   "status": "active",
+   "province": 18
+  },
+  {
+   "id": 306,
+   "name": "조인",
+   "war": 85,
+   "int": 65,
+   "cha": 75,
+   "faction": "cao",
+   "status": "active",
+   "province": 24
+  },
+  {
+   "id": 311,
+   "name": "순우경",
+   "war": 70,
+   "int": 45,
+   "cha": 50,
+   "faction": "yuan",
+   "status": "active",
+   "province": 2
+  },
+  {
+   "id": 312,
+   "name": "원희",
+   "war": 55,
+   "int": 60,
+   "cha": 60,
+   "faction": "yuan",
+   "status": "active",
+   "province": 3
+  },
+  {
+   "id": 313,
+   "name": "저수",
+   "war": 45,
+   "int": 95,
+   "cha": 75,
+   "faction": "yuan",
+   "status": "active",
+   "province": 4
+  },
+  {
+   "id": 314,
+   "name": "장합",
+   "war": 90,
+   "int": 75,
+   "cha": 70,
+   "faction": "yuan",
+   "status": "active",
+   "province": 8
+  },
+  {
+   "id": 315,
+   "name": "심배",
+   "war": 60,
+   "int": 85,
+   "cha": 65,
+   "faction": "yuan",
+   "status": "active",
+   "province": 9
+  },
+  {
+   "id": 331,
+   "name": "문빙",
+   "war": 80,
+   "int": 65,
+   "cha": 70,
+   "faction": "liubiao",
+   "status": "active",
+   "province": 27
+  },
+  {
+   "id": 332,
+   "name": "금선",
+   "war": 55,
+   "int": 45,
+   "cha": 50,
+   "faction": "liubiao",
+   "status": "active",
+   "province": 35
+  },
+  {
+   "id": 333,
+   "name": "유도",
+   "war": 45,
+   "int": 55,
+   "cha": 55,
+   "faction": "liubiao",
+   "status": "active",
+   "province": 36
+  },
+  {
+   "id": 334,
+   "name": "조범",
+   "war": 50,
+   "int": 60,
+   "cha": 50,
+   "faction": "liubiao",
+   "status": "active",
+   "province": 37
+  },
+  {
+   "id": 341,
+   "name": "여몽",
+   "war": 85,
+   "int": 80,
+   "cha": 75,
+   "faction": "sun",
+   "status": "active",
+   "province": 29
+  },
+  {
+   "id": 342,
+   "name": "장소",
+   "war": 25,
+   "int": 95,
+   "cha": 85,
+   "faction": "sun",
+   "status": "active",
+   "province": 30
+  },
+  {
+   "id": 343,
+   "name": "황개",
+   "war": 85,
+   "int": 65,
+   "cha": 70,
+   "faction": "sun",
+   "status": "active",
+   "province": 32
+  },
+  {
+   "id": 351,
+   "name": "법정",
+   "war": 45,
+   "int": 95,
+   "cha": 70,
+   "faction": "liuzhang",
+   "status": "active",
+   "province": 28
+  },
+  {
+   "id": 352,
+   "name": "황권",
+   "war": 60,
+   "int": 85,
+   "cha": 75,
+   "faction": "liuzhang",
+   "status": "active",
+   "province": 38
+  },
+  {
+   "id": 371,
+   "name": "마대",
+   "war": 80,
+   "int": 60,
+   "cha": 65,
+   "faction": "mateng",
+   "status": "active",
+   "province": 20
   }
  ]
 }

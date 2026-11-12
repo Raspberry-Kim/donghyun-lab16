@@ -101,7 +101,7 @@
           if (raw === undefined) return fail(`설정 ${n}(${c.label}) 뒤에 값이 ${c.args.length}개 있어야 하는데 ${k}개뿐이다.`);
           if (!INT.test(raw)) return fail(`설정 ${n}(${c.label})의 값 '${raw.slice(0, 12)}'는 정수가 아니다.`);
           const v = Number(raw);
-          if (v < a.min || v > a.max || (a.step > 1 && v % a.step !== 0)) return fail(`${c.args.length > 1 ? `${c.label}의 ${a.label}` : c.label} 값 ${fmt(v)}은 쓸 수 없다. ${DonghyunLangAdapter.rangeText(a)}만 된다.`);
+          if (v < a.min || v > a.max || (a.step > 1 && v % a.step !== 0)) return fail(`${c.args.length > 1 ? `${c.label}의 ${a.label}` : c.label} 값 ${DH.josa(fmt(v), '은', '는')} 쓸 수 없다. ${DonghyunLangAdapter.rangeText(a)}만 된다.`);
           vals.push(v);
         }
         if (c.check) { const why = c.check(vals, opt.ctx || {}); if (why) return fail(`설정 ${n}(${c.label}): ${why}`); }
