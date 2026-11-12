@@ -1,6 +1,8 @@
 /* 동현삼 · 지도 장면 — 육각 지도 위의 41개 주에서 한 달에 한 번씩 명령을 내린다. 규칙은 sam-rules.js에 있다.
- *   군주를 고른다 → 우리 주를 찍는다 → 농지 개발 · 징병 · 이동 · 수색 · 침공 가운데 하나 → 턴 종료.
+ *   군주를 고른다 → 우리 주를 찍는다 → 농지 개발 · 징병 · 이동 · 수색 · 침공 · 시혜 · 동맹 가운데 하나 → 턴 종료.
  *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다.
+ *   장수가 이웃한 공백지(잿빛 성터)로 가면 그 땅을 차지한다. 마지막 장수가 떠난 주는 공백지가 된다. 동맹은 상대를 고르고, 깰 때는 한 번 더 묻는다.
+ *   그림: 주는 세력 색 성(군주가 있는 곳은 깃발 단 큰 성)으로, 산 · 숲 · 물결은 sam-art.js의 픽셀 그림으로 그린다.
  *   턴 종료를 누르면 다른 군주들이 움직인다. 우리 주가 침공받으면 전투 화면으로 넘어간다(sam-battle-scene.js).
  *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다.
  * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 단추 · Enter 노란 단추 · Esc 그만두기 ·
@@ -52,6 +54,7 @@
       const grid = new DH.HexGrid(w.map.cols, w.map.rows, 7);
       this.setupMap({ grid, ...this.palette(grid), line: 'rgba(38,33,28,.07)', minZoom: 1, maxZoom: 3 });
       this.pos = new Map([...w.provinces.values()].map(p => [p.id, grid.center(p.hex[0], p.hex[1])]));
+      this.decor = this.decorate(grid);
       e.clock.setActors([]);
       this._off = [e.on('clock:turn', d => this.layout.log(`${d.year}년 ${d.month}월이 되었다`))];
       this.layout.log(`${w.meta.scenario || '시작'} · 주 ${w.provinces.size} · 군주 ${w.factions.size}`);
@@ -74,6 +77,20 @@
       }
       return { styles, tileAt: (c, r) => { const k = kind[r][c]; if (k[0] === 's') return k; const id = own[r * grid.cols + c], p = id >= 0 && this.game && this.game.P(id); return k + (p && p.owner ? p.owner : ''); } };
     }
+    /** 지도 꾸밈: 주가 없는 칸에 산 · 숲 · 물결을 둔다. 칸 번호로 정하니 늘 같은 자리다(서쪽일수록 산이 많다). 주와 그 이웃 칸은 비워 이름이 가리지 않게 한다. */
+    decorate(grid) {
+      const w = this.world, A = DH.Sam.Art, land = (c, r) => w.map.at(c, r) === 'land', near = new Set(), out = [];
+      for (const p of w.provinces.values()) { near.add(p.hex[0] + ',' + p.hex[1]); for (const [c, r] of grid.neighbors(p.hex[0], p.hex[1])) near.add(c + ',' + r); }
+      for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) {
+        if (near.has(c + ',' + r)) continue;
+        const h = A.hash(c, r), P = grid.center(c, r);
+        if (!land(c, r)) { if (h < 0.09 && grid.neighbors(c, r).every(([nc, nr]) => !land(nc, nr))) out.push({ name: 'wave', x: P.x, y: P.y + 1, cell: 0.9 }); continue; }
+        const hill = c < 9 ? 0.3 : c < 14 ? 0.15 : 0.06;
+        if (h < hill) out.push({ name: h < hill * 0.55 ? 'hill' : 'hill2', x: P.x, y: P.y + 2.5, cell: 0.9 });
+        else if (h > 0.87) out.push({ name: 'wood', x: P.x, y: P.y + 2, cell: 0.9 });
+      }
+      return out;
+    }
     colorOf(p) { return p.owner ? this.game.factions.get(p.owner).color : NEUTRAL; }
     get mine() { const p = this.game.P(this.selected); return this.mode === 'play' && p && p.owner === this.game.player ? p : null; }
 
@@ -86,13 +103,13 @@
       this.mode = 'play'; this.sub = null; this.flash = null; this.selected = w.officers.get(f.leader).province;
       const g = this.game, all = g.goal >= g.provinces.size;
       this.layout.log(`${DH.Sam.ro(f.name)} 시작한다. 우리 주를 찍고 한 달에 한 번씩 명령을 내린다`); this.sfx('zone');
-      if (!all || g.stage.months) this.layout.log(`이기는 조건: ${all ? '모든 주' : `주 ${g.goal}개`}를 차지한다` + (g.stage.months ? ` · ${g.stage.months}달 안에` : ''));
+      this.layout.log(`이기는 조건: ${all ? '다른 세력을 모두 무너뜨린다(또는 모든 주를 차지한다)' : `주 ${g.goal}개를 차지한다`}` + (g.stage.months ? ` · ${g.stage.months}달 안에` : ''));
       this.settled();
     }
     /** 이동·침공에서 지금 찍을 수 있는 주들 */
     candidates() {
       const s = this.sub, p = this.mine; if (!s || s.step !== 'to' || !p) return [];
-      return s.type === 'move' ? this.game.friends(p.id) : this.game.targets(p.id);
+      return s.type === 'move' ? [...this.game.friends(p.id), ...(s.officer != null ? this.game.openLand(p.id) : [])] : this.game.targets(p.id);
     }
 
     onTap(x, y) {
@@ -164,14 +181,18 @@
       const p = this.mine; if (!p) return;
       const s = this.sub;
       if (id === 'cancel') this.sub = null;
-      else if (id === 'develop' || id === 'draft' || id === 'search') this.say(g[id](p.id), { develop: 'pop', draft: 'foot', search: 'ping' }[id]);
+      else if (id === 'develop' || id === 'draft' || id === 'search' || id === 'relief') this.say(g[id](p.id), { develop: 'pop', draft: 'foot', search: 'ping', relief: 'pop' }[id]);
+      else if (id === 'ally') this.sub = { type: 'ally', step: 'f' };
+      else if (key === 'af' && s && s.type === 'ally' && s.step === 'f') { this.sub = null; const r = g.ally(p.id, arg); this.say(r, r.made ? 'cheer' : 'tick'); }
+      else if (key === 'ab' && s && s.type === 'ally' && s.step === 'f') { s.f = arg; s.step = 'break'; }
+      else if (id === 'abok' && s && s.type === 'ally' && s.step === 'break') { this.sub = null; this.say(g.breakPact(p.id, s.f), 'alert'); }
       else if (id === 'move') this.sub = g.officersOf(p.id).length ? { type: 'move', step: 'who' } : { type: 'move', step: 'to', officer: null };
       else if (id === 'attack') this.sub = { type: 'attack', step: 'to' };
       else if (key === 'who' && s && s.step === 'who') { s.officer = arg === 'none' ? null : Number(arg); s.step = 'to'; }
       else if (key === 'to' && s && s.step === 'to') { s.to = Number(arg); s.step = 'n'; }
       else if (key === 'n' && s && s.step === 'n') {
         const n = Number(arg); this.sub = null;
-        if (s.type === 'move') this.say(g.move(p.id, s.officer, s.to, n), 'horse');
+        if (s.type === 'move') { const r = g.move(p.id, s.officer, s.to, n); this.say(r, 'horse'); if (r.ok && r.took) this.selected = s.to; return this.settled(); }
         else return this.invade(p.id, s.to, n);
       }
       this.refresh();
@@ -207,7 +228,8 @@
         const s = this.game.nextAI();
         if (s.done) return this.endMonth();
         if (s.quiet) continue;
-        this.flash = { from: s.from, to: s.cmd.to, t0: tick }; this.layout.log(s.text); this.sfx(s.battle ? 'alert' : 'drum');            // 우리 주가 침공당하면 경보
+        if (s.cmd.to != null) this.flash = { from: s.from, to: s.cmd.to, t0: tick };
+        this.layout.log(s.text); this.sfx(s.battle ? 'alert' : s.cmd.type === 'attack' ? 'drum' : 'tick');            // 우리 주가 침공당하면 경보
         if (s.battle) return this.openBattle(s, 'def');
         this.pause = 26; return this.refresh();
       }
@@ -226,14 +248,14 @@
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
       if (!sel) {
         if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 단추를 누른다.' });
-        else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음']], note: this.note(null) });
+        else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음']], note: this.note(null) });
         return pick();
       }
       const inc = g.income(sel.id), off = g.officersOf(sel.id);
       L.setDetail({ title: `${sel.name} ${sel.hanja || ''}`, rows: [
-        ['세력', g.fname(sel.owner) + (sel.owner && sel.owner === me ? ' · 우리 땅' : '')], ['인구', fmt(sel.pop)],
+        ['세력', g.fname(sel.owner) + (sel.owner && sel.owner === me ? ' · 우리 땅' : me && g.allied(me, sel.owner) ? ` · 동맹(${g.alliesOf(me).find(a => a.id === sel.owner).months}달 남음)` : g.vacant(sel) ? ' · 장수를 보내면 차지한다' : '')], ['인구', fmt(sel.pop)],
         ['금', sel.owner ? `${fmt(sel.gold)} (달마다 +${fmt(inc.gold)})` : fmt(sel.gold)], ['쌀', sel.owner ? `${fmt(sel.rice)} (달마다 +${fmt(inc.rice)} −${fmt(inc.upkeep)})` : fmt(sel.rice)],
-        ['병력', fmt(sel.troops)], ['충성도', sel.loyalty], ['농지', sel.farm],
+        ['병력', fmt(sel.troops)], ['민심', sel.loyalty], ['농지', sel.farm],
         ['장수', off.length ? off.map(o => `${o.name}(무${o.war} 지${o.int} 매${o.cha})`).join(', ') : '없음'],
         ['이웃', sel.adj.map(id => { const q = g.P(id); return `${q.name}(${g.fname(q.owner)} ${fmt(q.troops)})`; }).join(' · ')]], note: this.note(sel) });
       pick();
@@ -242,66 +264,78 @@
     note(sel) {
       const g = this.game, s = this.sub, p = this.mine;
       if (this.mode === 'pick') return '아래에서 군주를 고르면 시작한다.';
-      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 ${g.provinces.size}개 주를 모두 차지했다.` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.` : '주를 모두 잃었다.') + ' 다시 하려면 아래 단추를 누른다.';
+      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 천하를 하나로 모았다(우리 주 ${g.provincesOf(g.player).length}개).` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.` : '주를 모두 잃었다.') + ' 다시 하려면 아래 단추를 누른다.';
       if (this.mode === 'busy') return '다른 군주들이 움직이는 중이다. 침공이 있으면 기록에 뜬다.';
       if (!sel) return '우리 주를 찍으면 명령을 내릴 수 있다. 다 내렸으면 턴 종료를 누른다.';
-      if (!p) return '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
+      if (!p) return g.vacant(sel) ? '공백지다. 이웃한 우리 주에서 장수를 이동시키면 차지한다.' : g.allied(g.player, sel.owner) ? '동맹의 땅이다. 동맹인 동안에는 서로 치지 않는다.' : '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
       if (s) {
-        if (s.step === 'who') return '누가 옮겨 갈지 고른다.';
-        if (s.step === 'to') return s.type === 'move' ? '어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.' : '어디를 칠지 고른다. 지도에서 붉은 테의 주를 찍어도 된다.';
-        if (s.type === 'move') return `${g.P(s.to).name}에 병력을 얼마나 딸려 보낼지 고른다.`;
-        const f = g.fighters(p.id); return `${g.P(s.to).name}에 보낼 병력을 고른다. ` + (f.length ? `${f.map(o => o.name).join(' · ')}${f.length > 1 ? ' 부대로 나뉘어' : josaGa(f[0].name)} 나선다.` : `장수가 없어 원정대(무력 ${g.rules.baseStat})가 나선다.`);
+        const last = g.officersOf(p.id).length === 1, empty = ` 장수가 한 명뿐이라, 그 장수가 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).`;
+        if (s.type === 'ally') return s.step === 'f' ? `동맹을 청할 세력을 고른다. 금 ${g.rules.ally.gold}은 받아들이든 말든 나간다. 맺으면 ${g.rules.ally.months}달 동안 서로 치지 않는다.` : `${DH.Sam.josa(g.fname(s.f), '과', '와')} 맺은 동맹을 깨면 우리 주 모두의 민심이 ${g.rules.ally.breakLoyalty} 내린다.`;
+        if (s.step === 'who') return '누가 옮겨 갈지 고른다.' + (last ? empty : '');
+        if (s.step === 'to') return s.type === 'move' ? '어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.' + (s.officer != null && g.openLand(p.id).length ? ' 공백지로 가면 그 땅을 차지한다.' : '') + (s.officer != null && last ? empty : '') : '어디를 칠지 고른다. 지도에서 붉은 테의 주를 찍어도 된다.';
+        if (s.type === 'move') return `${g.P(s.to).name}에 병력을 얼마나 딸려 보낼지 고른다.` + (s.officer != null && last ? empty : '');
+        const f = g.fighters(p.id); return `${g.P(s.to).name}에 보낼 병력을 고른다. ` + (f.length ? `${f.map(o => o.name).join(' · ')}${f.length > 1 ? ' 부대로 나뉘어' : josaGa(f[0].name)} 나선다.` : `장수가 없어 원정대(무력 ${g.rules.baseStat})가 나선다.`) + (last ? ` 이기면 장수가 옮겨 가 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : '');
       }
       if (p.acted) return '이번 달 명령을 이미 내렸다. 다른 주를 고르거나 턴 종료를 누른다.';
-      const no = [['develop', '농지 개발'], ['draft', '징병'], ['move', '이동'], ['attack', '침공']].map(([k, n]) => [n, g.can(p.id, k)]).filter(([, r]) => !r.ok).map(([n, r]) => `${n}: ${r.why}`);
+      const no = [['develop', '농지 개발'], ['draft', '징병'], ['move', '이동'], ['attack', '침공'], ['relief', '시혜'], ['ally', '동맹']].map(([k, n]) => [n, g.can(p.id, k)]).filter(([, r]) => !r.ok).map(([n, r]) => `${n}: ${r.why}`);
       return '명령 하나를 고른다. 주마다 한 달에 한 번이다.' + (no.length ? ' 지금 못 하는 것 — ' + no.join(' · ') : '');
     }
     menu() {
       const g = this.game, p = this.mine, s = this.sub, cancel = { id: 'cancel', label: '그만두기' };
       if (this.mode === 'pick') return [...[...g.factions.values()].map(f => ({ id: 'f:' + f.id, label: `${f.name} · 주 ${g.provincesOf(f.id).length}` })), ...ZOOM];
       if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }, ...ZOOM];
+      if (p && s && s.type === 'ally') {
+        const A = g.rules.ally, me = g.player;
+        if (s.step === 'break') return [{ id: 'abok', label: `정말 깬다 · 우리 주 민심 −${A.breakLoyalty}` }, { ...cancel, primary: true }];
+        return [...g.borderFactions(p.id).filter(f => !g.allied(me, f)).map(f => ({ id: 'af:' + f, label: `${g.fname(f)}에 청한다 · 금 ${A.gold} · ${Math.round(g.allyChance(p.id, f) * 100)}%`, disabled: p.gold < A.gold, hint: p.gold < A.gold ? `금 ${A.gold}이 있어야 한다` : '' })),
+          ...g.alliesOf(me).map(a => ({ id: 'ab:' + a.id, label: `${g.fname(a.id)} 동맹 깨기 · ${a.months}달 남음` })), cancel];
+      }
       if (p && s) {
         if (s.step === 'who') return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${o.name} 무${o.war}` })), { id: 'who:none', label: '병력만', disabled: p.troops <= 0 }, cancel];
-        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? `${q.name} ${fmt(q.troops)}` : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
+        if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? (g.vacant(q) ? `${q.name} · 공백지` : `${q.name} ${fmt(q.troops)}`) : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
         const half = Math.floor(p.troops / 2), min = g.rules.attackMin;
         if (s.type === 'move') return [...(s.officer !== null ? [{ id: 'n:0', label: '병력 없이' }] : []), { id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half <= 0 }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, disabled: p.troops <= 0 }, cancel];
         return [{ id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half < min, hint: half < min ? `병력 ${fmt(min)}부터 보낼 수 있다` : '' }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, primary: true }, cancel];
       }
       const R = g.rules, busy = this.mode === 'busy', cmd = (id, label) => { const r = p && !busy ? g.can(p.id, id) : { ok: false, why: busy ? '다른 군주들의 차례다' : '우리 주를 먼저 찍는다' }; return { id, label, disabled: !r.ok, hint: r.ok ? '' : r.why }; };
-      return [cmd('develop', `농지 개발 · 금 ${R.develop.gold}`), cmd('draft', `징병 +${fmt(R.draft.troops)} · 금 ${R.draft.gold}`), cmd('move', '이동'), cmd('search', '수색'), cmd('attack', '침공'),
+      return [cmd('develop', `농지 개발 · 금 ${R.develop.gold}`), cmd('draft', `징병 +${fmt(R.draft.troops)} · 금 ${R.draft.gold}`), cmd('move', '이동'), cmd('search', '수색'), cmd('attack', '침공'), cmd('relief', `시혜 · 쌀 ${fmt(R.relief.rice)}`), cmd('ally', '동맹'),
         { id: 'end', label: '턴 종료', primary: true, disabled: busy, hint: '다른 군주들이 움직이고 달이 넘어간다' }, ...ZOOM];
     }
 
     render(g) { super.render(g); if (this.mode === 'over') this.drawCard(g); }
     drawOver(g) {
-      const gm = this.game, z = this.cam.zoom, sel = this.selected, t = this.engine.tick, me = gm.player, near = sel ? new Set(gm.P(sel).adj) : new Set();
+      const gm = this.game, z = this.cam.zoom, sel = this.selected, t = this.engine.tick, me = gm.player, near = sel ? new Set(gm.P(sel).adj) : new Set(), A = DH.Sam.Art;
       const cand = new Set(this.candidates().map(q => q.id)), candCol = this.sub && this.sub.type === 'attack' ? RED : ACCENT;
-      // 이웃 길
+      // 산 · 숲 · 물결
+      for (const d of this.decor) A.draw(g, d.name, d.x, d.y, d.cell, A.LAND);
+      // 이웃 길: 흙길 빛 띠 위에 밝은 가운데 줄. 고른 주에서 나가는 길은 짙게
       g.lineCap = 'round';
-      for (const p of gm.provinces.values()) for (const b of p.adj) {
-        if (b < p.id) continue;
-        const A = this.pos.get(p.id), B = this.pos.get(b), hot = sel !== null && (p.id === sel || b === sel);
-        g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(B.x, B.y);
-        g.strokeStyle = hot ? INK : 'rgba(38,33,28,.38)'; g.lineWidth = (hot ? 2 : 1) / z * (z > 1.5 ? 1.3 : 1); g.stroke();
-      }
+      const road = (hot, w, col) => { g.beginPath(); for (const p of gm.provinces.values()) for (const b of p.adj) { if (b < p.id || (sel !== null && (p.id === sel || b === sel)) !== hot) continue; const P = this.pos.get(p.id), B = this.pos.get(b); g.moveTo(P.x, P.y); g.lineTo(B.x, B.y); } g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+      road(false, 2.3, 'rgba(120,96,62,.5)'); road(false, 0.8, 'rgba(250,240,214,.85)');
+      road(true, 3, INK); road(true, 1.1, ACCENT);
       // 방금 있었던 침공
-      if (this.flash) { const A = this.pos.get(this.flash.from), B = this.pos.get(this.flash.to), a = Math.max(0, 1 - (t - this.flash.t0) / 60); g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(B.x, B.y); g.strokeStyle = `rgba(192,50,31,${a.toFixed(3)})`; g.lineWidth = 3.2; g.stroke(); }
-      // 주
+      if (this.flash) { const P = this.pos.get(this.flash.from), B = this.pos.get(this.flash.to), a = Math.max(0, 1 - (t - this.flash.t0) / 60); g.beginPath(); g.moveTo(P.x, P.y); g.lineTo(B.x, B.y); g.strokeStyle = `rgba(192,50,31,${a.toFixed(3)})`; g.lineWidth = 3.2; g.stroke(); }
+      // 주: 세력 색 성. 군주가 있는 곳은 깃발 단 큰 성, 주인 없는 공백지는 잿빛 성터
+      const caps = new Set([...gm.factions.values()].filter(f => f.alive).map(f => gm.officers.get(f.leader)).filter(o => o && o.status === 'active').map(o => o.province));
       for (const p of gm.provinces.values()) {
-        const P = this.pos.get(p.id), r = p.id === sel ? 5.2 : 4.2;
-        if (cand.has(p.id)) { g.beginPath(); g.arc(P.x, P.y, r + 2.6 + 0.7 * Math.sin(t / 7), 0, Math.PI * 2); g.strokeStyle = candCol; g.lineWidth = 1.8; g.stroke(); }
-        if (cand.has(p.id) && this.sub.aim === p.id) { g.beginPath(); g.arc(P.x, P.y, r + 6.2, 0, Math.PI * 2); g.strokeStyle = INK; g.lineWidth = 1.6; g.stroke(); }      // 방향키로 겨눈 대상
-        g.beginPath(); g.arc(P.x, P.y, r, 0, Math.PI * 2); g.fillStyle = this.colorOf(p); g.fill();
-        g.lineWidth = p.id === sel ? 2 : near.has(p.id) ? 1.6 : 0.9; g.strokeStyle = p.id === sel ? ACCENT : near.has(p.id) ? '#fff' : INK; g.stroke();
-        if (me && p.owner === me && !p.acted && this.mode === 'play') { g.beginPath(); g.arc(P.x, P.y, 1.5, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); }      // 아직 명령을 내리지 않은 우리 주
+        const P = this.pos.get(p.id), kind = !p.owner ? 'ruin' : caps.has(p.id) ? 'capital' : 'town', top = kind === 'capital' ? 8.5 : kind === 'town' ? 5.5 : 2;
+        if (cand.has(p.id)) { g.beginPath(); g.arc(P.x, P.y, 9.6 + 0.7 * Math.sin(t / 7), 0, Math.PI * 2); g.strokeStyle = candCol; g.lineWidth = 1.8; g.stroke(); }
+        if (cand.has(p.id) && this.sub.aim === p.id) { g.beginPath(); g.arc(P.x, P.y, 12.8, 0, Math.PI * 2); g.strokeStyle = INK; g.lineWidth = 1.6; g.stroke(); }      // 방향키로 겨눈 대상
+        if (p.id === sel || near.has(p.id)) {                                               // 고른 주는 노란 받침, 이웃한 주는 흰 받침
+          g.beginPath(); g.roundRect(P.x - 8, P.y - top - 1.5, 16, top + 7, 3);
+          g.fillStyle = p.id === sel ? 'rgba(242,183,5,.5)' : 'rgba(255,255,255,.55)'; g.fill(); g.lineWidth = p.id === sel ? 1.8 : 1; g.strokeStyle = p.id === sel ? ACCENT : '#fff'; g.stroke();
+        }
+        A.draw(g, kind, P.x, P.y + 4.5, 1, A.castlePal(p.owner ? this.colorOf(p) : null));
+        if (me && p.owner === me && !p.acted && this.mode === 'play') { g.beginPath(); g.arc(P.x + 7, P.y - top + 1, 1.9, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = INK; g.stroke(); }      // 아직 명령을 내리지 않은 우리 주
+        if (me && gm.allied(me, p.owner)) { g.beginPath(); g.arc(P.x - 7, P.y - top + 1, 1.9, 0, Math.PI * 2); g.fillStyle = '#2e9e5b'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = '#fff'; g.stroke(); }                  // 동맹의 주
       }
       // 이름(크게 보면 병력도): 화면에서 늘 같은 크기로 보이게 배율로 나눈다
       const fs = 9 / z; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineJoin = 'round';
       for (const p of gm.provinces.values()) {
         const P = this.pos.get(p.id);
-        g.font = `700 ${fs}px ${FONT}`; g.lineWidth = 2.4 / z; g.strokeStyle = 'rgba(251,247,239,.92)'; g.strokeText(p.name, P.x, P.y + 5.5);
-        g.fillStyle = INK; g.fillText(p.name, P.x, P.y + 5.5);
-        if (z >= 1.5) { const s = fmt(p.troops); g.font = `600 ${7.5 / z}px ${FONT}`; g.strokeText(s, P.x, P.y + 5.5 + fs * 1.05); g.fillStyle = '#5a4f43'; g.fillText(s, P.x, P.y + 5.5 + fs * 1.05); }
+        g.font = `700 ${fs}px ${FONT}`; g.lineWidth = 2.4 / z; g.strokeStyle = 'rgba(251,247,239,.92)'; g.strokeText(p.name, P.x, P.y + 6);
+        g.fillStyle = INK; g.fillText(p.name, P.x, P.y + 6);
+        if (z >= 1.5) { const s = p.owner || p.troops ? fmt(p.troops) : '공백지'; g.font = `600 ${7.5 / z}px ${FONT}`; g.strokeText(s, P.x, P.y + 6 + fs * 1.05); g.fillStyle = '#5a4f43'; g.fillText(s, P.x, P.y + 6 + fs * 1.05); }
       }
     }
     drawCard(g) {
@@ -346,7 +380,9 @@
       this.selected = w.provinces.has(v.selected) ? v.selected : null;
       if (c && num(c.x) && num(c.y) && num(c.zoom)) { this.cam.zoom = Math.min(this.cam.maxZoom, Math.max(this.cam.minZoom, c.zoom)); this.cam.x = c.x; this.cam.y = c.y; this.cam.clampTo(this.grid); }
       const text = `저장한 판을 불러왔다 · ${game.fname(game.player)} · ${e.clock.label}`;
-      this.layout.log(text); this.refresh();
+      this.layout.log(text);
+      if (d.game.pacts === undefined && [...game.provinces.values()].some(p => p.owner && !game.officersOf(p.id).length)) this.layout.log('v0.05까지의 저장 파일이다. 장수가 없는 주는 달이 바뀔 때 공백지가 된다. 그 전에 장수를 보내 두면 지킬 수 있다');
+      this.refresh();
       return { ok: true, text, applied: rep.applied };
     }
   }

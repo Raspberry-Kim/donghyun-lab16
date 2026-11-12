@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.05"
+version: "0.06"
 doi: "10.5281/zenodo.24106052"
 date-released: "2026-11-12"
 authors:
@@ -18,7 +18,8 @@ abstract: >-
   broad frame of Romance of the Three Kingdoms II (Koei, 1989): the player
   picks one of nine rulers on a node map of 41 provinces of late Han China
   and gives one order per province per month (develop farmland, draft, move,
-  search, invade). An invasion opens a 10x10 hex battlefield with terrain
+  search, invade, relief, alliance). A province with no officer becomes
+  vacant land that an officer can occupy by moving in. An invasion opens a 10x10 hex battlefield with terrain
   movement costs and defence modifiers; the other rulers are played by a
   simple priority-based AI. Starting values, rule numbers, the victory
   condition and time limit are set through a program written in the esoteric

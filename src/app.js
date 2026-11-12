@@ -156,7 +156,7 @@ function slotNote(d) {
   return [u.title, u.date, u.line].filter(Boolean).map(x => clip(x)).join(' · ') + when;
 }
 function saveToSlot(n) {
-  try { const d = snapshot(); localStorage.setItem(SAVE.slot + n, JSON.stringify(d)); toast(`브라우저 칸 ${n}에 저장했다 · ${d.summary.title} · ${d.summary.date}`); return true; }
+  try { const d = snapshot(); localStorage.setItem(SAVE.slot + n, JSON.stringify(d)); toast(`브라우저 칸 ${n}에 저장했다 · ${d.summary.title} · ${d.summary.date}`); renderSlotList(); return true; }
   catch (e) { toast('브라우저 저장에 실패했다. 파일로 내려받아 저장하자.', 'error'); return false; }
 }
 function saveToFile() {
@@ -213,7 +213,7 @@ function saveMenu() {
 function deleteMenu() {
   const items = [];
   for (let n = 1; n <= SLOTS; n++) { const d = readSlot(n); items.push({ label: `브라우저 칸 ${n}`, note: slotNote(d), off: !d,
-    fn: () => confirmMenu(`칸 ${n}${eul(n)} 지울까? 되돌릴 수 없다.`, [['지운다', () => { try { localStorage.removeItem(SAVE.slot + n); } catch (e) {} toast(`브라우저 칸 ${n}${eul(n)} 지웠다`); deleteMenu(); }], ['그만둔다', deleteMenu]], deleteMenu) }); }
+    fn: () => confirmMenu(`칸 ${n}${eul(n)} 지울까? 되돌릴 수 없다.`, [['지운다', () => { try { localStorage.removeItem(SAVE.slot + n); } catch (e) {} toast(`브라우저 칸 ${n}${eul(n)} 지웠다`); renderSlotList(); deleteMenu(); }], ['그만둔다', deleteMenu]], deleteMenu) }); }
   items.push(['돌아가기', saveMenu]); openMenu('칸 지우기', items, saveMenu);
 }
 function loadMenu() {
@@ -227,6 +227,25 @@ function loadMenu() {
 for (const id of ['#game-save', '#fs-save']) $(id).onclick = saveMenu;
 for (const id of ['#game-load', '#fs-load']) $(id).onclick = loadMenu;
 $('#load-file').onchange = e => loadFile(e.target);
+/* 동현랭 코드 칸 아래의 목록: 브라우저 칸 셋과 파일. 출전하기 전에는 누르면 바로 열고, 하던 것이 있으면 한 번 묻는다. 지우기는 두 번 눌러야 지운다 */
+$('#load-file-setup').onchange = e => loadFile(e.target);
+document.querySelector('.load-head label').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#load-file-setup').click(); } });
+function renderSlotList() {
+  const box = $('#slot-list'); if (!box) return; box.replaceChildren();
+  for (let n = 1; n <= SLOTS; n++) {
+    const d = readSlot(n), b = el('button'), row = el('div'), u = (d && d.summary) || {}; b.type = 'button'; b.className = 'slot-btn'; b.disabled = !d; row.className = 'slot-row';
+    b.append(el('b', `칸 ${n}`), el('span', d ? slotNote({ ...d, summary: { title: u.title, date: u.date } }) : slotNote(null))); if (d && u.line) b.append(el('small', clip(u.line)));
+    b.onclick = () => { const s = readSlot(n); if (!s || !current) return renderSlotList(); if (waiting) loadFrom(s); else confirmMenu(`지금 ${SAVE.word}을 두고 칸 ${n}${eul(n)} 불러올까? 저장하지 않은 진행은 사라진다.`, [['불러온다', () => loadFrom(readSlot(n))], ['그만둔다', null]]); };
+    row.append(b);
+    if (d) { const x = el('button', '지우기'); x.type = 'button'; x.className = 'slot-del'; x.setAttribute('aria-label', `칸 ${n} 지우기`); let t = 0;
+      x.onclick = () => { if (!x.classList.contains('armed')) { x.classList.add('armed'); x.textContent = '정말 지운다'; t = setTimeout(() => { x.classList.remove('armed'); x.textContent = '지우기'; }, 4000); return; }
+        clearTimeout(t); try { localStorage.removeItem(SAVE.slot + n); } catch (e) {} renderSlotList(); status(`브라우저 칸 ${n}${eul(n)} 지웠다.`); };
+      row.append(x); }
+    box.append(row);
+  }
+}
+window.addEventListener('storage', e => { if (!e.key || e.key.startsWith(SAVE.slot)) renderSlotList(); });      // 다른 창에서 저장하거나 지운 것도 따라 보인다
+renderSlotList();
 
 /* ---------- 시작 카드: 첫 출전(또는 불러오기) 전까지 지도 위에 얹는다. 아래 판은 멈추고 입력은 카드가 받는다 ---------- */
 let waiting = true;
@@ -234,7 +253,7 @@ const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 class StartCard extends DH.Scene {
   constructor(engine, layout) { super(engine); this.layout = layout; }
   enter() {
-    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 지도 아래 불러오기로 이어 한다.` });
+    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 코드 칸 아래 목록이나 지도 아래 불러오기로 이어 한다.` });
     this.layout.setMenu([], null);   // 출전 단추는 B 칸 하나뿐이다. 코드를 보고 누르게 한다
   }
   onKey() {}   // 시작 전에는 지도가 키를 받지 않는다

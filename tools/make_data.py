@@ -71,7 +71,7 @@ EDGES=[(1,2),(2,3),(3,4),(3,7),(4,5),(4,6),(5,9),(5,10),(6,8),(6,10),(7,8),(8,17
 (12,13),(12,16),(13,16),(13,30),(14,15),(14,17),(14,24),(15,16),(15,24),(15,26),(16,29),(17,18),(17,24),(18,19),(19,20),(19,23),
 (20,21),(20,23),(21,22),(23,38),(23,25),(24,25),(25,26),(25,27),(26,27),(26,29),(26,33),(27,28),(27,35),(27,34),(28,40),(29,30),
 (29,33),(30,31),(31,32),(33,34),(34,35),(34,36),(34,37),(35,36),(36,37),(38,39),(39,40),(39,41),(40,41)]
-TIER={'A':(420000,900,2400,8000,70,60),'B':(260000,550,1500,5000,65,45),'C':(120000,300,800,2500,60,30)}   # 인구, 금, 쌀, 병력, 충성도, 농지 (시험 값)
+TIER={'A':(420000,900,2400,8000,70,60),'B':(260000,550,1500,5000,65,45),'C':(120000,300,800,2500,60,30)}   # 인구, 금, 쌀, 병력, 민심(자료의 loyalty), 농지 (시험 값)
 FACTIONS=[('cao','조조','#3566c4',101),('yuan','원소','#c9a227',111),('liubei','유비','#3f9a52',121),('liubiao','유표','#8b5fc7',131),
 ('sun','손책','#d0483a',141),('liuzhang','유장','#c77a2a',151),('zhanglu','장로','#6b7b8c',161),('mateng','마등','#2f9aa0',171),('gongsundu','공손도','#9a6b4b',181)]
 # id, 이름, 무력, 지력, 매력, 세력, 상태, 있는 주  (능력치는 동현삼의 시험 값이다. 원작 수치가 아니다)
@@ -89,7 +89,17 @@ OFFICERS=[
 (201,'조운',95,75,85,None,'free',6),(202,'제갈량',35,100,95,None,'free',25),
 # 재야 장수: 수색으로 찾는다. 있는 주는 대강의 연고지다(시험 배치)
 (203,'서서',65,95,80,None,'free',24),(204,'방통',35,98,70,None,'free',27),(205,'마량',25,90,85,None,'free',26),(206,'육손',70,95,90,None,'free',31),
-(207,'위연',90,65,50,None,'free',34),(208,'노숙',45,90,90,None,'free',29),(209,'미축',30,70,85,None,'free',13)]
+(207,'위연',90,65,50,None,'free',34),(208,'노숙',45,90,90,None,'free',29),(209,'미축',30,70,85,None,'free',13),
+(210,'감녕',90,65,60,None,'free',33),(211,'강유',85,90,75,None,'free',20),(212,'방덕',90,60,65,None,'free',21),(213,'순유',30,95,80,None,'free',17),
+(214,'전위',95,30,55,None,'free',11),(215,'맹획',85,40,70,None,'free',41),(216,'장송',25,90,60,None,'free',39),(217,'진궁',50,90,70,None,'free',10),
+(218,'주태',90,50,65,None,'free',32),(219,'전예',75,80,75,None,'free',2),
+# 태수: 주마다 장수가 적어도 한 명 있다. 장수가 없는 주는 주인 없는 공백지가 된다(동현삼 규칙)
+(301,'정욱',45,90,65,'cao','active',10),(302,'장료',95,80,80,'cao','active',15),(303,'만총',60,85,75,'cao','active',16),(304,'하후연',90,55,70,'cao','active',17),
+(305,'서황',90,70,70,'cao','active',18),(306,'조인',85,65,75,'cao','active',24),
+(311,'순우경',70,45,50,'yuan','active',2),(312,'원희',55,60,60,'yuan','active',3),(313,'저수',45,95,75,'yuan','active',4),(314,'장합',90,75,70,'yuan','active',8),(315,'심배',60,85,65,'yuan','active',9),
+(331,'문빙',80,65,70,'liubiao','active',27),(332,'금선',55,45,50,'liubiao','active',35),(333,'유도',45,55,55,'liubiao','active',36),(334,'조범',50,60,50,'liubiao','active',37),
+(341,'여몽',85,80,75,'sun','active',29),(342,'장소',25,95,85,'sun','active',30),(343,'황개',85,65,70,'sun','active',32),
+(351,'법정',45,95,70,'liuzhang','active',28),(352,'황권',60,85,75,'liuzhang','active',38),(371,'마대',80,60,65,'mateng','active',20)]
 
 adj=collections.defaultdict(set)
 for a,b in EDGES: assert a!=b; adj[a].add(b); adj[b].add(a)
@@ -108,12 +118,15 @@ provinces=[]
 for pid,name,hj,lon,lat,tier,owner in PROV:
     c,r,off=spot[pid]; assert off<1.0,(name,'제자리에서 1° 넘게 밀렸다',off)
     pop,gold,rice,troops,loyalty,farm=TIER[tier]
+    if owner is None: troops=0                      # 주인 없는 땅(공백지)에는 병력이 없다
     provinces.append(dict(id=pid,name=name,hanja=hj,lon=lon,lat=lat,hex=[c,r],owner=owner,pop=pop,gold=gold,rice=rice,troops=troops,loyalty=loyalty,farm=farm,adj=sorted(adj[pid])))
 print('주 칸이 제자리에서 가장 멀리 밀린 곳:',max((v[2],k) for k,v in spot.items()))
 assert len(provinces)==41 and all(p['adj'] for p in provinces)
+for p in provinces: assert p['owner'] is None or any(o[5]==p['owner'] and o[6]=='active' and o[7]==p['id'] for o in OFFICERS),(p['name'],'주인이 있는데 장수가 없다')
+assert len({o[0] for o in OFFICERS})==len(OFFICERS)
 sam=dict(format='donghyun-sam-data',version=1,
  meta=dict(title='동현삼 샘플 자료',scenario='200년 1월 무렵을 본뜬 시험 배치',start=dict(year=200,month=1),
-  note='41개 주는 후한 말 실제 지명과 위치에서 골랐고 인접은 동현삼이 정했다. 원작의 주 번호·인접·능력치를 옮긴 것이 아니다. 인구·금·쌀·병력·충성도·농지·능력치는 시험 값이다. 해안선은 오늘날 기준이다.',
+  note='41개 주는 후한 말 실제 지명과 위치에서 골랐고 인접은 동현삼이 정했다. 원작의 주 번호·인접·능력치를 옮긴 것이 아니다. 인구·금·쌀·병력·민심·농지·능력치는 시험 값이다. 해안선은 오늘날 기준이다.',
   sources=['Natural Earth 110m land (public domain) https://www.naturalearthdata.com/']),
  map=dict(grid='hex',layout='pointy-odd-r',cols=S_COLS,rows=S_ROWS,origin=dict(lon=S_LON0,lat=S_LAT0),rowStepDeg=S_ROWSTEP,tiles={'~':'sea','#':'land'},rle=[rle(x) for x in s_rows]),
  factions=[dict(id=i,name=n,color=c,leader=l) for i,n,c,l in FACTIONS],
@@ -215,7 +228,9 @@ hang=dict(format='donghyun-hang-data',version=1,
   sources=['Natural Earth 110m land (public domain) https://www.naturalearthdata.com/']),
  map=dict(grid='square',cols=H_COLS,rows=H_ROWS,wrapX=True,origin=dict(lon=H_LON0,lat=H_LAT0),degPerTile=1,tiles={'~':'sea','#':'land'},carved=carved,rle=[rle(''.join(x)) for x in grid]),
  goods=[dict(id=i,name=n,base=b) for i,n,b in GOODS], facilities=FAC, ports=ports,
- shipTypes=[dict(id='caravel',name='캐러벨',cargo=120,minCrew=10,maxCrew=40,speed=2,hull=60,guns=8,price=2000),dict(id='carrack',name='캐럭',cargo=320,minCrew=30,maxCrew=120,speed=1,hull=120,guns=16,price=5000)],
+ shipTypes=[dict(id='caravel',name='캐러벨',cargo=120,minCrew=10,maxCrew=40,speed=2,hull=60,guns=8,price=2000),dict(id='carrack',name='캐럭',cargo=320,minCrew=30,maxCrew=120,speed=1,hull=120,guns=16,price=5000),
+  # 거북선은 무적 모드에서만 고른다(cheat). 짐은 캐러벨만큼 싣고, 가장 빠르고, 포가 가장 세다(지어낸 시험 값).
+  dict(id='turtle',name='거북선',cargo=120,minCrew=10,maxCrew=40,speed=3,hull=200,guns=40,price=30000,cheat=True)],
  fleets=[dict(id='player',name='포동이 탐험대',x=lis[0],y=lis[1],port='lisbon',crew=28,food=90,water=60,gold=1000,captain=dict(name='포동이',war=70),
    ships=[dict(id='s1',type='caravel',name='꼬리바람호',hold=[dict(good='wine',qty=40,paid=18),dict(good='olive',qty=20,paid=14)])])],
  # 바다에서 만나는 적 함대(지어낸 이름). 첫 배가 기함이다.

@@ -6,9 +6,10 @@
  *   번호  설정                     값
  *    1    군주                     0 고르는 화면 · 1~9 자료에 적힌 순서(1 조조 … 9 공손도)
  *    2    난수 씨앗                1~2147483646
- *    3~7  우리 주마다 시작 금 · 쌀 · 병력 · 충성도 · 농지
- *    8    주 하나의 초기값         주 번호, 항목(1 금 · 2 쌀 · 3 병력 · 4 충성도 · 5 농지), 값     ← 여러 번 쓸 수 있다
+ *    3~7  우리 주마다 시작 금 · 쌀 · 병력 · 민심 · 농지
+ *    8    주 하나의 초기값         주 번호, 항목(1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지), 값       ← 여러 번 쓸 수 있다
  *    10~13 징병 수량 · 징병 금 · 농지 개발 금 · 농지 1마다 쌀
+ *    14~17 시혜에 드는 쌀 · 동맹에 드는 금 · 동맹 기간(달) · 장수를 사로잡을 확률(%)
  *    20~24 승리 조건(차지할 주 수) · 기한(달) · 전투 기한(일) · 부대 이동력 · AI 신중함(×10)
  *    30   장수 능력치              장수 번호, 능력(1 무력 · 2 지력 · 3 매력), 값 1~100              ← 여러 번 쓸 수 있다
  *
@@ -18,7 +19,7 @@
   const DH = root.DH = root.DH || {};
   const S = DH.Sam, clone = o => JSON.parse(JSON.stringify(o));
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const FIELD = [null, ['gold', '금', 0, 99999, 1], ['rice', '쌀', 0, 99999, 1], ['troops', '병력', 0, 99900, 100], ['loyalty', '충성도', 0, 100, 1], ['farm', '농지', 0, 100, 1]];
+  const FIELD = [null, ['gold', '금', 0, 99999, 1], ['rice', '쌀', 0, 99999, 1], ['troops', '병력', 0, 99900, 100], ['loyalty', '민심', 0, 100, 1], ['farm', '농지', 0, 100, 1]];
   const STAT = [null, ['war', '무력'], ['int', '지력'], ['cha', '매력']];
 
   /** 동현삼의 globalState. 기본값(fallback)이 들어 있다. */
@@ -40,7 +41,7 @@
       show: ([n], { world }) => (n === 0 ? '고르는 화면' : factionAt(world, n) ? factionAt(world, n).name : n + '번') },
     2: { key: 'start.seed', label: '난수 씨앗', min: 1, max: 2147483646, path: 'start.seed', hint: '같은 씨앗이면 같은 판', def: '1' },
     3: startCmd('gold', 1), 4: startCmd('rice', 2), 5: startCmd('troops', 3), 6: startCmd('loyalty', 4), 7: startCmd('farm', 5),
-    8: { key: 'provinces', label: '주 초기값', multi: true, hint: '항목 1 금 · 2 쌀 · 3 병력 · 4 충성도 · 5 농지', def: '자료 값',
+    8: { key: 'provinces', label: '주 초기값', multi: true, hint: '항목 1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지', def: '자료 값',
       args: [{ label: '주 번호', min: 1, max: 999 }, { label: '항목', min: 1, max: 5 }, { label: '값', min: 0, max: 99999 }],
       check: ([p, k, v], { world }) => { const f = FIELD[k];
         if (world && !world.provinces.has(p)) return `${p}번 주는 없다`;
@@ -51,7 +52,12 @@
     11: { key: 'draft.gold', label: '징병에 드는 금', min: 0, max: 10000, path: 'rules.draft.gold' },
     12: { key: 'develop.gold', label: '농지 개발에 드는 금', min: 0, max: 10000, path: 'rules.develop.gold' },
     13: { key: 'ricePerFarm', label: '농지 1마다 달마다 쌀', min: 1, max: 100, path: 'rules.ricePerFarm' },
-    20: { key: 'stage.goal', label: '승리 조건: 차지할 주 수', min: 2, max: 999, path: 'stage.goal', hint: '이만큼 차지하면 이긴다', def: '모든 주',
+    14: { key: 'relief.rice', label: '시혜에 드는 쌀', min: 0, max: 10000, path: 'rules.relief.rice', hint: '쌀을 풀어 민심을 얻는다' },
+    15: { key: 'ally.gold', label: '동맹에 드는 금', min: 0, max: 10000, path: 'rules.ally.gold', hint: '받아들이지 않아도 돌아오지 않는다' },
+    16: { key: 'ally.months', label: '동맹 기간(달)', min: 1, max: 120, path: 'rules.ally.months', hint: '이 동안 서로 치지 않는다' },
+    17: { key: 'capture', label: '장수를 사로잡을 확률(%)', min: 0, max: 100, hint: '침공에 이겼을 때 지키던 장수마다 · 군주는 빼고', get: st => Math.round(st.rules.capture * 100),
+      show: ([v]) => `${v}%`, set: (st, [v]) => { st.rules.capture = v / 100; } },
+    20: { key: 'stage.goal', label: '승리 조건: 차지할 주 수', min: 2, max: 999, path: 'stage.goal', hint: '이만큼 차지하면 이긴다 · 정하지 않으면 다른 세력을 모두 무너뜨려야 한다', def: '모든 주',
       check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
     21: { key: 'stage.months', label: '기한(달)', min: 0, max: 1200, path: 'stage.months', hint: '이 달 수가 지나면 진다 · 0 기한 없음' },
     22: { key: 'battle.days', label: '전투 기한(일)', min: 5, max: 60, path: 'battle.days', hint: '공격 측이 이 안에 못 이기면 물러난다' },
@@ -77,7 +83,7 @@
     return lines.map(l => (l === '@' ? `ㅋㅋ ↓ 여기가 ${no}번 문장이다. 되돌아오는 자리` : l.replace('{@}', lit(no)).replace('{@번}', no + '번'))).join('\n');
   }
 
-  /** 플레이그라운드에 싣는 예제 열. name의 번호는 고르는 칸에 보이는 순서다. 01은 '설정 없음'이고, 09 · 10은 손으로 쓴 동현랭(변수 · 반복문)이다. */
+  /** 플레이그라운드에 싣는 예제 열. name의 번호는 고르는 칸에 보이는 순서다. 01은 '설정 없음'이고, 09 · 10은 손으로 쓴 동현랭(변수 · 반복문)이다. 11은 v0.06에서 더한 민심 · 동맹 · 사로잡기 설정이다. */
   const examples = world => { const c = (list, title) => lang.compose(list, title, { world }); return [
     { id: 'none', name: '01 · 기본값(설정 없음)', code: '나는 동현이냐?\nㅋㅋ 아무것도 출력하지 않으면 기본값 그대로 시작한다\n동현이구나' },
     { id: 'rich', name: '02 · 넉넉한 유비', code: c([[1, 3], [3, 3000], [4, 20000], [10, 2000], [30, 121, 1, 90]], '유비로 시작 · 금 3,000 · 쌀 20,000 · 징병 2,000씩 · 유비 무력 90') },
@@ -85,7 +91,7 @@
     { id: 'fast', name: '04 · 빠른 전투 · 급한 AI', code: c([[22, 10], [23, 8], [24, 15], [8, 14, 3, 30000]], '전투 10일 · 이동력 8 · AI는 1.5배만 모아도 친다 · 허창 병력 30,000') },
     { id: 'calm', name: '05 · 느긋한 내정 · 신중한 AI', code: c([[24, 100], [12, 50], [13, 8], [11, 200]], 'AI는 10배를 모아야 친다 · 농지 개발 금 50 · 농지 1마다 쌀 8 · 징병 금 200') },
     { id: 'weak', name: '06 · 좁은 땅: 장로의 한중', code: c([[1, 7], [3, 100], [4, 600], [5, 3000], [20, 3], [21, 60]], '장로로 시작 · 금 100 · 쌀 600 · 병력 3,000 · 세 주를 차지하면 이긴다 · 60달 안에') },
-    { id: 'unify', name: '07 · 조조의 통일: 10년 기한', code: c([[1, 1], [2, 3], [21, 120]], '조조로 시작 · 씨앗 3 · 모든 주를 차지해야 이긴다 · 120달 안에') },
+    { id: 'unify', name: '07 · 조조의 통일: 10년 기한', code: c([[1, 1], [2, 3], [21, 120]], '조조로 시작 · 씨앗 3 · 다른 세력을 모두 무너뜨리면 이긴다 · 120달 안에') },
     { id: 'swap', name: '08 · 능력치 실험: 문무를 바꾼 세 형제', code: c([[1, 3], [30, 121, 1, 100], [30, 121, 3, 75], [30, 122, 1, 75], [30, 122, 2, 95], [30, 123, 1, 40], [30, 123, 2, 95]], '유비로 시작 · 유비는 무력 100에 매력 75 · 관우는 무력 75에 지력 95 · 장비는 무력 40에 지력 95') },
     { id: 'scale', name: '09 · 변수: 배율 하나로 시작값 셋', code: script(['나는 동현이냐?',
       'ㅋㅋ 변수 · 배율 하나(동현 = 5)로 금 5,000 · 쌀 20,000 · 징병 2,000씩',
@@ -105,7 +111,8 @@
       '동현아 동현도옹',
       'ㅋㅋ 동현이 10보다 작으면(동현에 ㅠ를 열 번 더해 음수면) {@번} 문장으로 돌아간다',
       `뭉치 동현${'ㅠ'.repeat(10)}? 신중동역 {@}`,
-      '동현이구나']) }
+      '동현이구나']) },
+    { id: 'heart', name: '11 · 민심과 동맹: 싼 시혜 · 긴 동맹', code: c([[1, 3], [6, 50], [14, 300], [15, 100], [16, 36], [17, 60]], '유비로 시작 · 우리 주 민심 50 · 시혜 쌀 300 · 동맹 금 100 · 동맹 36달 · 사로잡을 확률 60%') }
   ]; };
 
   DH.Sam = Object.assign(S, { newState, lang, applyDonghyunLang, examples });
