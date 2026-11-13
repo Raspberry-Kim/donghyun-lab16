@@ -237,7 +237,7 @@
     endMonth() {
       if (this.game.over) return this.settled();
       for (const n of this.game.endMonth()) this.layout.log(n); this.sfx('rows');
-      this.engine.clock.endPhase(); this.mode = 'play'; this.refresh();
+      this.engine.clock.endPhase(); this.mode = 'play'; this.settled();      // 달이 바뀌면서 기한이 차거나 마지막 주를 잃으면 여기서 바로 끝 화면으로 간다
     }
 
     refresh() {
@@ -264,7 +264,7 @@
     note(sel) {
       const g = this.game, s = this.sub, p = this.mine;
       if (this.mode === 'pick') return '아래에서 군주를 고르면 시작한다.';
-      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 천하를 하나로 모았다(우리 주 ${g.provincesOf(g.player).length}개).` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.` : '주를 모두 잃었다.') + ' 다시 하려면 아래 단추를 누른다.';
+      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 천하를 하나로 모았다(우리 주 ${g.provincesOf(g.player).length}개).` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? (g.goal >= g.provinces.size ? `${g.stage.months}달 안에 다른 세력을 모두 무너뜨리지 못했다.` : `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.`) : '주를 모두 잃었다.') + ' 다시 하려면 아래 단추를 누른다.';
       if (this.mode === 'busy') return '다른 군주들이 움직이는 중이다. 침공이 있으면 기록에 뜬다.';
       if (!sel) return '우리 주를 찍으면 명령을 내릴 수 있다. 다 내렸으면 턴 종료를 누른다.';
       if (!p) return g.vacant(sel) ? '공백지다. 이웃한 우리 주에서 장수를 이동시키면 차지한다.' : g.allied(g.player, sel.owner) ? '동맹의 땅이다. 동맹인 동안에는 서로 치지 않는다.' : '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
@@ -344,7 +344,7 @@
       g.beginPath(); g.roundRect(x, y, w, h, 10); g.fillStyle = '#fbf7ef'; g.fill(); g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
       g.fillStyle = won ? ACCENT : '#8d8477'; g.fillRect(x + 1, y + 1, w - 2, 6);
       g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK; g.font = `800 20px ${FONT}`; g.fillText(this.overTitle(), W / 2, y + 40);
-      g.font = `500 12px ${FONT}`; g.fillStyle = '#6e6356'; g.fillText(`${this.engine.clock.label} · ‘다시 하기’를 누르면 군주를 다시 고른다`, W / 2, y + 68);
+      g.font = `500 12px ${FONT}`; g.fillStyle = '#6e6356'; g.fillText(`${this.engine.clock.label} · ‘다시 하기’를 누르면 ${this.state.start.player ? '같은 군주로 새 판을 연다' : '군주를 다시 고른다'}`, W / 2, y + 68);      // 설정으로 군주를 정했으면 고르는 화면을 거치지 않는다
     }
     // ───────── 저장과 불러오기 ─────────
     save() { return { selected: this.selected, mode: this.mode, cam: { x: this.cam.x, y: this.cam.y, zoom: this.cam.zoom } }; }
