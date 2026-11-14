@@ -97,7 +97,7 @@
     /** 군주를 고르고 판을 연다. */
     start(fid) {
       const w = this.world, c = this.engine.clock, f = w.factions.get(fid);
-      if (this.state.start.seed != null) this.engine.rng.state = this.state.start.seed >>> 0;      // 씨앗을 정했으면 판마다 같은 수가 나온다
+      if (this.state.start.seed != null) this.engine.rng.state = this.state.start.seed >>> 0;      // 시드를 정했으면 판마다 같은 수가 나온다
       this.game = this.newGame(fid);
       Object.assign(c, { year: w.meta.start.year, month: w.meta.start.month || 1, serial: 0, turn: 1 }); c.setActors([fid]);
       this.mode = 'play'; this.sub = null; this.flash = null; this.selected = w.officers.get(f.leader).province;

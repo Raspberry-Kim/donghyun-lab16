@@ -1,4 +1,4 @@
-/* 동현 공통 엔진 · 1/7 core — 이름 공간 DH, 사건 버스, 씨앗 난수, 자료 검사기, JSON 읽기, 줄 길이 압축 풀기, 받침에 맞는 조사.
+/* 동현 공통 엔진 · 1/7 core — 이름 공간 DH, 사건 버스, 시드 난수, 자료 검사기, JSON 읽기, 줄 길이 압축 풀기, 받침에 맞는 조사.
  * 모든 엔진 파일은 같은 꼴이다: 전역 DH에 붙이고(브라우저는 window.DH), node에서는 require로 같은 DH를 받는다.
  * 묶는 순서: core → loop → clock → grid → tilemap → layout → engine → (게임별 parser → scene) */
 (function (root) {
@@ -20,7 +20,7 @@
     }
   }
 
-  /** 씨앗 난수(mulberry32). 같은 씨앗이면 같은 판. state를 저장하면 이어서 같은 수가 나온다. */
+  /** 시드 난수(mulberry32). 같은 시드면 같은 판. state를 저장하면 이어서 같은 수가 나온다. */
   class RNG {
     constructor(seed = 1) { this.state = seed >>> 0; }
     next() {
