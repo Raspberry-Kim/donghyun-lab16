@@ -7,7 +7,7 @@ const samJ = () => JSON.parse(fs.readFileSync(path.join(root, 'src/sam/donghyun_
 let n = 0; const ok = (name, fn) => { fn(); n++; console.log('ok ' + name); };
 const bad = (fn, re) => assert.throws(fn, e => e instanceof DH.DataError && re.test(e.message), '잡아야 할 오류를 놓쳤다 ' + re);
 
-ok('난수: 같은 씨앗 같은 수 · 상태를 되돌리면 이어서 같다', () => {
+ok('난수: 같은 시드 같은 수 · 상태를 되돌리면 이어서 같다', () => {
   const a = new DH.RNG(7), b = new DH.RNG(7); for (let i = 0; i < 50; i++) assert.strictEqual(a.next(), b.next());
   const st = a.state, x = a.next(); a.state = st; assert.strictEqual(a.next(), x); assert.notStrictEqual(new DH.RNG(8).next(), new DH.RNG(7).next());
 });
@@ -254,7 +254,7 @@ ok('AI 차례: 사람의 주를 치면 전투를 돌려주고 멈춘다 · AI끼
   const out = g.settle(hit.pending, hit.battle.auto()); assert.ok(['att', 'def'].includes(out.winner)); let rest = 0; for (;;) { const s = g.nextAI(); if (s.done) break; rest++; assert.ok(!s.battle || s.pending.def === 'liubei'); } assert.ok(steps + rest > 20);
   assert.ok([...g.provinces.values()].filter(p => p.owner && p.owner !== 'liubei' && p.acted).length > 30, 'AI의 주는 거의 모두 명령을 내렸다');
 });
-ok('AI만의 120달: 값이 깨지지 않는다 · 현역 장수는 늘 자기 세력의 주에 있다 · 같은 씨앗이면 같은 역사', () => {
+ok('AI만의 120달: 값이 깨지지 않는다 · 현역 장수는 늘 자기 세력의 주에 있다 · 같은 시드면 같은 역사', () => {
   const run = () => { const g = newGame({ player: null, rng: new DH.RNG(1) }); let battles = 0;
     for (let m = 0; m < 120; m++) { battles += g.runAIAll().length; g.endMonth();
       for (const p of g.provinces.values()) { for (const k of ['pop', 'gold', 'rice', 'troops', 'loyalty', 'farm']) assert.ok(Number.isInteger(p[k]) && p[k] >= 0, `${m}달 ${p.name}.${k} = ${p[k]}`); assert.ok(p.loyalty <= 100 && p.farm <= 100 && (p.owner === null || g.factions.get(p.owner).alive)); }
@@ -349,7 +349,7 @@ ok('동현삼 예제: 이름 앞에 번호 01~10 · 예제마다 새 판이 열�
   const pick = (id, f) => { const { st, r } = run(by(id).code); assert.ok(r.ok); return f(st, r); };
   assert.deepStrictEqual(pick('calm', (st, r) => r.applied), ['AI 신중함(×10) 10배', '농지 개발에 드는 금 50', '농지 1마다 달마다 쌀 8', '징병에 드는 금 200']);
   assert.deepStrictEqual(pick('weak', (st, r) => r.applied), ['군주 장로', '우리 주 시작 금 100', '우리 주 시작 쌀 600', '우리 주 시작 병력 3,000', '승리 조건: 차지할 주 수 3', '기한(달) 60']);
-  assert.deepStrictEqual(pick('unify', (st, r) => r.applied), ['군주 조조', '난수 씨앗 3', '기한(달) 120']);
+  assert.deepStrictEqual(pick('unify', (st, r) => r.applied), ['군주 조조', '난수 시드 3', '기한(달) 120']);
   assert.deepStrictEqual(pick('swap', st => st.officers), [[121, 'war', 100], [121, 'cha', 75], [122, 'war', 75], [122, 'int', 95], [123, 'war', 40], [123, 'int', 95]]);
   // 09 변수: 대입 한 줄만 바꾸면 세 값이 함께 바뀐다
   const sc = by('scale').code.split('\n'), at = sc.findIndex(l => l.startsWith('동현아 ')), scale = k => run(sc.map((l, i) => i === at ? '동현아 ' + A.expression(k) : l).join('\n'));
