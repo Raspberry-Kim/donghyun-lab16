@@ -370,7 +370,7 @@ ok('동현삼 예제: 이름 앞에 번호 01~10 · 예제마다 새 판이 열�
 function fakeLayout() {
   const L = { logs: [], items: [], fn: null, detail: null,
     log(t) { L.logs.push(t); }, setInfo() {}, setDetail(d) { L.detail = d; }, setMenu(items, fn) { L.items = items; L.fn = fn; },
-    keyed() { let k = 0; return L.items.map(it => ({ ...it, n: it.key ? null : ++k })); },                      // 엔진 Layout과 같은 번호 규칙(글자를 따로 준 단추는 건너뛴다)
+    keyed() { let k = 0; return L.items.map(it => ({ ...it, n: it.key ? null : ++k })); },                      // 엔진 Layout과 같은 번호 규칙(글자를 따로 준 버튼은 건너뛴다)
     press(k) { const it = L.keyed().find(x => x.n === k); if (!it || it.disabled) return false; L.fn(it.id); return true; },
     pressPrimary() { const it = L.items.find(x => x.primary); if (!it || it.disabled) return false; L.fn(it.id); return true; } };
   return L;
@@ -466,7 +466,7 @@ ok('동현삼 화면: 시혜 · 동맹 청하기 · 동맹 깨기 · 공백지 �
   k.key('Escape'); assert.strictEqual(s.sub, null); let made = false; for (let i = 0; i < 40 && !made; i++) { s.game.P(13).acted = false; s.game.P(13).gold = 300; s.selected = 13; s.command('ally'); s.command('af:sun'); made = s.game.allied('liubei', 'sun'); }
   assert.ok(made, '여러 번 청하면 맺어진다'); assert.ok(k.layout.logs.some(t => /하비: 손책과 동맹을 맺었다\(12달\)/.test(t))); assert.strictEqual(s.game.P(13).gold, 0);
   s.game.P(13).acted = false; s.refresh(); assert.ok(k.layout.detail && JSON.stringify(k.layout.detail).includes('손책'), '고른 주의 설명에 동맹이 보인다');
-  s.command('ally'); assert.deepStrictEqual(k.layout.items.map(x => x.id), ['af:cao', 'af:yuan', 'ab:sun', 'cancel']); s.command('ab:sun'); assert.deepStrictEqual([s.sub.step, s.sub.f], ['break', 'sun']); assert.ok(k.layout.items.find(x => x.id === 'cancel').primary, '깨기는 한 번 더 묻고 노란 단추는 그만두기');
+  s.command('ally'); assert.deepStrictEqual(k.layout.items.map(x => x.id), ['af:cao', 'af:yuan', 'ab:sun', 'cancel']); s.command('ab:sun'); assert.deepStrictEqual([s.sub.step, s.sub.f], ['break', 'sun']); assert.ok(k.layout.items.find(x => x.id === 'cancel').primary, '깨기는 한 번 더 묻고 노란 버튼은 그만두기');
   s.command('abok'); assert.deepStrictEqual([s.game.allied('liubei', 'sun'), s.game.P(12).loyalty, s.sub], [false, 64, null]);
   const z = mk(5), t = z.scene; t.start('liuzhang'); t.selected = 39; t.command('move'); t.command('who:152'); assert.ok(z.layout.items.some(x => x.id === 'to:41'), '장수는 공백지 건녕으로도 간다'); t.command('to:41'); t.command('n:0');
   assert.deepStrictEqual([t.game.P(41).owner, t.game.officers.get(152).province, t.selected], ['liuzhang', 41, 41]); assert.ok(z.layout.logs.some(x => /장임이 들어가 공백지를 차지했다/.test(x)));
@@ -488,16 +488,16 @@ ok('동현삼 키보드: 한 달을 키보드로만 보낸다(징병 → 이동 
   k.key('Digit2'); assert.deepStrictEqual([g().P(12).troops, g().P(12).acted], [6000, true]);
   k.key('Space'); assert.strictEqual(s.selected, 13); k.key('Digit3'); assert.deepStrictEqual([s.sub.type, s.sub.step], ['move', 'who']); k.key('Escape'); assert.strictEqual(s.sub, null, 'Esc는 고르던 것을 그만둔다'); assert.strictEqual(s.selected, 13);
   k.key('Digit3'); const who = k.layout.keyed(); assert.strictEqual(who[who.length - 1].id, 'cancel'); k.key('Digit' + who.find(x => x.id === 'who:none').n); assert.strictEqual(s.sub.step, 'to');
-  k.key('ArrowLeft'); assert.strictEqual(s.sub.aim, 12, '이웃 우리 주는 소패뿐'); assert.ok(k.layout.items.find(x => x.id === 'to:12').primary, '겨눈 대상이 노란 단추가 된다'); k.key('Enter'); assert.deepStrictEqual([s.sub.step, s.sub.to], ['n', 12]);
+  k.key('ArrowLeft'); assert.strictEqual(s.sub.aim, 12, '이웃 우리 주는 소패뿐'); assert.ok(k.layout.items.find(x => x.id === 'to:12').primary, '겨눈 대상이 노란 버튼이 된다'); k.key('Enter'); assert.deepStrictEqual([s.sub.step, s.sub.to], ['n', 12]);
   k.key('Digit' + k.layout.keyed().find(x => /^절반/.test(x.label)).n); assert.deepStrictEqual([s.sub, g().P(13).troops, g().P(12).troops, g().P(13).acted], [null, 2500, 8500, true]);
-  k.key('Enter'); assert.strictEqual(s.mode, 'busy', 'Enter = 노란 단추(턴 종료)'); k.key('Digit1'); k.key('ArrowLeft'); k.key('Escape'); assert.strictEqual(s.mode, 'busy', '다른 군주들의 차례에는 키가 듣지 않는다');
+  k.key('Enter'); assert.strictEqual(s.mode, 'busy', 'Enter = 노란 버튼(턴 종료)'); k.key('Digit1'); k.key('ArrowLeft'); k.key('Escape'); assert.strictEqual(s.mode, 'busy', '다른 군주들의 차례에는 키가 듣지 않는다');
   for (let i = 0; i < 40000 && s.mode === 'busy'; i++) { const t = k.engine.scene; if (t !== s) { if (t.mode === 'result') t.command('back'); else if (t.myTurn) t.command('auto'); } k.engine.step(1); }
   assert.deepStrictEqual([s.mode, g().months, k.engine.clock.label], ['play', 1, '200년 2월']);
   k.key('Escape'); while (s.selected !== 12) k.key('Space'); k.key('Digit5'); assert.deepStrictEqual([s.sub.type, s.sub.step, s.sub.aim], ['attack', 'to', undefined]); k.key('Enter'); assert.strictEqual(s.sub.step, 'to', '겨누기 전의 Enter는 아무것도 정하지 않는다');
   k.key('ArrowUp'); const first = s.sub.aim; assert.ok(s.candidates().some(q => q.id === first)); const aims = new Set([first]); for (const c of ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown']) { k.key(c); aims.add(s.sub.aim); }
   assert.deepStrictEqual([...aims].sort((a, b) => a - b), s.candidates().map(q => q.id).sort((a, b) => a - b), '방향키로 침공할 수 있는 이웃을 모두 겨눌 수 있다');
 });
-ok('동현삼 키보드(전투): 방향키 커서 · Enter로 옮기고 친다 · Space 다음 부대 · 숫자 키 단추 · 결과 카드는 Enter', () => {
+ok('동현삼 키보드(전투): 방향키 커서 · Enter로 옮기고 친다 · Space 다음 부대 · 숫자 키 버튼 · 결과 카드는 Enter', () => {
   const k = mk(5), s = k.scene; k.key('Digit3'); k.key('Digit5'); k.key('ArrowUp'); while (s.sub.aim !== 10) k.key('ArrowLeft'); k.key('Enter'); k.key('Enter');
   const b = k.engine.scene; assert.ok(b instanceof DH.Sam.SamBattleScene && b.me === 'att' && b.myTurn && b.cur === null, '커서는 키를 쓰기 전에는 없다');
   const me = b.b.alive('att'), foe = b.b.alive('def')[0], u = me[0];
@@ -526,7 +526,7 @@ ok('동현삼 키보드(전투): 방향키 커서 · Enter로 옮기고 친다 �
     if (!hit && b.mode === 'fight') { const d0 = b.b.day; if (b.myTurn && b.b.alive('att').every(x => x.done) === false) k.key('Digit2'); for (let i = 0; i < 3000 && !(b.myTurn && b.b.day > d0) && b.mode === 'fight'; i++) k.engine.step(1); }
   }
   assert.ok(hit, '키보드만으로 적을 쳤다');
-  if (b.mode === 'fight') { k.key('Digit4'); assert.strictEqual(b.ask, true, '숫자 4 = 퇴각(되묻는다)'); k.key('Enter'); assert.strictEqual(b.ask, false, '되묻는 창의 Enter = 노란 단추(돌아가기)'); k.key('Digit3'); assert.strictEqual(b.auto, true, '숫자 3 = 맡기기'); }
+  if (b.mode === 'fight') { k.key('Digit4'); assert.strictEqual(b.ask, true, '숫자 4 = 퇴각(되묻는다)'); k.key('Enter'); assert.strictEqual(b.ask, false, '되묻는 창의 Enter = 노란 버튼(돌아가기)'); k.key('Digit3'); assert.strictEqual(b.auto, true, '숫자 3 = 맡기기'); }
   for (let i = 0; i < 20000 && b.mode !== 'result'; i++) k.engine.step(1); assert.strictEqual(b.mode, 'result');
   k.key('Enter'); assert.ok(k.engine.scene === b, '결과 카드는 반 초 뒤부터 넘어간다'); k.engine.step(31); k.key('Enter'); assert.ok(k.engine.scene === s && s.mode !== 'pick');
   const onTap = DH.Sam.SamBattleScene.prototype.onTap.toString(); assert.ok(/this\.cur = null/.test(onTap) && /tapCell/.test(onTap), '손으로 찍으면 커서가 숨고 같은 길(tapCell)로 간다');
