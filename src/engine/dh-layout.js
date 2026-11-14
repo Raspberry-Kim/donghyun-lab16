@@ -1,8 +1,8 @@
 /* 동현 공통 엔진 · 6/7 layout — 화면 나누기: 위 정보 띠 · 가운데 캔버스 · 오른쪽(좁은 화면에서는 아래) 조작 창.
  * DOM을 한 번 짓고, 그 뒤로는 글자만 바꾼다. 자료에서 온 글은 textContent로만 넣는다(HTML로 풀지 않는다).
  *   setInfo([{label,value}]) 위 띠 · setDetail({title,rows:[[이름,값]],note}) 조작 창 위쪽 설명
- *   setMenu([{id,label,hint,disabled,primary,key}], onSelect) 조작 단추 · log(글) 기록 한 줄
- *   press(n) · pressPrimary() 키보드로 단추 누르기(hotkeys를 켠 게임) */
+ *   setMenu([{id,label,hint,disabled,primary,key}], onSelect) 조작 버튼 · log(글) 기록 한 줄
+ *   press(n) · pressPrimary() 키보드로 버튼 누르기(hotkeys를 켠 게임) */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
@@ -10,7 +10,7 @@
 
   class Layout {
     /** @param {HTMLElement} host @param {{title:string, width:number, height:number, panel?:'auto'|'right'|'bottom', hotkeys?:boolean}} o
-     *  hotkeys를 켜면 조작 단추에 번호(1~9)가 붙고, 장면이 press(n)으로 그 단추를 누를 수 있다(키보드로 노는 게임). */
+     *  hotkeys를 켜면 조작 버튼에 번호(1~9)가 붙고, 장면이 press(n)으로 그 버튼을 누를 수 있다(키보드로 노는 게임). */
     constructor(host, o) {
       this.host = host; this.hotkeys = !!o.hotkeys;
       const app = this.root = el('div', 'dh-app'); app.dataset.panel = o.panel || 'auto';
@@ -33,7 +33,7 @@
       host.replaceChildren(app);
       this._info = [];
       this.menuEl.addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (!b || b.disabled || !this._onSelect) return; this._onSelect(b.dataset.id);
-        if (e.detail > 0) this.canvas.focus({ preventScroll: true }); });      // 마우스나 손가락으로 누른 뒤에는 키보드가 다시 지도에 듣는다(키보드로 누른 단추는 초점을 지킨다)
+        if (e.detail > 0) this.canvas.focus({ preventScroll: true }); });      // 마우스나 손가락으로 누른 뒤에는 키보드가 다시 지도에 듣는다(키보드로 누른 버튼은 초점을 지킨다)
     }
     setInfo(items) {
       if (items.length !== this._info.length) {
@@ -52,16 +52,16 @@
       const doc = root.document, lost = doc.activeElement && this.menuEl.contains(doc.activeElement); let n = 0;
       this.menuEl.replaceChildren(...items.map(it => {
         const b = el('button', it.primary ? 'dh-btn dh-primary' : 'dh-btn', it.label); b.type = 'button'; b.dataset.id = it.id; if (it.hint) b.title = it.hint; b.disabled = !!it.disabled;
-        if (this.hotkeys && it.key !== false) {                 // 번호는 자리대로 붙는다(흐린 단추도 센다). key를 주면 그 글자를 적고 번호는 건너뛴다
+        if (this.hotkeys && it.key !== false) {                 // 번호는 자리대로 붙는다(흐린 버튼도 센다). key를 주면 그 글자를 적고 번호는 건너뛴다
           const k = it.key || (n < 9 ? String(++n) : '');
           if (k) { const mark = el('kbd', 'dh-key', k); mark.setAttribute('aria-hidden', 'true'); b.prepend(mark); if (!it.key) b.dataset.key = k; b.setAttribute('aria-keyshortcuts', k); }
         }
         return b; }));
-      if (lost) this.canvas.focus({ preventScroll: true });     // 누른 단추가 사라져도 키보드가 지도에 남는다
+      if (lost) this.canvas.focus({ preventScroll: true });     // 누른 버튼이 사라져도 키보드가 지도에 남는다
     }
-    /** 번호 n(1~9)이 붙은 단추를 누른다. 없거나 흐리면 false */
+    /** 번호 n(1~9)이 붙은 버튼을 누른다. 없거나 흐리면 false */
     press(n) { const b = this.menuEl.querySelector(`button[data-key="${n}"]`); if (!b || b.disabled || !this._onSelect) return false; this._onSelect(b.dataset.id); return true; }
-    /** 강조된(노란) 단추를 누른다. 없거나 흐리면 false */
+    /** 강조된(노란) 버튼을 누른다. 없거나 흐리면 false */
     pressPrimary() { const b = this.menuEl.querySelector('button.dh-primary'); if (!b || b.disabled || !this._onSelect) return false; this._onSelect(b.dataset.id); return true; }
     log(text) { this.logEl.prepend(el('li', null, text)); while (this.logEl.children.length > 30) this.logEl.lastChild.remove(); }
     destroy() { this.root.remove(); }

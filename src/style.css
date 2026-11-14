@@ -194,7 +194,7 @@ sup.tm{font-size:.55em;line-height:0;vertical-align:super;margin-left:.08em;lett
 .boot-error{padding:12px 14px;border:1px solid var(--error);border-radius:8px;color:var(--error);white-space:pre-wrap;font-size:var(--text-sm)}
 #status[data-kind=error]{color:var(--error)}
 #result[data-kind=ok]{color:#2f6b2a}[data-theme=dark] #result[data-kind=ok]{color:#9fd08a}
-/* ---- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄우고 오른쪽 위에 닫기 단추.
+/* ---- 전체 화면(동현램 · 동현닥과 같은 규칙): 정보 띠 · 지도 · 조작 창을 통째로 띄우고 오른쪽 위에 닫기 버튼.
    요소 전체 화면을 못 쓰는 기기(iPhone Safari)는 창을 가득 채우는 유사 전체 화면. 크기는 app.js의 fit()이 --fs-*로 정한다 ---- */
 .stage-full{position:relative}
 .board-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
@@ -228,7 +228,7 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .stage-full.fs.stack .exit-full .long,.stage-full.fs.side .exit-full .long{display:none}      /* 좁은 화면에서는 '✕ 닫기'로 줄인다 */
 .exit-full{min-height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(20,18,16,.72);color:#fff;font:600 13px var(--body);opacity:.6;transition:opacity .15s;cursor:pointer}
 .exit-full:hover,.exit-full:focus-visible{opacity:1;background:rgba(20,18,16,.9)!important}
-/* 안내는 5초 동안 뜬다. 정보 띠를 가리지 않게 닫기 단추 왼쪽의 빈 띠에 둔다(가로로 든 휴대폰에서는 지도 아래쪽) */
+/* 안내는 5초 동안 뜬다. 정보 띠를 가리지 않게 닫기 버튼 왼쪽의 빈 띠에 둔다(가로로 든 휴대폰에서는 지도 아래쪽) */
 .full-hint{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;box-sizing:border-box;display:flex;align-items:center;min-height:36px;max-width:calc(100% - 318px);margin:0;padding:3px 12px;border-radius:8px;background:rgba(20,18,16,.88);border:1px solid rgba(255,255,255,.18);color:#efe6d8;font:500 12px/1.4 var(--body);word-break:keep-all;pointer-events:none}.full-hint b{color:#f2b705;font-weight:700}
 .full-hint[hidden]{display:none}.full-hint>span{display:block}
 .stage-full.fs.stack .full-hint{top:auto;bottom:calc(14px + env(safe-area-inset-bottom));max-width:calc(100% - 28px)}

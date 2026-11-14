@@ -5,7 +5,7 @@
  *   그림: 주는 세력 색 성(군주가 있는 곳은 깃발 단 큰 성)으로, 산 · 숲 · 물결은 sam-art.js의 픽셀 그림으로 그린다.
  *   턴 종료를 누르면 다른 군주들이 움직인다. 우리 주가 침공받으면 전투 화면으로 넘어간다(sam-battle-scene.js).
  *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다.
- * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 단추 · Enter 노란 단추 · Esc 그만두기 ·
+ * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 버튼 · Enter 노란 버튼 · Esc 그만두기 ·
  *   Shift+방향키(또는 W A S D) 지도 옮기기 · + − 확대와 축소. 이동·침공에서 '어디로'를 고를 때는 방향키로 대상을 옮기고 Enter로 정한다.
  * 저장: saveGame()이 설정 목록 · 달력 · 난수 · 판을 한 묶음으로 내고, loadGame()이 검사한 뒤 되살린다. 우리 차례의 지도에서만 저장한다. */
 (function (root) {
@@ -120,14 +120,14 @@
       if (best !== null && best !== this.selected) this.sfx('tick');
       this.sub = null; this.selected = best; this.refresh();
     }
-    /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 단추를 누른다. */
+    /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 버튼을 누른다. */
     onKey(code, ev) {
       if (ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) return;
       const d = ARROW[code], shift = !!(ev && ev.shiftKey), n = digit(code), used = () => { if (ev) ev.preventDefault(); };
       if ((d && shift) || PAN[code]) return super.onKey(PAN[code] || code, ev);              // 지도 옮기기
       if (d) { used(); return this.step(d); }
       if (code === 'Escape') { if (this.mode === 'busy') return; if (this.sub) this.sub = null; else this.selected = null; return this.refresh(); }
-      if (ev && ev.repeat) return;                                                            // 누르고 있어도 단추는 한 번만 눌린다
+      if (ev && ev.repeat) return;                                                            // 누르고 있어도 버튼은 한 번만 눌린다
       if (n) { used(); this.layout.press(n); }
       else if (code === 'Enter' || code === 'NumpadEnter') { used(); const s = this.sub; if (s && s.step === 'to' && s.aim != null) this.command('to:' + s.aim); else this.layout.pressPrimary(); }
       else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
@@ -247,7 +247,7 @@
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
       if (!sel) {
-        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 단추를 누른다.' });
+        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
         else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음']], note: this.note(null) });
         return pick();
       }
@@ -264,7 +264,7 @@
     note(sel) {
       const g = this.game, s = this.sub, p = this.mine;
       if (this.mode === 'pick') return '아래에서 군주를 고르면 시작한다.';
-      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 천하를 하나로 모았다(우리 주 ${g.provincesOf(g.player).length}개).` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? (g.goal >= g.provinces.size ? `${g.stage.months}달 안에 다른 세력을 모두 무너뜨리지 못했다.` : `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.`) : '주를 모두 잃었다.') + ' 다시 하려면 아래 단추를 누른다.';
+      if (this.mode === 'over') return (g.overWhy === 'all' ? `${g.months}달 만에 천하를 하나로 모았다(우리 주 ${g.provincesOf(g.player).length}개).` : g.overWhy === 'goal' ? `${g.months}달 만에 목표한 ${g.goal}개 주를 차지했다.` : g.overWhy === 'time' ? (g.goal >= g.provinces.size ? `${g.stage.months}달 안에 다른 세력을 모두 무너뜨리지 못했다.` : `${g.stage.months}달 안에 ${g.goal}개 주를 차지하지 못했다.`) : '주를 모두 잃었다.') + ' 다시 하려면 아래 버튼을 누른다.';
       if (this.mode === 'busy') return '다른 군주들이 움직이는 중이다. 침공이 있으면 기록에 뜬다.';
       if (!sel) return '우리 주를 찍으면 명령을 내릴 수 있다. 다 내렸으면 턴 종료를 누른다.';
       if (!p) return g.vacant(sel) ? '공백지다. 이웃한 우리 주에서 장수를 이동시키면 차지한다.' : g.allied(g.player, sel.owner) ? '동맹의 땅이다. 동맹인 동안에는 서로 치지 않는다.' : '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
@@ -392,7 +392,7 @@
   async function boot(host, src, opt = {}) {
     const world = DH.Sam.parse(await DH.Data.load(src));
     const W = 480, H = 360;
-    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 단추에 번호가 붙는다(숫자 키)
+    const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 버튼에 번호가 붙는다(숫자 키)
     const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: MAP.deep, clock: { unit: 'month', start: world.meta.start } });
     const scene = new SamMapScene(engine, world, layout); engine.setScene(scene);
     if (opt.script) scene.applyDonghyunLang(opt.script);                      // 동현랭 설정을 주면 그 값으로 연다

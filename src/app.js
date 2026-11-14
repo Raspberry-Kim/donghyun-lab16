@@ -254,7 +254,7 @@ class StartCard extends DH.Scene {
   constructor(engine, layout) { super(engine); this.layout = layout; }
   enter() {
     this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 코드 칸 아래 목록이나 지도 아래 불러오기로 이어 한다.` });
-    this.layout.setMenu([], null);   // 출전 단추는 B 칸 하나뿐이다. 코드를 보고 누르게 한다
+    this.layout.setMenu([], null);   // 출전 버튼은 B 칸 하나뿐이다. 코드를 보고 누르게 한다
   }
   onKey() {}   // 시작 전에는 지도가 키를 받지 않는다
   render(g) {
