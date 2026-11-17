@@ -2,9 +2,9 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.09"
+version: "0.10"
 doi: "10.5281/zenodo.24106052"
-date-released: "2026-11-15"
+date-released: "2026-11-17"
 authors:
   - family-names: Kim
     given-names: Dong Hyun
@@ -14,6 +14,10 @@ license: MIT
 repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
 url: "https://raspberry-kim.github.io/donghyun-lab16/"
 abstract: >-
+  Version 0.10 applies the map zoom rule of Donghyunhang: the map scale
+  changes only through the + and - icons on the map and the + and - keys, and the
+  mouse wheel, trackpad pinch and Safari gestures no longer zoom the play
+  area. Game rules, data, examples and saves remain unchanged.
   Donghyunsam is a browser-based, noncommercial toy that follows only the
   broad frame of Romance of the Three Kingdoms II (Koei, 1989): the player
   picks one of nine rulers on a node map of 41 provinces of late Han China

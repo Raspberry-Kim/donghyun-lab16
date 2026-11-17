@@ -139,6 +139,9 @@ $('#full').onclick = () => {
   try { const r = stageFull.requestFullscreen ? stageFull.requestFullscreen() : stageFull.webkitRequestFullscreen(); if (r && r.catch) r.catch(() => setPseudo(true)); } catch (err) { setPseudo(true); }
 };
 window.__dhFull = { fit, setPseudo, isFull };            // 시험용 손잡이
+// 플레이 영역의 트랙패드 pinch/Safari gesture만 막는다. 문서의 접근성 확대 키는 보존한다(동현항과 같은 규칙).
+stageFull.addEventListener('wheel', e => { if (!waiting && e.ctrlKey) e.preventDefault(); }, { passive: false });
+for (const kind of ['gesturestart', 'gesturechange', 'gestureend']) stageFull.addEventListener(kind, e => { if (!waiting) e.preventDefault(); }, { passive: false });
 
 /* ---------- 저장 · 불러오기(동현심과 같은 규칙): 브라우저 칸 3개 + .dhsave 파일. 저절로 저장하지 않는다 ----------
    메뉴는 화면 가운데 뜨고(전체 화면에서도), 떠 있는 동안 판은 멎는다. 칸은 이 기기의 이 브라우저에만 남는다 */
