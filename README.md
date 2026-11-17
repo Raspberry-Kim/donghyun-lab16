@@ -1,4 +1,4 @@
-# 동현삼 v0.34
+# 동현삼 v0.35
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24106052.svg)](https://doi.org/10.5281/zenodo.24106052)
 
@@ -462,7 +462,7 @@ donghyun-lab16/
       sam-scene.js         지도 장면: 군주 고르기 · 주 고르기 · 명령 메뉴 · 턴 종료 · 키보드 · 지도 배율 · 저장과 불러오기
   tools/make_data.py   JSON을 만드는 생성기 (표 + Natural Earth 육지 자료)
   tools/check_zhuangzi.py   『장자』 100구절의 원문을 위키문헌과 대조한다
-  qa/                  core-tests.cjs (node) · ui.cjs · victory.cjs (Playwright)
+  qa/                  core-tests.cjs (node) · ui.cjs · victory.cjs · note-blink.cjs (Playwright)
 ```
 
 - `src/engine/`은 동현삼(donghyun-lab16)과 동현항(donghyun-lab17)에 같은 파일로 들어 있다. 한쪽에서 고치면 다른 쪽에도 그대로 옮긴다.
@@ -476,6 +476,7 @@ node qa/core-tests.cjs         # 핵심 시험 56개 (엔진 · 파서 · 동현
 node build.cjs                 # index.html 한 장
 node qa/ui.cjs                 # 화면 시험 33개 (Playwright · 데스크톱과 휴대폰 390px · 전체 화면 · 저장과 불러오기 · 저장 칸 목록 · 키보드 · 두 낭자)
 node qa/victory.cjs            # 승리 화면 5묶음 (팡파르와 꽃비 · 패배 · 소리 끔 · 휴대폰과 전체 화면). 뒤에 chromium · firefox · webkit을 붙여 고른다
+node qa/note-blink.cjs         # 데스크톱 권장 안내 상자의 빨간 테두리 점멸 6묶음. 뒤에 chromium · firefox · webkit을 붙여 고른다
 python3 tools/check_zhuangzi.py   # 『장자』 100구절 원문 대조 (위키문헌에서 받아 온다)
 ```
 

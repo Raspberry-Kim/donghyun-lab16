@@ -272,7 +272,9 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .document a,.document code{overflow-wrap:anywhere} /* 긴 주소와 파일 이름이 좁은 화면을 밀어내지 않게 */
 .lang-rule th,.lang-rule td:first-child,.lang-rule td:last-child{white-space:nowrap}
 /* 데스크톱 권장 안내(동현둠과 같은 상자) */
-.mobile-note{margin:-6px 0 18px;padding:10px 14px;border:1px dashed var(--line);border-radius:10px;font-size:var(--text-xs);color:var(--muted);word-break:keep-all}
+/* 테두리는 빨간색 점멸(1초에 한 번, 켜짐 0.5초 · 꺼짐 0.5초). 테두리가 1px 굵어진 만큼 안쪽 여백을 줄여 상자 크기는 그대로. */
+.mobile-note{margin:-6px 0 18px;padding:9px 13px;border:2px solid var(--red);border-radius:10px;font-size:var(--text-xs);color:var(--muted);word-break:keep-all;animation:note-blink 1s steps(1,end) infinite}
+@keyframes note-blink{0%{border-color:var(--red)}50%{border-color:transparent}}
 .mobile-note strong{display:inline-block;margin-right:8px;padding:1px 8px;border-radius:999px;background:var(--surface2);color:var(--ink);font-size:11px}
 
 
