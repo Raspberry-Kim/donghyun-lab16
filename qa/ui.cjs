@@ -188,9 +188,9 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   const NAME = '동현삼', TABS = ['지도', '동현삼 출전 규약', '규칙', '엔진과 자료', '수학적 원리', '모델과 출처'], HEADS = { protocol: ['설정 번호', '예제 열'], rules: ['플레이 방법', '조작', '동현삼 규칙'], engine: ['엔진의 층', '게임이 얹는 법', '동현랭 어댑터', 'JSON 규격', '파일', '돌려 보기'], about: ['상표와 관계', '이 자료가 무엇이고 무엇이 아닌지', '자료 출처'] };
   const band = await p.evaluate(() => ({ n: document.querySelectorAll('.series-item').length, ctx: document.querySelector('.series-context').textContent, here: [...document.querySelectorAll('.series-item[aria-current=page]')].map(a => a.querySelector('.series-name').textContent), hrefs: [...document.querySelectorAll('a.series-item')].map(a => a.getAttribute('href')),
     ed: document.querySelector('.edition').textContent.trim(), foot: document.querySelector('footer').textContent, title: document.title, left: document.documentElement.innerHTML.match(/__[A-Z_]+__|<!--README/g) }));
-  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [19, [NAME + '™'], 18, null]); assert.ok(band.ctx.includes('열여덟 개의 작은 세계') && band.ed.startsWith('v0.32') && band.foot.includes(NAME + ' v0.32') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
+  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [19, [NAME + '™'], 18, null]); assert.ok(band.ctx.includes('열여덟 개의 작은 세계') && band.ed.startsWith('v0.33') && band.foot.includes(NAME + ' v0.33') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
   assert.ok(band.hrefs.every(h => /^https:\/\/raspberry-kim\.github\.io\/donghyun-(lang|lab\d+)\/$/.test(h)) && new Set(band.hrefs).size === 18, '띠의 주소 열여덟 개가 서로 다르다');
-  ok(`시리즈 띠 19칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v0.32 · 빌드 자리표가 남지 않았다`);
+  ok(`시리즈 띠 19칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v0.33 · 빌드 자리표가 남지 않았다`);
 
   const tabsNow = () => p.evaluate(() => ({ names: [...document.querySelectorAll('.tabs button')].map(b => b.textContent), on: [...document.querySelectorAll('.tabs button[aria-current=page]')].map(b => b.dataset.tab), shown: [...document.querySelectorAll('.tab-panel')].filter(x => !x.hidden).map(x => x.id), sw: document.documentElement.scrollWidth, run: __dh.engine.loop.running }));
   await G(() => __dh.engine.start()); let T = await tabsNow(); assert.deepStrictEqual([T.names, T.on, T.shown, T.run], [TABS, ['play'], ['tab-play'], true]);
@@ -334,7 +334,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await s.keyboard.press('Escape'); assert.strictEqual(await gm(), null); assert.deepStrictEqual([await S(() => __dh.engine.loop.running), await onMap()], [true, true], 'Esc로 닫으면 판이 다시 돌고 키보드는 지도에 듣는다');
   await s.click('#game-save'); await s.mouse.click(12, 12); assert.strictEqual(await gm(), null, '메뉴 바깥을 누르면 닫힌다'); await S(() => __dh.engine.stop());
   await s.click('#game-save'); await s.keyboard.press('Enter'); assert.strictEqual(await gm(), null); assert.deepStrictEqual(await status(), ['브라우저 칸 1에 저장했다 · 유비 · 200년 1월', '']);
-  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '0.32', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
+  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '0.33', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
   await s.click('button[data-id=develop]'); assert.strictEqual(await S(() => __dh.game.P(12).farm), 51); assert.ok(await onMap(), '버튼을 누른 뒤에도 키보드는 지도에 듣는다');
   await s.click('#game-save'); M = await gm(); assert.ok(/^유비 · 200년 1월 · 주 2 · 병력 10,000 · \d+\/\d+ \d\d:\d\d 저장$/.test(M.notes[0]), M.notes[0]); await pick('브라우저 칸 1'); M = await gm(); assert.deepStrictEqual([M.title, M.items], ['칸 1에 덮어쓸까?', ['덮어쓴다', '그만둔다']]);
   await pick('그만둔다'); assert.strictEqual((await gm()).title, '저장'); assert.strictEqual((await slot(1)).game.provinces[11].farm, 45, '그만두면 칸은 그대로다');
@@ -505,7 +505,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
     assert.strictEqual(await E(() => __dh.waiting()), true); assert.strictEqual(L0.first, 'sam-counsel', '조작 창 맨 위'); assert.deepStrictEqual(L0.caps, ['동행낭자', '수행낭자']); assert.deepStrictEqual(L0.alt, ['동행낭자 얼굴 초상', '수행낭자 얼굴 초상']);
     assert.deepStrictEqual([L0.img, L0.data, L0.pos, L0.flip], [[192, 128], true, ['0px', '100%'], ['none', 'matrix(-1, 0, 0, 1, 0, 0)']], '얼굴 그림 두 칸 · 오른쪽 얼굴만 뒤집어 마주 본다');
     assert.ok(L0.faces.every(f => f.w === 72 && f.h === 96) && L0.faces[0].r < L0.faces[1].l && Math.abs(L0.faces[0].t - L0.faces[1].t) < 1 && L0.faces[0].l >= L0.panel.l && L0.faces[1].r <= L0.panel.r, JSON.stringify(L0.faces));
-    assert.ok(S0.a.startsWith('주군, 저는') && S0.a.includes('동행낭자') && S0.b.includes('수행낭자') && S0.src === null, '출전 전부터 두 낭자가 말한다');
+    assert.ok(S0.a.startsWith('주군, 저는') && S0.a.includes('동행낭자') && S0.b === '주군, 저는 곁에서 살필 수행낭자입니다. 주군께서 운영하실 규칙과 숨은 셈법을 하나씩 아뢰겠습니다.' && S0.src === null, '출전 전부터 두 낭자가 말한다');
     assert.deepStrictEqual([L0.zoom, L0.under, L0.out], [1.125, [], 0], '처음 배율 1.125 · 아이콘에 가린 주가 없다 · 41개 주가 모두 보인다');
     await E(() => document.querySelector('.dh-canvas').scrollIntoView({ block: 'center' })); await c.screenshot({ path: shot + '/ui-council-first.png' });
     await c.click('#run'); await c.waitForTimeout(200); const Lr = await look(); assert.deepStrictEqual([Lr.zoom, Lr.under, Lr.out], [1.125, [], 0], '출전해도 그대로 · 아이콘에 가린 주가 없다');
