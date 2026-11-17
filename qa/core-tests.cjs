@@ -546,7 +546,7 @@ ok('두 낭자: 『장자』 100구절은 서로 다르고 편명이 있다 · �
 });
 ok('두 낭자: 고르기 전에는 소개 · 우리 땅에서는 『장자』 · 같은 주를 다시 누르거나 달이 바뀌면 다음 구절 · 명령을 내려도 구절은 그대로', () => {
   const k = mk(3), s = k.scene, C = s.council;
-  assert.ok(C.a.startsWith('주군, 저는') && C.a.includes('동행낭자') && C.b.includes('수행낭자') && C.quote === null, '시작 전부터 두 낭자가 말한다');
+  assert.ok(C.a.startsWith('주군, 저는') && C.a.includes('동행낭자') && C.b === '주군, 저는 곁에서 살필 수행낭자입니다. 주군께서 운영하실 규칙과 숨은 셈법을 하나씩 아뢰겠습니다.' && C.quote === null, '시작 전부터 두 낭자가 말한다');
   s.start('liubei'); assert.strictEqual(s.selected, 12); const q0 = C.quote, a0 = C.a, b0 = C.b;
   assert.ok(q0 && a0 === `주군, 『장자』 「${DH.Sam.CHAPTER[q0[0]]}」의 한 구절입니다. “${q0[2]}”` && DH.Sam.QUOTES.includes(q0));
   assert.ok(DH.Sam.TIPS.map(t => t(DH.Sam.Council.ctx(s.game))).includes(b0), '수행낭자의 첫 한 마디');

@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.32"
+version: "0.33"
 doi: "10.5281/zenodo.24106052"
 date-released: "2026-11-17"
 authors:
@@ -14,9 +14,10 @@ license: MIT
 repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
 url: "https://raspberry-kim.github.io/donghyun-lab16/"
 abstract: >-
-  Version 0.32 changes the portrait of the second companion to the Nagasaki
-  port associate of Donghyunhang (the first of the two Nagasaki faces); the
-  first companion keeps the Jemulpo associate.
+  Version 0.33 rewords the opening line that the second companion speaks on
+  the first screen, before a game is started. Her portrait is the Nagasaki
+  port associate of Donghyunhang (the first of the two Nagasaki faces) and
+  the first companion keeps the Jemulpo associate, as in version 0.32.
   Since version 0.30 two companions sit at the top of the control panel,
   shown from the first screen: one recites one of 100 passages from the Zhuangzi
   on the player's own provinces and, on other provinces, briefly describes
