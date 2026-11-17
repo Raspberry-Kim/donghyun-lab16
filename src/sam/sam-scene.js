@@ -252,7 +252,7 @@
         this.pause = 20; this.settled();
       } }));
     }
-    settled() { if (this.game.over && this.mode !== 'over') { this.mode = 'over'; this.sub = null; this.layout.log(this.overTitle()); const w = this.game.overWhy; this.sfx(w === 'all' || w === 'goal' ? 'win' : 'lose', 0.6); } this.refresh(); }
+    settled() { if (this.game.over && this.mode !== 'over') { this.mode = 'over'; this.sub = null; this.layout.log(this.overTitle()); this.sfx(this.game.over === 'won' ? 'pomp' : 'lose', 0.6); } this.refresh(); }
     /** 판이 끝난 까닭에 맞는 한 줄 */
     overTitle() { const w = this.game.overWhy; return w === 'all' ? '온 땅을 하나로 모았다' : w === 'goal' ? '목표한 땅을 모두 차지했다' : w === 'time' ? '기한이 다 되었다' : '세력이 무너졌다'; }
 
@@ -377,8 +377,10 @@
         if (z >= 1.5) { const s = p.owner || p.troops ? fmt(p.troops) : '공백지'; g.font = `600 ${7.5 / z}px ${FONT}`; g.strokeText(s, P.x, P.y + 6 + fs * 1.05); g.fillStyle = '#5a4f43'; g.fillText(s, P.x, P.y + 6 + fs * 1.05); }
       }
     }
+    /** 끝 화면 카드의 자리(판 좌표). 꽃비가 이 자리를 비켜 간다 */
+    cardRect() { const w = 300, h = 96; return { x: (this.engine.width - w) / 2, y: (this.engine.height - h) / 2, w, h }; }
     drawCard(g) {
-      const W = this.engine.width, H = this.engine.height, won = this.game.over === 'won', w = 300, h = 96, x = (W - w) / 2, y = (H - h) / 2;
+      const W = this.engine.width, H = this.engine.height, won = this.game.over === 'won', { x, y, w, h } = this.cardRect();
       g.fillStyle = 'rgba(38,33,28,.4)'; g.fillRect(0, 0, W, H);
       g.beginPath(); g.roundRect(x, y, w, h, 10); g.fillStyle = '#fbf7ef'; g.fill(); g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
       g.fillStyle = won ? ACCENT : '#8d8477'; g.fillRect(x + 1, y + 1, w - 2, 6);

@@ -16,7 +16,14 @@ const SND = DHSFX(GAME.SAVE.file + ':sound'), sounds = [];              // sound
 function sndUI() { const b = $('#sound'); b.setAttribute('aria-pressed', String(SND.on)); b.classList.toggle('muted', !SND.on); b.title = SND.on ? '효과음 끄기 (M)' : '효과음 켜기 (M)'; }
 $('#sound').onclick = () => { SND.set(!SND.on); sndUI(); }; sndUI();
 document.addEventListener('keydown', e => { if (e.code !== 'KeyM' || e.metaKey || e.ctrlKey || e.altKey || menu) return; const a = document.activeElement; if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT' || a.tagName === 'SELECT')) return; SND.set(!SND.on); sndUI(); });
-function playSfx(s) { sounds.push(s.k); if (sounds.length > 50) sounds.shift(); SND.play(s.k, s.delay); }
+function playSfx(s) { sounds.push(s.k); if (sounds.length > 50) sounds.shift(); SND.play(s.k, s.delay); if (s.k === 'pomp') fete(s.delay); }
+/** 승리 축하: 팡파르(약 10초)와 함께 꽃비를 내린다. 새 판을 열거나 저장한 판을 불러오면 함께 멈춘다. 소리를 꺼 두어도 꽃비는 내린다 */
+function fete(delay) {
+  const sc = current.scene, e = current.engine, stage = host.querySelector('.dh-stage');
+  const hole = () => { const r = sc.cardRect(), kx = stage.clientWidth / e.width, ky = stage.clientHeight / e.height; return [(r.x - 1) * kx, (r.y - 1) * ky, (r.w + 2) * kx, (r.h + 2) * ky]; };   // 결과 카드 자리는 비워 글자를 가리지 않는다
+  DHPETALS.start(stage, { dur: 10.4, delay: delay || 0, hole, alive: () => current.scene === sc && sc.mode === 'over', cut: () => SND.stop() });
+}
+function feteOff() { DHPETALS.stop(); SND.stop(); }
 let tab = 'play', resume = false;
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
   const next = b.dataset.tab; if (next === tab) return;
@@ -81,7 +88,7 @@ function sortie() {
   clearTimeout(previewTimer);
   const rep = current.applyDonghyunLang(code.value);
   if (!rep.ok) { $('#status').textContent = '출전하지 못했다'; $('#status').dataset.kind = 'error'; SND.play('buzz'); return say('error', rep.errors.join(' ') + (waiting ? '' : ' 하던 판은 그대로 두었다.')); }
-  begun(); $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
+  feteOff(); begun(); $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
   say('ok', rep.empty ? '설정이 없다. 기본값으로 새 판을 열었다.' : `설정 ${rep.settings.length}개를 적용하고 새 판을 열었다: ${rep.applied.join(' · ')}`);
 }
 /** 예제 목록과 설정 번호 표를 채운다 */
@@ -171,7 +178,7 @@ function saveToFile() {
 function loadFrom(d) {
   const r = current.scene.loadGame(d);
   if (!r.ok) { toast('불러오기 실패: ' + r.why + ` 하던 ${SAVE.word}은 그대로 두었다.`, 'error'); return false; }
-  begun(); status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
+  feteOff(); begun(); status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
   fit(); return true;
 }
 async function loadFile(input) {
@@ -281,7 +288,7 @@ function begun() {
 
 /* ---------- 시작: 자료를 읽고 기본값의 판 위에 시작 카드를 얹는다 ---------- */
 GAME.boot($('#host'), '#lab-data').then(g => {
-  current = g; window.__dh = g; g.sounds = sounds;       // 시험용 손잡이
+  current = g; window.__dh = g; g.sounds = sounds; g.snd = SND;       // 시험용 손잡이
   g.engine.on('sfx', playSfx);
   g.engine.pushScene(new StartCard(g.engine, g.layout)); g.waiting = () => waiting;
   $('#run').disabled = false; $('#game-save').disabled = false; $('#game-load').disabled = false; $('#status').textContent = '출전 준비';

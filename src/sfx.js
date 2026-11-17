@@ -1,7 +1,7 @@
 /* 합성 효과음: 소리 파일 없이 Web Audio로 그 자리에서 만든다.
-   발소리·말발굽·바퀴·궤도·배·비행·점령 환호·상대 점령 알림·승리 딩동댕·패배 땡, 공격·반격·격파, 동현텐의 짧은 소리.
+   발소리·말발굽·바퀴·궤도·배·비행·점령 환호·상대 점령 알림·승리 팡파르·딩동댕·패배 땡, 공격·반격·격파, 동현텐의 짧은 소리.
    브라우저 규칙에 따라 첫 클릭·터치·키 입력 뒤에 소리 장치를 연다.
-   동현삼·동현항은 동현큐의 이 파일을 그대로 쓰고 끝에 동전 소리(coin)·북소리(drum)만 더했다. 두 저장소의 파일은 같다. */
+   동현삼·동현항은 동현큐의 이 파일을 그대로 쓰고 끝에 동전 소리(coin)·북소리(drum)와 승리 팡파르(pomp)를 더했다. 두 저장소의 파일은 같다. */
 var DHSFX=function(storeKey){ /* 동현워의 합성 효과음에 동현크용 소리를 더했다 */
   'use strict';
   var AC=window.AudioContext||window.webkitAudioContext, ctx=null, master=null, noiseBuf=null;
@@ -35,6 +35,11 @@ var DHSFX=function(storeKey){ /* 동현워의 합성 효과음에 동현크용 �
     o.connect(g); g.connect(out||master); o.start(t); o.stop(t+(a||0.01)+dur+0.05); return o;
   }
   function bus(peak){ var g=ctx.createGain(); g.gain.value=peak; g.connect(master); return g; }
+  /* 팡파르만 따로 묶어, 소리를 끄거나 결과 화면을 떠날 때 바로 줄인다 */
+  var fan=null, fanEnd=0, played=[];
+  function hush(){ if(!fan||!ctx) return; var g=fan, u=ctx.currentTime; fan=null;
+    try{ g.gain.cancelScheduledValues(u); g.gain.setValueAtTime(g.gain.value,u); g.gain.linearRampToValueAtTime(0,u+0.12); }catch(e){}
+    setTimeout(function(){ try{ g.disconnect(); }catch(e){} },400); }
   var S={
     foot:function(t,dur,heavy){ var n=Math.max(2,Math.min(6,Math.round(dur/0.16))); for(var i=0;i<n;i++){ var u=t+i*0.16+(i%2)*0.012;
       noise(u,0.06,'lowpass',heavy?600:900,0,0.5); var o=tone(u,'sine',heavy?95:120,0.08,0.45,0.004); o.frequency.exponentialRampToValueAtTime(55,u+0.08); } },
@@ -123,17 +128,51 @@ var DHSFX=function(storeKey){ /* 동현워의 합성 효과음에 동현크용 �
     /* 동현삼·동현항: 사고팔 때 동전, 침공할 때 북 */
     coin:function(t){ tone(t,'square',1319,0.05,0.12,0.002); tone(t+0.06,'square',1760,0.16,0.12,0.002); },
     drum:function(t){ for(var i=0;i<3;i++){ var u=t+i*0.18, o=tone(u,'sine',i===2?70:90,0.22,0.85,0.003); o.frequency.exponentialRampToValueAtTime(42,u+0.22); noise(u,0.08,'lowpass',500,0,0.45,0.002); } },
-    flap:function(t){ for(var i=0;i<3;i++){ noise(t+i*0.045,0.035,'bandpass',320,1.2,0.9,0.004); var o=tone(t+i*0.045,'triangle',190,0.04,0.2,0.003); o.frequency.exponentialRampToValueAtTime(120,t+i*0.045+0.04); } }
+    flap:function(t){ for(var i=0;i<3;i++){ noise(t+i*0.045,0.035,'bandpass',320,1.2,0.9,0.004); var o=tone(t+i*0.045,'triangle',190,0.04,0.2,0.003); o.frequency.exponentialRampToValueAtTime(120,t+i*0.045+0.04); } },
+    /* 승리 팡파르(약 10초): 엘가 〈위풍당당 행진곡〉 1번(1901) 트리오 가락의 첫 줄을 라장조로 옮겨 금관·저음·팀파니 소리로 합성한다. 녹음은 쓰지 않는다.
+       가락·화음·저음은 악보를 따른다(마디마다 두 번 짚는 화음, 차례로 오르는 저음). 넷째 마디는 조금 늦추고, 다음 줄의 첫 으뜸화음에서 맺는다.
+       음은 MIDI 번호(69 = 가온 라 440Hz), 길이는 박으로 적는다 */
+    pomp:function(t){ hush(); var out=fan=ctx.createGain(); out.gain.value=0.85; out.connect(master);
+      var pre=ctx.createGain(), dl=ctx.createDelay(0.5), fb=ctx.createGain(), wet=ctx.createGain(); dl.delayTime.value=0.115; fb.gain.value=0.28; wet.gain.value=0.22;
+      pre.connect(out); pre.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(out);
+      var B=0.53, at=function(b){ return t+(b<=12?b*B:12*B+(b-12)*B*(1+0.05*(b-12))); }, hz=function(m){ return 440*Math.pow(2,(m-69)/12); };
+      function horn(b,len,m,peak,cut){ var u=at(b), d=at(b+len)-u-0.035, lp=ctx.createBiquadFilter(), g=ctx.createGain(); lp.type='lowpass'; lp.Q.value=0.7;
+        lp.frequency.setValueAtTime(cut*0.4,u); lp.frequency.linearRampToValueAtTime(cut,u+0.07); lp.frequency.setTargetAtTime(cut*0.62,u+0.07,0.3);
+        g.gain.setValueAtTime(0.0001,u); g.gain.linearRampToValueAtTime(peak,u+0.04); g.gain.setTargetAtTime(peak*0.8,u+0.04,0.25); g.gain.setTargetAtTime(0.0001,u+d,0.05);
+        [-5,5].forEach(function(c){ var o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=hz(m); o.detune.value=c; o.connect(lp); o.start(u); o.stop(u+d+0.4); });
+        lp.connect(g); g.connect(pre); }
+      function timp(b,m,peak){ var u=at(b), o=tone(u,'sine',hz(m)*1.1,0.5,peak,0.004,pre); o.frequency.exponentialRampToValueAtTime(hz(m),u+0.06); noise(u,0.07,'lowpass',700,0,peak*0.5,0.002,pre); }
+      function crash(b,peak,dur){ var u=at(b); noise(u,dur,'highpass',4800,0,peak,0.004,pre); noise(u,dur*0.6,'bandpass',2600,0.6,peak*0.5,0.004,pre);
+        var o=tone(u,'sine',58,0.45,peak*1.5,0.004,pre); o.frequency.exponentialRampToValueAtTime(34,u+0.45); }
+      /* 가락: 한 옥타브 위를 겹쳐 트럼펫처럼 밝게 한다 */
+      [[74,0,2],[73,2,0.5],[74,2.5,0.5],[76,3,1],[71,4,2],[69,6,2],[67,8,2],[66,10,0.5],[67,10.5,0.5],[69,11,1],[64,12,4],[66,16,1.4]].forEach(function(n){
+        horn(n[1],n[2],n[0],0.2,2500); horn(n[1],n[2],n[0]+12,0.1,3300); });
+      /* 화음(박마다 다시 짚는다)과 저음 */
+      var CH=[[57,62,66],[57,62,66],[57,61,64],[57,61,64],[59,62,66],[59,62,66],[57,62,66],[57,62,66],[59,62,67],[59,62,67],[57,62,66],[57,62,66],[56,62,64],[56,62,64],[55,61,64],[55,61,64]],
+          BS=[38,38,40,40,42,42,42,45,43,43,45,45,47,47,45,45];
+      CH.forEach(function(c,b){ c.forEach(function(m){ horn(b,0.94,m,0.065,1300); }); horn(b,0.94,BS[b],0.2,520); horn(b,0.94,BS[b]+12,0.085,760); });
+      [57,62,66,69,74].forEach(function(m){ horn(16,1.4,m,0.085,1700); }); horn(16,1.4,38,0.22,520); horn(16,1.4,50,0.1,760);
+      /* 팀파니·심벌즈·작은북: 첫 박과 마디 머리를 짚고, 끝 두 박에서 굴려 마지막 화음으로 몰아간다 */
+      crash(0,0.16,0.9); timp(0,50,0.5); timp(4,50,0.3); timp(8,50,0.36); timp(12,52,0.3);
+      for(var i=0;i<12;i++){ var b=14+i/6, k=i/11; timp(b,45,0.1+0.3*k); noise(at(b),0.05,'bandpass',1900,0.7,0.05+0.2*k,0.002,pre); }
+      crash(16,0.28,1.1); timp(16,50,0.5); fanEnd=performance.now()+(at(17.4)+0.5-ctx.currentTime)*1000;
+    }
   };
   // play(k)로 부를 때 길이·음높이가 필요한 소리의 기본값(동현삼·동현항: 이동 · 출항 · 배 구입)
   var ARGS={foot:[0.5],horse:[0.6],tire:[0.5],tread:[0.6],siege:[0.6],ship:[0.6],air:[0.6],copter:[0.6],bell:[880,0.45,0.35]};
   var MT={foot:'foot',mech:'mech',horse:'horse',tire:'tire',tread:'tread',siege:'siege',ship:'ship',lander:'ship',air:'air'};
   return {
     get on(){ return on; },
-    set:function(v){ on=!!v; try{ localStorage.setItem(storeKey,on?'on':'off'); }catch(e){} if(on) unlock(); },
+    set:function(v){ on=!!v; try{ localStorage.setItem(storeKey,on?'on':'off'); }catch(e){} if(on) unlock(); else hush(); },
     /* 유닛 이동: mt는 이동 방식, dur는 화면 이동 시간(초), copter는 헬기 여부 */
     move:function(mt,dur,copter){ if(!ready()) return; var t=ctx.currentTime+0.01, k=copter?'copter':MT[mt];
       if(k==='mech') S.foot(t,dur,true); else if(S[k]) S[k](t,dur); },
-    play:function(k,delay){ if(!ready()||!S[k]) return; S[k].apply(null,[ctx.currentTime+0.01+(delay||0)].concat(ARGS[k]||[])); }
+    play:function(k,delay){ if(!ready()||!S[k]) return; played.push(k); if(played.length>40) played.shift(); S[k].apply(null,[ctx.currentTime+0.01+(delay||0)].concat(ARGS[k]||[])); },
+    /* 팡파르를 멈춘다(짧은 효과음은 그대로 둔다) */
+    stop:function(){ hush(); },
+    /* 실제로 낸 소리의 이름(최근 40개). 시험이 읽는다 */
+    get played(){ return played.slice(); },
+    /* 팡파르가 울리는 중인가 */
+    get ringing(){ return !!fan&&performance.now()<fanEnd; }
   };
 };

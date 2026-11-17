@@ -34,6 +34,12 @@
 - 삼국지 II — 위키백과: https://ko.wikipedia.org/wiki/삼국지_II
 - Koei Tecmo — Wikipedia: https://en.wikipedia.org/wiki/Koei_Tecmo
 
+## 승리 팡파르
+
+- 선율은 에드워드 엘가의 「위풍당당 행진곡」 1번(Op. 39 No. 1, 1901년 작곡·출판)의 트리오 첫 줄이다. 악보는 공공 영역이다([IMSLP의 작품 면](https://imslp.org/wiki/Pomp_and_Circumstance_March_No.1,_Op.39_No.1_(Elgar,_Edward))).
+- 녹음이나 연주 음원을 쓰지 않았다. 음높이와 박자를 `src/sfx.js`에 적고 브라우저에서 합성한다. 조는 마지막 재현부의 D장조이고 빠르기와 악기 배치는 동현삼이 정했다.
+- 음을 대조한 악보: [G Major Music Theory의 쉬운 편곡](https://gmajormusictheory.org/Freebies/Level4/4Pomp/4Pomp.pdf), [IMSLP의 피아노 편곡](https://s9.imslp.org/files/imglnks/usimg/b/b7/IMSLP833625-PMLP898174-Elgar_Nacar_Pomp_and_Circumstance_1.pdf), [Hymnary의 선율 기록](https://hymnary.org/tune/land_of_hope_and_glory_elgar).
+
 ## 글꼴
 
 검은고딕 Black Han Sans · Pretendard · 나눔고딕코딩 — SIL Open Font License 1.1 (`licenses/`).
