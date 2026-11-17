@@ -2,8 +2,8 @@
 // 설명 탭의 글은 README.md에서 가져온다. README를 고치고 다시 묶으면 페이지의 설명도 같이 바뀐다.
 const fs = require('fs'), path = require('path');
 const { copyIcons } = require('./icon-files.cjs');
-const LAB = { name: '동현삼', version: '0.10', data: 'sam/donghyun_sam_data.json',
-  game: ['sam/sam-parser.js', 'sam/sam-rules.js', 'sam/sam-battle.js', 'sam/sam-lang.js', 'sam/sam-art.js', 'sam/sam-battle-scene.js', 'sam/sam-scene.js'] };
+const LAB = { name: '동현삼', version: '0.30', data: 'sam/donghyun_sam_data.json',
+  game: ['sam/sam-parser.js', 'sam/sam-rules.js', 'sam/sam-battle.js', 'sam/sam-lang.js', 'sam/sam-art.js', 'sam/sam-battle-scene.js', 'sam/sam-council.js', 'sam/sam-scene.js'] };
 const ENGINE = ['dh-core.js', 'dh-loop.js', 'dh-clock.js', 'dh-grid.js', 'dh-tilemap.js', 'dh-layout.js', 'dh-engine.js', 'dh-lang.js'].map(f => 'engine/' + f);
 const JS = ['lang/donghyun.js', ...ENGINE, ...LAB.game, 'sfx.js', 'app.js'];
 const root = __dirname, out = path.join(root, 'dist'), src = n => fs.readFileSync(path.join(root, 'src', n), 'utf8');
@@ -65,6 +65,7 @@ need(/^## v([\d.]+) /m.exec(fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'ut
 let css = src('style.css') + '\n' + src('engine/dh-layout.css');
 for (const name of fs.readdirSync(path.join(root, 'fonts')))
   css = css.replaceAll('./fonts/' + name, 'data:font/woff2;base64,' + fs.readFileSync(path.join(root, 'fonts', name)).toString('base64'));
+css = css.replaceAll('__LADIES_PNG__', 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'src/sam/sam-ladies.png')).toString('base64'));   // 두 낭자의 얼굴(192×128, 두 칸)
 const html = docs(src('index.html'))
   .replace('__SERIES_NAV__', () => src('series.html'))
   .replace('__BRAND_ICON__', () => src('brand-icon.txt').trim())
@@ -72,7 +73,7 @@ const html = docs(src('index.html'))
   .replace('__DATA_JSON__', () => JSON.stringify(JSON.parse(src(LAB.data))).replaceAll('</', '<\\/'))
   .replace('<link rel="stylesheet" href="./style.css">', () => `<style>${css}</style>`)
   .replace('<script src="./game.js"></script>', () => '<script>' + JS.map(src).join('\n;\n').replaceAll('</script', '<\\/script') + '</script>');
-need(!/src="\.\/game\.js"|__SERIES_NAV__|__BRAND_ICON__|__VERSION__|__DATA_JSON__|<!--README|href="\.\/style\.css"/.test(html), '묶지 못한 자리가 남았다');
+need(!/src="\.\/game\.js"|__SERIES_NAV__|__BRAND_ICON__|__VERSION__|__DATA_JSON__|__LADIES_PNG__|<!--README|href="\.\/style\.css"/.test(html), '묶지 못한 자리가 남았다');
 fs.writeFileSync(path.join(root, 'index.html'), html);
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, 'index.html'), html);

@@ -327,7 +327,26 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
 .load-head label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 /* 지도 확대 · 축소 아이콘(동현항과 같은 자리 · 같은 모양). 바퀴와 트랙패드 제스처 대신 이 아이콘으로만 배율을 바꾼다. */
 .dh-stage{position:relative}
-.sam-zoom{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:2}
+/* 확대 · 축소 아이콘은 지도 오른쪽 아래(바다)에 둔다. 처음 배율에서 오른쪽 위의 양평을 가리지 않는다. */
+.sam-zoom{position:absolute;bottom:10px;right:10px;display:flex;gap:5px;z-index:2}
 .sam-zoom[hidden]{display:none}
 .sam-zoom button{width:38px;height:38px;font:700 22px/1 sans-serif;background:#fff8e6;color:#26211c;border:1px solid #887b63;border-radius:5px;cursor:pointer}
 .sam-zoom button:focus-visible{outline:3px solid #317a94;outline-offset:2px}
+/* 두 낭자(동행낭자 · 수행낭자): 조작 창 맨 위. 동현항의 조언 카드와 같은 자리 · 같은 얼굴 크기. 두 얼굴은 서로 마주 본다(오른쪽 얼굴만 좌우로 뒤집는다). */
+.sam-counsel{min-width:0;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sam-faces{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;margin:0 0 8px}
+.sam-face{margin:0;display:flex;align-items:flex-end;gap:8px;min-width:0}
+.sam-face-b{flex-direction:row-reverse}
+.sam-portrait{width:72px;height:96px;flex:none;background:#f3e6c4 url('__LADIES_PNG__') 0 0/200% 100% no-repeat;image-rendering:pixelated;border:1px solid #aa956d;border-radius:4px}
+.sam-face-b .sam-portrait{background-position:100% 0;transform:scaleX(-1)}
+.sam-face figcaption{font-size:11px;line-height:1.5;font-weight:600;color:var(--muted);white-space:nowrap}
+.sam-say{margin:6px 0 0;font-size:13px;line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}
+.sam-who{display:inline-block;margin-right:2px;padding:0 5px;border-radius:4px;background:var(--surface2);font-size:11px;font-weight:700;line-height:1.6;vertical-align:1px}
+.sam-say-b{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.sam-src{display:inline-block;margin-top:2px;font-size:11px;line-height:1.5;color:var(--muted)}
+.sam-src[hidden]{display:none}
+@media (max-width:600px){.sam-portrait{width:54px;height:72px}.sam-face{gap:6px}}
+.stage-full.fs.side .sam-portrait{width:54px;height:72px}
+@media (max-height:860px){.stage-full.fs .sam-portrait{width:54px;height:72px}}
+/* 전체 화면에서 조작 창이 넘치면 명령 버튼을 창 아래쪽에 붙여 둔다. 두 낭자의 말이 길어도 버튼이 바로 닿고, 가려진 설명은 창을 밀어서 본다. */
+.stage-full.fs:not(.stack):not(.side) .dh-panel .dh-menu{position:sticky;bottom:0;z-index:1;margin:-10px 0;padding:10px 0;background:linear-gradient(to bottom,transparent,var(--paper) 10px)}

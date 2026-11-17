@@ -1,7 +1,7 @@
 // 동현삼 핵심 시험(공통 엔진 · 자료 · 규칙 · 동현랭). 브라우저 없이 node로 돈다: node qa/core-tests.cjs
 const assert = require('assert'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
-for (const f of ['src/engine/dh-core.js', 'src/engine/dh-loop.js', 'src/engine/dh-clock.js', 'src/engine/dh-grid.js', 'src/engine/dh-tilemap.js', 'src/engine/dh-layout.js', 'src/engine/dh-engine.js', 'src/engine/dh-lang.js', 'src/sam/sam-parser.js', 'src/sam/sam-rules.js', 'src/sam/sam-battle.js', 'src/sam/sam-lang.js', 'src/sam/sam-art.js', 'src/sam/sam-battle-scene.js', 'src/sam/sam-scene.js']) require(path.join(root, f));
+for (const f of ['src/engine/dh-core.js', 'src/engine/dh-loop.js', 'src/engine/dh-clock.js', 'src/engine/dh-grid.js', 'src/engine/dh-tilemap.js', 'src/engine/dh-layout.js', 'src/engine/dh-engine.js', 'src/engine/dh-lang.js', 'src/sam/sam-parser.js', 'src/sam/sam-rules.js', 'src/sam/sam-battle.js', 'src/sam/sam-lang.js', 'src/sam/sam-art.js', 'src/sam/sam-battle-scene.js', 'src/sam/sam-council.js', 'src/sam/sam-scene.js']) require(path.join(root, f));
 const DH = globalThis.DH;
 const samJ = () => JSON.parse(fs.readFileSync(path.join(root, 'src/sam/donghyun_sam_data.json'), 'utf8'));
 let n = 0; const ok = (name, fn) => { fn(); n++; console.log('ok ' + name); };
@@ -445,7 +445,7 @@ ok('동현삼 저장: 우리 차례의 지도에서만 저장한다 · 불러오
   const r = s.loadGame(d); assert.ok(r.ok); assert.ok(k.engine.scene === s && s.mode === 'play' && s.game.months === 0 && s.game.P(12).troops === 5000, '전투를 접고 저장한 달로 돌아온다');
   const w = mk(2, DH.Sam.lang.compose([[20, 2]])); w.scene.start('liubei'); assert.deepStrictEqual([w.scene.mode, w.scene.game.over, w.scene.saveInfo().ok], ['over', 'won', true]);
   const dw = pack(w), x = mk(7); assert.ok(x.scene.loadGame(dw).ok); assert.deepStrictEqual([x.scene.mode, x.scene.game.over, x.scene.game.overWhy, x.layout.items[0].id], ['over', 'won', 'goal', 'again']);
-  const v = pack(k); assert.deepStrictEqual(Object.keys(v.scene), ['selected', 'mode', 'cam']); v.scene = { selected: 999, cam: { x: 'a' } }; assert.ok(s.loadGame(v).ok); assert.strictEqual(s.selected, null, '화면 정보가 이상하면 버리고 판만 되살린다');
+  const v = pack(k); assert.deepStrictEqual(Object.keys(v.scene), ['selected', 'mode', 'cam', 'council']); v.scene = { selected: 999, cam: { x: 'a' } }; assert.ok(s.loadGame(v).ok); assert.strictEqual(s.selected, null, '화면 정보가 이상하면 버리고 판만 되살린다');
 });
 ok('동현삼 저장: 동맹도 함께 적힌다 · v0.05까지의 저장 파일(장수 40 · 동맹 없음)도 열린다 · 주인이 바뀐 주의 새 장수는 재야로 남는다', () => {
   const k = mk(5); k.scene.start('liubei'); k.scene.game.pacts.set(k.scene.game.pactKey('liubei', 'sun'), 7); const d = pack(k); assert.deepStrictEqual(d.game.pacts, [['liubei', 'sun', 7]]);
@@ -530,5 +530,82 @@ ok('동현삼 키보드(전투): 방향키 커서 · Enter로 옮기고 친다 �
   for (let i = 0; i < 20000 && b.mode !== 'result'; i++) k.engine.step(1); assert.strictEqual(b.mode, 'result');
   k.key('Enter'); assert.ok(k.engine.scene === b, '결과 카드는 반 초 뒤부터 넘어간다'); k.engine.step(31); k.key('Enter'); assert.ok(k.engine.scene === s && s.mode !== 'pick');
   const onTap = DH.Sam.SamBattleScene.prototype.onTap.toString(); assert.ok(/this\.cur = null/.test(onTap) && /tapCell/.test(onTap), '손으로 찍으면 커서가 숨고 같은 길(tapCell)로 간다');
+});
+/* ---------- 두 낭자(sam-council.js)와 지도 배율 ---------- */
+const tapOn = (s, id) => { const P = s.pos.get(id), q = s.cam.toScreen(P.x, P.y); s.onTap(q.x, q.y); };
+ok('두 낭자: 『장자』 100구절은 서로 다르고 편명이 있다 · 한 마디는 60가지가 넘는다 · 41개 주 설명이 모두 있다 · 말투', () => {
+  const S = DH.Sam, Q = S.QUOTES, w = DH.Sam.parse(samJ());
+  assert.strictEqual(Q.length, 100); assert.strictEqual(new Set(Q.map(q => q[1])).size, 100); assert.strictEqual(new Set(Q.map(q => q[2])).size, 100);
+  for (const [han, orig, text] of Q) { assert.ok(S.CHAPTER[han], han); assert.ok(/^[\u3400-\u9fff（），。；：？、]+$/.test(orig), orig); assert.ok(text.length >= 8 && !/[!?]$|뿐|습니다|입니다/.test(text), '옮긴 글은 평서체 그대로: ' + text); }
+  assert.ok(new Set(Q.map(q => q[0])).size >= 30, '여러 편에서 고른다');
+  for (const p of w.provinces.values()) { const d = S.REGION[p.name]; assert.ok(d && d.startsWith(p.name) && /니다\.$/.test(d) && !/뿐|!/.test(d), p.name); }
+  assert.strictEqual(Object.keys(S.REGION).length, w.provinces.size);
+  const g = new S.Game(w, { player: 'liubei', state: S.newState() }), c = S.Council.ctx(g), tips = S.TIPS.map(t => t(c));
+  assert.ok(tips.length >= 60 && new Set(tips).size === tips.length);
+  for (const t of tips) assert.ok(/(니다|시지요)\.$/.test(t) && !/뿐|!|undefined|NaN|\[object/.test(t), '존대 · 군말 없음: ' + t);
+});
+ok('두 낭자: 고르기 전에는 소개 · 우리 땅에서는 『장자』 · 같은 주를 다시 누르거나 달이 바뀌면 다음 구절 · 명령을 내려도 구절은 그대로', () => {
+  const k = mk(3), s = k.scene, C = s.council;
+  assert.ok(C.a.startsWith('주군, 저는') && C.a.includes('동행낭자') && C.b.includes('수행낭자') && C.quote === null, '시작 전부터 두 낭자가 말한다');
+  s.start('liubei'); assert.strictEqual(s.selected, 12); const q0 = C.quote, a0 = C.a, b0 = C.b;
+  assert.ok(q0 && a0 === `주군, 『장자』 「${DH.Sam.CHAPTER[q0[0]]}」의 한 구절입니다. “${q0[2]}”` && DH.Sam.QUOTES.includes(q0));
+  assert.ok(DH.Sam.TIPS.map(t => t(DH.Sam.Council.ctx(s.game))).includes(b0), '수행낭자의 첫 한 마디');
+  s.command('draft'); s.refresh(); s.command('move'); s.command('cancel'); assert.deepStrictEqual([C.a, C.b], [a0, b0], '명령을 내리거나 메뉴를 오가도 말은 그대로');
+  tapOn(s, 12); assert.ok(C.quote !== q0 && C.a !== a0 && C.b !== b0, '같은 주를 다시 누르면 다음 구절 · 수행낭자도 새 한 마디');
+  const q1 = C.quote; tapOn(s, 13); assert.ok(C.quote !== q1, '다른 우리 주로 가면 다음 구절'); const q2 = C.quote;
+  k.endMonth(); assert.ok(s.selected === 13 && C.quote !== q2, '달이 바뀌면 다음 구절');
+  k.key('Escape'); assert.strictEqual(C.a, `주군, 우리 땅은 2주, 병력은 모두 ${Number(s.game.troopsOf('liubei')).toLocaleString('ko-KR')}입니다. 이번 달 명령이 남은 주는 2곳입니다.`); assert.strictEqual(C.quote, null);
+});
+ok('두 낭자: 남의 땅을 고르면 그곳의 설명과 군주 · 병력 · 세력 전체를 판의 값에서 셈한다 · 공백지 · 동맹 · 값이 바뀌면 말도 바뀐다', () => {
+  const k = mk(3), s = k.scene, C = s.council, g0 = s.game, f = n => Number(n).toLocaleString('ko-KR');
+  tapOn(s, 14); assert.strictEqual(C.a, `주군, ${DH.Sam.REGION['허창']} 군주 조조가 이곳에 머물고 있으며, 병력은 ${f(g0.P(14).troops)}, 장수는 ${g0.officersOf(14).length}명입니다. 조조 세력은 모두 9주, 병력 ${f(g0.troopsOf('cao'))}입니다.`, '군주를 고르기 전에도 아뢴다');
+  s.start('liubei'); const g = s.game;
+  for (const p of g.provinces.values()) {
+    if (p.owner === 'liubei') continue;
+    tapOn(s, p.id); assert.strictEqual(s.selected, p.id); const a = C.a; assert.ok(a.startsWith('주군, ' + DH.Sam.REGION[p.name]) && C.quote === null, p.name);
+    if (!p.owner) { assert.ok(a.includes('주인 없는 공백지')); continue; }
+    const fa = g.factions.get(p.owner), lead = g.officers.get(fa.leader);
+    assert.ok(a.includes(`병력은 ${f(p.troops)}, 장수는 ${g.officersOf(p.id).length}명입니다.`) && a.includes(`군주 ${lead.name}`), a);
+    assert.ok(lead.province === p.id ? a.includes('이곳에 머물고 있으며') : a.includes(`${g.P(lead.province).name}에 있고`), a);
+    const n = g.provincesOf(p.owner).length; assert.ok(n > 1 ? a.includes(`${fa.name} 세력은 모두 ${n}주, 병력 ${f(g.troopsOf(p.owner))}입니다.`) : a.includes(`${fa.name} 세력의 땅은 이곳 하나입니다.`), a);
+  }
+  tapOn(s, 10); const a1 = C.a, b1 = C.b; g.P(10).troops += 1234; s.refresh(); assert.ok(C.a !== a1 && C.a.includes(f(g.P(10).troops)) && C.b !== b1, '병력이 바뀌면 말이 바뀌고 수행낭자도 새 한 마디');
+  const a2 = C.a, b2 = C.b; s.refresh(); assert.deepStrictEqual([C.a, C.b], [a2, b2], '바뀐 것이 없으면 그대로');
+  g.pacts.set(g.pactKey('liubei', 'cao'), 7); s.refresh(); assert.ok(C.a.endsWith('우리와는 동맹이라 앞으로 7달 동안 서로 치지 않습니다.'));
+  tapOn(s, 41); assert.ok(C.a.endsWith('지금은 주인 없는 공백지입니다. 우리 땅과 맞닿아 있지 않아 아직은 장수를 보낼 수 없습니다.'), C.a);
+  g.P(40).owner = 'liubei'; s.refresh(); assert.ok(C.a.endsWith('이웃한 우리 강주에서 장수를 보내시면 싸우지 않고 차지합니다.'), C.a);
+  const out = g.P(13); out.owner = 'cao'; tapOn(s, 12); tapOn(s, 13); assert.ok(C.a.includes('군주 조조는') && C.quote === null, '빼앗긴 땅은 남의 땅으로 아뢴다');
+});
+ok('두 낭자: 수행낭자의 한 마디와 구절은 한 바퀴를 다 돌 때까지 겹치지 않는다 · 다음 바퀴의 처음이 앞 바퀴의 끝과 같지 않다 · 수치는 동현랭 설정을 따른다', () => {
+  const S = DH.Sam, k = mk(4), s = k.scene, C = s.council, T = S.TIPS.length; s.start('liubei');
+  const tips = [C.b], quotes = [C.quote]; for (let i = 1; i < 2 * Math.max(T, 100) + 1; i++) { tapOn(s, 12); tips.push(C.b); quotes.push(C.quote); }
+  for (const [list, n] of [[tips, T], [quotes, 100]]) { assert.strictEqual(new Set(list.slice(0, n)).size, n, '첫 바퀴에 모두 한 번씩'); assert.strictEqual(new Set(list.slice(n, 2 * n)).size, n, '둘째 바퀴도'); assert.notStrictEqual(list[n - 1], list[n], '바퀴가 바뀔 때 같은 말이 이어지지 않는다'); }
+  const a = new S.Council(11), b = new S.Council(11), c = new S.Council(12), seq = x => Array.from({ length: 30 }, () => x.draw('tips', T)).join();
+  assert.strictEqual(seq(a), seq(b)); assert.notStrictEqual(seq(new S.Council(11)), seq(c), '시드가 다르면 차례가 다르다');
+  const z = mk(4, S.lang.compose([[10, 2000], [11, 150], [14, 800], [15, 400], [16, 6], [17, 50], [22, 30], [23, 7], [24, 40], [20, 6], [21, 60]])), all = S.TIPS.map(t => t(S.Council.ctx(z.scene.game))).join('\n');
+  for (const want of ['징병은 금 150에 병사 2,000을 얻습니다.', '시혜는 쌀 800을 풀어', '동맹을 청하면 금 400이 나갑니다.', '동맹은 6달 동안 이어지고', '한 명마다 50% 확률로', '1 − 0.5² = 75%입니다. 셋이면 88%입니다.', '수비 측은 30일을 버티면 이깁니다.', '부대의 이동력은 하루 7입니다.', '지형 비용의 합이 7 이하인 칸입니다.', '상대 병력의 4배, 적어도 6,000을 모은 뒤에', '이 판은 주 6을 차지하면 이깁니다. 기한은 60달입니다.', '지금 값은 병사 2,000 · 금 150입니다.', '지금 값은 이동력 7 · 30일입니다.', 'p가 60%라면 금 667쯤입니다.'])
+    assert.ok(all.includes(want), '설정을 따르지 않는 한 마디: ' + want);
+});
+ok('두 낭자: 저장하면 주머니가 이어진다 · v0.10까지의 저장 파일도 열린다 · 낭자의 말은 판의 난수를 쓰지 않는다', () => {
+  const k = mk(6), s = k.scene; s.start('liubei'); for (let i = 0; i < 9; i++) tapOn(s, 12);
+  const r0 = k.engine.rng.state; for (let i = 0; i < 40; i++) tapOn(s, i % 2 ? 12 : 14); assert.strictEqual(k.engine.rng.state, r0, '판의 난수는 그대로');
+  const d = pack(k), c = d.scene.council; assert.ok(Number.isInteger(c.seed) && c.quotes.length <= 100 && c.tips.length <= DH.Sam.TIPS.length); assert.ok(c.quotes.every(Number.isInteger) && c.tips.every(Number.isInteger) && c.last.length === 2);
+  const next = () => { tapOn(s, 12); return [s.council.a, s.council.b]; }, want = [next(), next(), next()];
+  const x = mk(99); assert.ok(x.scene.loadGame(d).ok); assert.ok(x.scene.selected === 12 && x.scene.council.quote, '불러오면 새 구절로 맞는다');
+  const got0 = [x.scene.council.a, x.scene.council.b], nx = () => { tapOn(x.scene, 12); return [x.scene.council.a, x.scene.council.b]; };
+  assert.deepStrictEqual([got0, nx(), nx()], want, '저장한 자리에서 주머니가 이어진다');
+  const old = pack(k); delete old.scene.council; const y = mk(5); assert.ok(y.scene.loadGame(old).ok && y.scene.council.a.startsWith('주군, 『장자』'), 'council이 없는 저장 파일');
+  for (const bad of [{ seed: 'x' }, { seed: 1, quotes: [1, 1], tips: [] }, { seed: 1, quotes: [100], tips: [] }, { seed: 1, quotes: [], tips: [-1] }, 7, null]) { const v = pack(k); v.scene.council = bad; const u = mk(5); assert.ok(u.scene.loadGame(v).ok && u.scene.council.a.startsWith('주군, 『장자』'), '이상한 주머니는 버린다'); }
+});
+ok('지도 배율: 처음은 1.125배(1배와 1.25배의 가운데) · 41개 주의 성과 이름이 모두 화면 안 · + 한 번 1.40625배 · − 한 번 1배 · 키와 아이콘이 같은 단 · 저장된 배율은 그대로', () => {
+  const k = mk(1), s = k.scene, c = s.cam; assert.strictEqual(c.zoom, 1.125); assert.strictEqual(c.zoom, (1 + 1.25) / 2);
+  const inside = () => [...s.pos.values()].every(P => { const a = c.toScreen(P.x - 12, P.y - 10), b = c.toScreen(P.x + 12, P.y + 6 + 9 / c.zoom + 1); return a.x >= 0 && a.y >= 0 && b.x <= 480 && b.y <= 360; });
+  assert.ok(inside(), '처음 배율에서 모든 주가 보인다'); s.start('liubei'); assert.strictEqual(c.zoom, 1.125, '출전해도 그대로');
+  s.command('zin'); assert.strictEqual(c.zoom, 1.40625); s.command('zout'); assert.strictEqual(c.zoom, 1.125); const home = [c.x, c.y]; s.command('zout'); assert.strictEqual(c.zoom, 1); assert.ok(inside(), '1배는 지도 전체'); s.command('zout'); assert.strictEqual(c.zoom, 1); s.command('zin'); assert.deepStrictEqual([c.zoom, c.x, c.y], [1.125, ...home], '1배에서 +를 누르면 처음 화면'); assert.ok(inside()); s.command('zout');
+  const seen = [c.zoom]; for (let i = 0; i < 9; i++) { k.key('Equal'); seen.push(c.zoom); } assert.deepStrictEqual(seen.slice(0, 7), [1, 1.125, 1.40625, 1.7578125, 2.197265625, 2.74658203125, 3]); assert.deepStrictEqual(seen.slice(7), [3, 3, 3]);
+  k.key('NumpadSubtract'); assert.strictEqual(c.zoom, 2.74658203125); k.key('Minus'); k.key('NumpadAdd'); assert.strictEqual(c.zoom, 2.74658203125);
+  c.zoom = 1.25; s.command('zin'); assert.strictEqual(c.zoom, 1.40625, '예전 저장 파일의 1.25배에서 +'); c.zoom = 1.25; s.command('zout'); assert.strictEqual(c.zoom, 1.125); c.zoom = 1.5625; s.command('zout'); assert.strictEqual(c.zoom, 1.40625);
+  c.zoom = 1.5625; c.clampTo(s.grid); const d = pack(k), x = mk(2); assert.ok(x.scene.loadGame(d).ok); assert.strictEqual(x.scene.cam.zoom, 1.5625, '저장한 배율로 돌아온다');
+  const P = s.pos.get(12), mid = () => c.toWorld(240, 180); c.zoom = 2.197265625; c.centerOn(P.x, P.y); c.clampTo(s.grid); const m0 = mid(); s.command('zin'); const m1 = mid(); assert.ok(Math.abs(m0.x - m1.x) < 1e-6 && Math.abs(m0.y - m1.y) < 1e-6, '화면 가운데를 붙들고 커진다');
 });
 console.log(`핵심 시험 ${n}개 통과`);

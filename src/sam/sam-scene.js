@@ -3,10 +3,11 @@
  *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다.
  *   장수가 이웃한 공백지(잿빛 성터)로 가면 그 땅을 차지한다. 마지막 장수가 떠난 주는 공백지가 된다. 동맹은 상대를 고르고, 깰 때는 한 번 더 묻는다.
  *   그림: 주는 세력 색 성(군주가 있는 곳은 깃발 단 큰 성)으로, 산 · 숲 · 물결은 sam-art.js의 픽셀 그림으로 그린다.
+ *   조작 창 맨 위에는 두 낭자가 있다(sam-council.js). 동행낭자는 우리 땅에서 『장자』를 읊고 남의 땅에서는 그곳의 군주와 병력을 아뢴다. 수행낭자는 규칙을 한 마디씩 한다.
  *   턴 종료를 누르면 다른 군주들이 움직인다. 우리 주가 침공받으면 전투 화면으로 넘어간다(sam-battle-scene.js).
  *   침공하거나 침공받은 전투가 끝나면 주의 주인이 바뀌고 이 지도로 돌아온다.
  * 키보드(지도를 한 번 누른 뒤): 방향키 주 고르기 · Space 명령이 남은 다음 우리 주 · 숫자 키 조작 창의 버튼 · Enter 노란 버튼 · Esc 그만두기 ·
- *   Shift+방향키(또는 W A S D) 지도 옮기기 · + − 확대와 축소. 이동·침공에서 '어디로'를 고를 때는 방향키로 대상을 옮기고 Enter로 정한다.
+ *   Shift+방향키(또는 W A S D) 지도 옮기기 · + − 확대와 축소(1 · 1.125 · 1.41 · 1.76 · 2.2 · 2.75 · 3배. 처음은 1.125배). 이동·침공에서 '어디로'를 고를 때는 방향키로 대상을 옮기고 Enter로 정한다.
  * 저장: saveGame()이 설정 목록 · 달력 · 난수 · 판을 한 묶음으로 내고, loadGame()이 검사한 뒤 되살린다. 우리 차례의 지도에서만 저장한다. */
 (function (root) {
   'use strict';
@@ -16,6 +17,8 @@
   const MAP = { shallow: '#b5d6e2', sea: '#9fc4d9', deep: '#93bcd4', land: '#ece2c7', rim: '#c9b48a' };   // 지도 기본 색(동현항과 같은 바다)
   const fmt = n => Number(n).toLocaleString('ko-KR');
   const ZOOM = [['zin', '지도 확대', '+'], ['zout', '지도 축소', '−']];   // 지도 위 아이콘(동현항과 같은 자리 · 같은 모양)
+  // 지도 배율의 단. 처음 배율(HOME)은 기본 1배와 +를 한 번 누른 1.25배의 가운데인 1.125배다. 거기서 1.25배씩 커지고, 한 번 줄이면 지도 전체가 보이는 1배다.
+  const HOME = 1.125, LEVELS = [1, HOME, HOME * 1.25, HOME * 1.25 ** 2, HOME * 1.25 ** 3, HOME * 1.25 ** 4, 3];
   const SAVE = { format: 'donghyunsam-save', version: 1, name: '동현삼', slot: 'donghyunsam:slot', file: 'donghyunsam', word: '판' };
   const ARROW = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }, PAN = { KeyA: 'ArrowLeft', KeyD: 'ArrowRight', KeyW: 'ArrowUp', KeyS: 'ArrowDown' };
   const digit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(code); return m ? Number(m[1]) : 0; };
@@ -28,6 +31,7 @@
       this.game = this.newGame(null);                              // 군주를 고르기 전에는 구경만 한다
       this.mode = 'pick'; this.selected = null; this.sub = null; this.pause = 0; this.flash = null;
       this.settings = [];                                          // 지금 판에 적용된 동현랭 설정 [[번호, 값…]] (저장할 때 함께 적는다)
+      this.council = new DH.Sam.Council();                         // 두 낭자(동행낭자 · 수행낭자). 주머니의 난수는 판의 난수와 따로 돈다
     }
     newGame(player) { return new DH.Sam.Game(this.world, { player, rng: this.engine.rng, state: this.state }); }
     /** 동현랭 설정을 받아 globalState를 새로 짓고 판을 다시 연다. 오류가 있으면 지금 판을 그대로 둔다.
@@ -55,12 +59,26 @@
       this.setupMap({ grid, ...this.palette(grid), line: 'rgba(38,33,28,.07)', minZoom: 1, maxZoom: 3 });
       this.pos = new Map([...w.provinces.values()].map(p => [p.id, grid.center(p.hex[0], p.hex[1])]));
       this.decor = this.decorate(grid);
+      this.home();
       e.clock.setActors([]);
       this._off = [e.on('clock:turn', d => this.layout.log(`${d.year}년 ${d.month}월이 되었다`))];
       this.layout.log(`${w.meta.scenario || '시작'} · 주 ${w.provinces.size} · 군주 ${w.factions.size}`);
       this.refresh();
     }
     exit() { this._off.forEach(f => f()); }
+    /** 처음 배율로 맞춘다: 1.125배. 41개 주의 성과 이름이 모두 들어오게 주들이 놓인 자리의 가운데를 화면 가운데에 둔다. */
+    home() {
+      const P = [...this.pos.values()], xs = P.map(p => p.x), ys = P.map(p => p.y), top = Math.min(...ys) - 10, bottom = Math.max(...ys) + 6 + 9 / HOME;      // 성 지붕 위부터 이름 아래까지
+      this.cam.zoom = HOME; this.cam.centerOn((Math.min(...xs) + Math.max(...xs)) / 2, (top + bottom) / 2); this.cam.clampTo(this.grid);
+    }
+    /** 배율을 한 단 올리거나 내린다(dir +1 · −1). 화면 가운데를 붙든다. 저장 파일에서 온 어중간한 배율도 가까운 단으로 간다. */
+    zoomStep(dir) {
+      const c = this.cam, z = c.zoom, next = dir > 0 ? LEVELS.find(v => v > z + 1e-6) : [...LEVELS].reverse().find(v => v < z - 1e-6);
+      if (next === undefined) return;
+      if (next === HOME && z < HOME) return this.home();                                      // 지도 전체(1배)에서 한 단 키우면 처음 화면으로 돌아온다
+      const sx = this.engine.width / 2, sy = this.engine.height / 2, w = c.toWorld(sx, sy);
+      c.zoom = Math.min(c.maxZoom, Math.max(c.minZoom, next)); c.x = w.x - sx / c.zoom; c.y = w.y - sy / c.zoom; c.clampTo(this.grid);
+    }
     /** 지도 색(레트로 픽셀 지도처럼 몇 가지 평평한 색만 쓴다). 바다는 뭍에서 멀수록 짙어지는 세 단.
      *  뭍은 가장 가까운 주(걸음 수)의 세력 색을 아주 옅게 머금어 땅의 주인이 한눈에 보이고, 바다에 닿은 칸은 조금 짙게 해 해안선을 세운다. */
     palette(grid) {
@@ -103,6 +121,7 @@
       this.mode = 'play'; this.sub = null; this.flash = null; this.selected = w.officers.get(f.leader).province;
       const g = this.game, all = g.goal >= g.provinces.size;
       this.layout.log(`${DH.Sam.ro(f.name)} 시작한다. 우리 주를 찍고 한 달에 한 번씩 명령을 내린다`); this.sfx('zone');
+      this.council.poke();
       this.layout.log(`이기는 조건: ${all ? '다른 세력을 모두 무너뜨린다(또는 모든 주를 차지한다)' : `주 ${g.goal}개를 차지한다`}` + (g.stage.months ? ` · ${g.stage.months}달 안에` : ''));
       this.settled();
     }
@@ -118,6 +137,7 @@
       for (const [id, p] of this.pos) { const d = Math.hypot(p.x - wpt.x, p.y - wpt.y); if (d < bd) { bd = d; best = id; } }
       if (best !== null && this.candidates().some(q => q.id === best)) return this.command('to:' + best);   // 고르는 중이면 그 주가 대상이 된다
       if (best !== null && best !== this.selected) this.sfx('tick');
+      else if (best !== null && !this.sub) this.council.poke();                               // 같은 주를 다시 누르면 동행낭자가 다음 구절을 읊는다
       this.sub = null; this.selected = best; this.refresh();
     }
     /** 키보드. 방향키는 주를 고르고(대상을 고르는 중이면 대상을 옮기고), 숫자 키와 Enter는 조작 창의 버튼을 누른다. */
@@ -131,7 +151,8 @@
       if (n) { used(); this.layout.press(n); }
       else if (code === 'Enter' || code === 'NumpadEnter') { used(); const s = this.sub; if (s && s.step === 'to' && s.aim != null) this.command('to:' + s.aim); else this.layout.pressPrimary(); }
       else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
-      else super.onKey(code, ev);                                                             // + − 확대 · 축소
+      else if (code === 'Equal' || code === 'NumpadAdd') this.command('zin');                 // + − 확대 · 축소(아이콘과 같은 단을 밟는다)
+      else if (code === 'Minus' || code === 'NumpadSubtract') this.command('zout');
     }
     // 지도 배율은 지도 위의 + − 아이콘과 + − 키로만 바꾼다. 마우스 바퀴와 트랙패드 제스처로는 바뀌지 않는다(동현항과 같은 규칙).
     onWheel() {}
@@ -188,8 +209,8 @@
     reveal(id) { const P = this.pos.get(id), q = this.cam.toScreen(P.x, P.y), m = 28, e = this.engine; if (q.x < m || q.x > e.width - m || q.y < m || q.y > e.height - m) { this.cam.centerOn(P.x, P.y); this.cam.clampTo(this.grid); } }
 
     command(id) {
-      if (id === 'zin') return this.zoomBy(1.25);
-      if (id === 'zout') return this.zoomBy(0.8);
+      if (id === 'zin') return this.zoomStep(1);
+      if (id === 'zout') return this.zoomStep(-1);
       const g = this.game, [key, arg] = id.split(':');
       if (this.mode === 'pick') { if (key === 'f') this.start(arg); return; }
       if (this.mode === 'over') { if (id === 'again') this.restart(); return; }
@@ -254,7 +275,7 @@
     endMonth() {
       if (this.game.over) return this.settled();
       for (const n of this.game.endMonth()) this.layout.log(n); this.sfx('rows');
-      this.engine.clock.endPhase(); this.mode = 'play'; this.settled();      // 달이 바뀌면서 기한이 차거나 마지막 주를 잃으면 여기서 바로 끝 화면으로 간다
+      this.engine.clock.endPhase(); this.mode = 'play'; this.council.poke(); this.settled();      // 달이 바뀌면서 기한이 차거나 마지막 주를 잃으면 여기서 바로 끝 화면으로 간다
     }
 
     refresh() {
@@ -263,7 +284,7 @@
         { label: '병력', value: me ? fmt(own.reduce((s, p) => s + p.troops, 0)) : '-' }, { label: '남은 명령', value: me ? own.filter(p => !p.acted).length : '-' },
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
-      this.zoomIcons();
+      this.zoomIcons(); this.council.sync(this); this.council.paint(L);
       if (!sel) {
         if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 지도 위 + · − 아이콘으로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
         else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음']], note: this.note(null) });
@@ -365,7 +386,7 @@
       g.font = `500 12px ${FONT}`; g.fillStyle = '#6e6356'; g.fillText(`${this.engine.clock.label} · ‘다시 하기’를 누르면 ${this.state.start.player ? '같은 군주로 새 판을 연다' : '군주를 다시 고른다'}`, W / 2, y + 68);      // 설정으로 군주를 정했으면 고르는 화면을 거치지 않는다
     }
     // ───────── 저장과 불러오기 ─────────
-    save() { return { selected: this.selected, mode: this.mode, cam: { x: this.cam.x, y: this.cam.y, zoom: this.cam.zoom } }; }
+    save() { return { selected: this.selected, mode: this.mode, cam: { x: this.cam.x, y: this.cam.y, zoom: this.cam.zoom }, council: this.council.toJSON() }; }
     /** 지금 저장할 수 있는지. 우리 차례의 지도에서만 된다. {ok:true} 또는 {ok:false, why} */
     saveInfo() {
       if (this.engine.scene !== this) return NO('전투가 끝난 뒤에 저장할 수 있다.');
@@ -397,6 +418,7 @@
       const v = d.scene || {}, c = v.cam, num = x => typeof x === 'number' && isFinite(x);
       this.selected = w.provinces.has(v.selected) ? v.selected : null;
       if (c && num(c.x) && num(c.y) && num(c.zoom)) { this.cam.zoom = Math.min(this.cam.maxZoom, Math.max(this.cam.minZoom, c.zoom)); this.cam.x = c.x; this.cam.y = c.y; this.cam.clampTo(this.grid); }
+      this.council.restore(v.council); this.council.poke();                                   // 낭자의 주머니도 이어 간다(없으면 하던 대로)
       const text = `저장한 판을 불러왔다 · ${game.fname(game.player)} · ${e.clock.label}`;
       this.layout.log(text);
       if (d.game.pacts === undefined && [...game.provinces.values()].some(p => p.owner && !game.officersOf(p.id).length)) this.layout.log('v0.05까지의 저장 파일이다. 장수가 없는 주는 달이 바뀔 때 공백지가 된다. 그 전에 장수를 보내 두면 지킬 수 있다');

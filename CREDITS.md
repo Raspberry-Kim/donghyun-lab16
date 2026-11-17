@@ -14,7 +14,13 @@
 - 공통 엔진(`src/engine/`: 루프 · 달력 · 사각·육각 격자와 길 찾기 · 타일 지도와 카메라 · 화면 나누기 · 장면 · 동현랭 어댑터). 동현항(donghyun-lab17)과 같은 파일을 쓴다.
 - 동현삼의 자료 규격과 파서, 내정 · AI · 전투 규칙, 지도와 전투 장면(`src/sam/`), 동현랭 출전 규약과 예제, 문서, 시험.
 - 자료 생성기(`tools/make_data.py`)와 그것이 만든 `src/sam/donghyun_sam_data.json`.
+- 두 낭자의 말(`src/sam/sam-council.js`): 41개 주의 한 문장 설명, 규칙 한 마디 75가지, 『장자』 100구절의 우리말. 우리말 구절은 원문을 보고 직접 짧게 옮긴 글이고 기존 번역서의 문장을 옮겨 적지 않았다.
 - 동현랭 실행기(`src/lang/donghyun.js`)는 [동현랭 저장소](https://github.com/Raspberry-Kim/donghyun-lang)의 v1.55를 고치지 않고 썼다. 편집기와 페이지 뼈대 · 시리즈 띠 · 입력 표식은 동현닥을 비롯한 동현 시리즈의 방식을 따랐다.
+
+## 두 낭자의 얼굴과 『장자』
+
+- 얼굴 그림(`src/sam/sam-ladies.png`)은 [동현항](https://github.com/Raspberry-Kim/donghyun-lab17) v1.27의 제물포 협력자 두 사람의 초상을 그대로 가져온 것이다. 새로 생성하고 96×128픽셀로 정리한 이미지이며, 특정 인물이나 원작 캐릭터를 본뜨지 않았고 원작 캡처나 공식 캐릭터 이미지를 포함하지 않는다.
+- 『장자』 원문: 위키문헌 莊子 https://zh.wikisource.org/wiki/莊子 (공공 영역의 고전). `tools/check_zhuangzi.py`로 100구절을 편마다 대조한다.
 
 ## 지도 자료
 
