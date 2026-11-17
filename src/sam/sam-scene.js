@@ -15,7 +15,7 @@
   const NEUTRAL = '#b9b0a2', INK = '#26211c', ACCENT = '#f2b705', RED = '#c0321f';
   const MAP = { shallow: '#b5d6e2', sea: '#9fc4d9', deep: '#93bcd4', land: '#ece2c7', rim: '#c9b48a' };   // 지도 기본 색(동현항과 같은 바다)
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const ZOOM = [{ id: 'zin', label: '확대', key: '+' }, { id: 'zout', label: '축소', key: '−' }];
+  const ZOOM = [['zin', '지도 확대', '+'], ['zout', '지도 축소', '−']];   // 지도 위 아이콘(동현항과 같은 자리 · 같은 모양)
   const SAVE = { format: 'donghyunsam-save', version: 1, name: '동현삼', slot: 'donghyunsam:slot', file: 'donghyunsam', word: '판' };
   const ARROW = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }, PAN = { KeyA: 'ArrowLeft', KeyD: 'ArrowRight', KeyW: 'ArrowUp', KeyS: 'ArrowDown' };
   const digit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(code); return m ? Number(m[1]) : 0; };
@@ -133,6 +133,23 @@
       else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
       else super.onKey(code, ev);                                                             // + − 확대 · 축소
     }
+    // 지도 배율은 지도 위의 + − 아이콘과 + − 키로만 바꾼다. 마우스 바퀴와 트랙패드 제스처로는 바뀌지 않는다(동현항과 같은 규칙).
+    onWheel() {}
+    /** 지도 오른쪽 위의 확대 · 축소 아이콘. 이 장면이 맨 위일 때만 보인다(시작 카드와 전투 중에는 숨는다). node 시험에서는 만들지 않는다. */
+    zoomIcons() {
+      const cv = this.layout.canvas, doc = root.document;
+      if (!doc || !cv || !cv.parentElement) return;
+      if (!this.zoomTools) {
+        const tools = this.zoomTools = doc.createElement('div'); tools.className = 'sam-zoom';
+        for (const [id, label, icon] of ZOOM) {
+          const b = doc.createElement('button'); b.type = 'button'; b.textContent = icon; b.dataset.zoom = id; b.setAttribute('aria-label', label); b.title = label;
+          b.onclick = () => { if (this.engine.scene === this) this.command(id); };
+          tools.append(b);
+        }
+        cv.parentElement.append(tools);
+      }
+      const hide = this.engine.scene !== this; if (this.zoomTools.hidden !== hide) this.zoomTools.hidden = hide;
+    }
     /** from에서 d 방향으로 가장 가까운 주(pool 가운데). 그 방향의 56° 안쪽을 먼저 보고, 없으면 그쪽 절반에서 찾는다. 없으면 null */
     toward(from, d, pool) {
       const P = this.pos.get(from); let best = null, bs = Infinity, wide = null, ws = Infinity;
@@ -246,8 +263,9 @@
         { label: '병력', value: me ? fmt(own.reduce((s, p) => s + p.troops, 0)) : '-' }, { label: '남은 명령', value: me ? own.filter(p => !p.acted).length : '-' },
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
       const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
+      this.zoomIcons();
       if (!sel) {
-        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 바퀴로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
+        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 지도 위 + · − 아이콘으로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
         else L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음']], note: this.note(null) });
         return pick();
       }
@@ -282,8 +300,8 @@
     }
     menu() {
       const g = this.game, p = this.mine, s = this.sub, cancel = { id: 'cancel', label: '그만두기' };
-      if (this.mode === 'pick') return [...[...g.factions.values()].map(f => ({ id: 'f:' + f.id, label: `${f.name} · 주 ${g.provincesOf(f.id).length}` })), ...ZOOM];
-      if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }, ...ZOOM];
+      if (this.mode === 'pick') return [...[...g.factions.values()].map(f => ({ id: 'f:' + f.id, label: `${f.name} · 주 ${g.provincesOf(f.id).length}` }))];
+      if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }];
       if (p && s && s.type === 'ally') {
         const A = g.rules.ally, me = g.player;
         if (s.step === 'break') return [{ id: 'abok', label: `정말 깬다 · 우리 주 민심 −${A.breakLoyalty}` }, { ...cancel, primary: true }];
@@ -299,10 +317,10 @@
       }
       const R = g.rules, busy = this.mode === 'busy', cmd = (id, label) => { const r = p && !busy ? g.can(p.id, id) : { ok: false, why: busy ? '다른 군주들의 차례다' : '우리 주를 먼저 찍는다' }; return { id, label, disabled: !r.ok, hint: r.ok ? '' : r.why }; };
       return [cmd('develop', `농지 개발 · 금 ${R.develop.gold}`), cmd('draft', `징병 +${fmt(R.draft.troops)} · 금 ${R.draft.gold}`), cmd('move', '이동'), cmd('search', '수색'), cmd('attack', '침공'), cmd('relief', `시혜 · 쌀 ${fmt(R.relief.rice)}`), cmd('ally', '동맹'),
-        { id: 'end', label: '턴 종료', primary: true, disabled: busy, hint: '다른 군주들이 움직이고 달이 넘어간다' }, ...ZOOM];
+        { id: 'end', label: '턴 종료', primary: true, disabled: busy, hint: '다른 군주들이 움직이고 달이 넘어간다' }];
     }
 
-    render(g) { super.render(g); if (this.mode === 'over') this.drawCard(g); }
+    render(g) { super.render(g); if (this.mode === 'over') this.drawCard(g); this.zoomIcons(); }
     drawOver(g) {
       const gm = this.game, z = this.cam.zoom, sel = this.selected, t = this.engine.tick, me = gm.player, near = sel ? new Set(gm.P(sel).adj) : new Set(), A = DH.Sam.Art;
       const cand = new Set(this.candidates().map(q => q.id)), candCol = this.sub && this.sub.type === 'attack' ? RED : ACCENT;

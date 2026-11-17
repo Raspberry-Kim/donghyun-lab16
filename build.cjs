@@ -2,7 +2,7 @@
 // 설명 탭의 글은 README.md에서 가져온다. README를 고치고 다시 묶으면 페이지의 설명도 같이 바뀐다.
 const fs = require('fs'), path = require('path');
 const { copyIcons } = require('./icon-files.cjs');
-const LAB = { name: '동현삼', version: '0.09', data: 'sam/donghyun_sam_data.json',
+const LAB = { name: '동현삼', version: '0.10', data: 'sam/donghyun_sam_data.json',
   game: ['sam/sam-parser.js', 'sam/sam-rules.js', 'sam/sam-battle.js', 'sam/sam-lang.js', 'sam/sam-art.js', 'sam/sam-battle-scene.js', 'sam/sam-scene.js'] };
 const ENGINE = ['dh-core.js', 'dh-loop.js', 'dh-clock.js', 'dh-grid.js', 'dh-tilemap.js', 'dh-layout.js', 'dh-engine.js', 'dh-lang.js'].map(f => 'engine/' + f);
 const JS = ['lang/donghyun.js', ...ENGINE, ...LAB.game, 'sfx.js', 'app.js'];
@@ -11,11 +11,11 @@ const root = __dirname, out = path.join(root, 'dist'), src = n => fs.readFileSyn
 /* ---------- README.md → 설명 탭 ---------- */
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const LINK = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
-function inline(s) {                                   // `코드` · **굵게** · [글](주소) · 맨 주소
+function inline(s) {                                   // `코드` · **굵게** · [글](주소) · 맨 주소. 주소 안의 괄호 한 겹(위키백과 문서 이름)은 주소로 읽는다
   return s.split(/(`[^`]+`)/).map(part => {
     if (/^`[^`]+`$/.test(part)) return '<code>' + esc(part.slice(1, -1)) + '</code>';
     return esc(part).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
-      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)|(https?:\/\/[^\s<)]+)/g, (m, text, href, bare) => bare ? LINK(bare, bare) : LINK(href, text));
+      .replace(/\[([^\]]+)\]\((https?:(?:[^()\s]|\([^()\s]*\))+)\)|(https?:\/\/(?:[^\s<()]|\([^\s<()]*\))+)/g, (m, text, href, bare) => bare ? LINK(bare, bare) : LINK(href, text));
   }).join('');
 }
 /** 마크다운 줄들을 HTML로. shift: '###'을 h(3+shift)로 낸다 */
