@@ -19,7 +19,7 @@
 
 ## 두 낭자의 얼굴과 『장자』
 
-- 얼굴 그림(`src/sam/sam-ladies.png`)은 [동현항](https://github.com/Raspberry-Kim/donghyun-lab17) v1.27의 제물포 협력자 두 사람의 초상을 그대로 가져온 것이다. 새로 생성하고 96×128픽셀로 정리한 이미지이며, 특정 인물이나 원작 캐릭터를 본뜨지 않았고 원작 캡처나 공식 캐릭터 이미지를 포함하지 않는다.
+- 얼굴 그림(`src/sam/sam-ladies.png`)은 [동현항](https://github.com/Raspberry-Kim/donghyun-lab17) v1.27의 제물포 협력자(동행낭자)와 동래 협력자(수행낭자)의 초상을 그대로 가져온 것이다. 새로 생성하고 96×128픽셀로 정리한 이미지이며, 특정 인물이나 원작 캐릭터를 본뜨지 않았고 원작 캡처나 공식 캐릭터 이미지를 포함하지 않는다.
 - 『장자』 원문: 위키문헌 莊子 https://zh.wikisource.org/wiki/莊子 (공공 영역의 고전). `tools/check_zhuangzi.py`로 100구절을 편마다 대조한다.
 
 ## 지도 자료
