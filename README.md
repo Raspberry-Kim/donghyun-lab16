@@ -1,4 +1,4 @@
-# 동현삼 v0.35
+# 동현삼 v0.36
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24106052.svg)](https://doi.org/10.5281/zenodo.24106052)
 
@@ -476,7 +476,7 @@ node qa/core-tests.cjs         # 핵심 시험 56개 (엔진 · 파서 · 동현
 node build.cjs                 # index.html 한 장
 node qa/ui.cjs                 # 화면 시험 33개 (Playwright · 데스크톱과 휴대폰 390px · 전체 화면 · 저장과 불러오기 · 저장 칸 목록 · 키보드 · 두 낭자)
 node qa/victory.cjs            # 승리 화면 5묶음 (팡파르와 꽃비 · 패배 · 소리 끔 · 휴대폰과 전체 화면). 뒤에 chromium · firefox · webkit을 붙여 고른다
-node qa/note-blink.cjs         # 데스크톱 권장 안내 상자의 빨간 테두리 점멸 6묶음. 뒤에 chromium · firefox · webkit을 붙여 고른다
+node qa/note-blink.cjs         # 데스크톱 권장 안내 상자의 살구색 테두리(처음 열 번만 점멸) 7묶음. 뒤에 chromium · firefox · webkit을 붙여 고른다
 python3 tools/check_zhuangzi.py   # 『장자』 100구절 원문 대조 (위키문헌에서 받아 온다)
 ```
 

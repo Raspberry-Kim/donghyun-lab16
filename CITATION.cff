@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.35"
+version: "0.36"
 doi: "10.5281/zenodo.24106052"
 date-released: "2026-11-18"
 authors:
@@ -14,8 +14,10 @@ license: MIT
 repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
 url: "https://raspberry-kim.github.io/donghyun-lab16/"
 abstract: >-
-  Version 0.35 makes the border of the desktop-recommended notice box
-  blink in red, once a second; rules, data and save format are unchanged.
+  Version 0.36 softens the border of the desktop-recommended notice box
+  to a pastel coral and lets it blink only ten times after the page opens,
+  then stay lit; rules, data and save format are unchanged.
+  Version 0.35 made that border blink in red, once a second.
   Version 0.34 added a victory celebration: on winning, a synthesized
   fanfare of about ten seconds plays the first line of the trio tune of
   Elgar's Pomp and Circumstance March No. 1 (public domain; no recording
