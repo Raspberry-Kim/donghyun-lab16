@@ -40,7 +40,7 @@
   class SamMapScene extends DH.MapScene {
     /** @param worlds 고를 수 있는 판 배치들(DH.Sam.worlds). 주지 않으면 world 하나뿐이다. */
     constructor(engine, world, layout, worlds) {
-      super(engine); this.world = world; this.layout = layout; this.worlds = worlds && worlds.length ? worlds : [world];
+      super(engine); this.world = world; this.told = world; this.layout = layout; this.worlds = worlds && worlds.length ? worlds : [world];
       this.state = DH.Sam.newState();                             // globalState: 기본값. 동현랭 설정이 오면 새로 지어 덮어쓴다
       this.game = this.newGame(null);                              // 군주를 고르기 전에는 구경만 한다
       this.mode = 'pick'; this.selected = null; this.sub = null; this.pause = 0; this.flash = null;
@@ -50,31 +50,41 @@
     }
     newGame(player) { return new DH.Sam.Game(this.world, { player, rng: this.engine.rng, state: this.state }); }
     /** 동현랭 설정을 받아 globalState를 새로 짓고 판을 다시 연다. 오류가 있으면 지금 판을 그대로 둔다.
+     *  hold를 주면 판을 시작하지 않고 그 설정의 배치만 지도에 편다(출전 전 미리 보기 · 군주가 정해져 있어도 고르지 않는다).
      *  @returns 보고서 {ok, empty, settings, errors, applied} */
-    applyDonghyunLang(scriptText) {
+    applyDonghyunLang(scriptText, hold) {
       const st = DH.Sam.newState(), rep = DH.Sam.readLang(scriptText, this.worlds, st);      // 시나리오(31번)를 먼저 읽어 판을 고른 뒤 그 판에 비춰 검사한다
       if (!rep.ok) return rep;
       this.state = st; this.settings = rep.settings.map(x => [x.n, ...x.values]);
       while (this.engine.scene && this.engine.scene !== this) this.engine.popScene();          // 전투 중이었으면 접는다
-      this.setWorld(rep.world);
-      this.layout.log(rep.empty ? '동현랭 설정이 없다. 기본값으로 새 판을 연다' : `동현랭 설정 ${rep.settings.length}개를 적용했다: ${rep.applied.join(' · ')}`);
-      this.restart();
+      this.setWorld(rep.world, hold);
+      if (!hold) this.layout.log(rep.empty ? '동현랭 설정이 없다. 기본값으로 새 판을 연다' : `동현랭 설정 ${rep.settings.length}개를 적용했다: ${rep.applied.join(' · ')}`);
+      this.restart(hold);
       return rep;
     }
+    /** 미리 보는 배치를 기록 맨 위 한 줄로 알린다. 예제를 넘겨 볼 때마다 쌓이지 않게 그 한 줄만 고쳐 쓰고, 판을 열면 지운다. 처음 알린 배치를 그대로 볼 때는 적지 않는다. */
+    peek(w) {
+      const ol = this.layout.logEl; if (!ol) return;
+      if (this._peek) this._peek.remove(); this._peek = null;
+      if (w) { this.layout.log(`미리 보기: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`); this._peek = ol.firstChild; }
+    }
     /** 판 배치(시나리오)를 바꾼다. 지도와 주는 같으니 세력 색만 다시 짓는다. 바뀌었으면 true */
-    setWorld(w) {
-      if (!w || w === this.world) return false;
+    setWorld(w, quiet) {
+      if (!w) return false;
+      this.peek(quiet && (w !== this.told || this.opened) ? w : null); if (!quiet) this.opened = true;
+      if (!quiet && w !== this.told) { this.told = w; this.layout.log(`시나리오: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`); }   // 미리 보기는 쌓이는 줄을 남기지 않는다(peek의 한 줄뿐). 판을 열 때 앞서 알린 배치와 다르면 한 번 적는다
+      if (w === this.world) return false;
       this.world = w;
       if (this.grid && this.tiles) { const pal = this.palette(this.grid); this.seasons = pal.seasons; this.tiles.tileAt = pal.tileAt; this.tiles.styles = pal.seasons[this.season]; }
-      this.layout.log(`시나리오: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`);
       return true;
     }
-    /** 새 판. 설정에 군주가 정해져 있으면 바로 시작하고, 아니면 고르는 화면으로 간다. */
-    restart() {
+    /** 새 판. 설정에 군주가 정해져 있으면 바로 시작하고, 아니면 고르는 화면으로 간다. hold면 군주가 정해져 있어도 시작하지 않는다(미리 보기). */
+    restart(hold) {
       const w = this.world, c = this.engine.clock, n = this.state.start.player;
       Object.assign(c, { year: w.meta.start.year, month: w.meta.start.month || 1, serial: 0, turn: 1 }); c.setActors([]);
       this.sub = null; this.flash = null; this.pause = 0; this.selected = null; this.marches = []; this.crown = null;
-      if (n) return this.start([...w.factions.keys()][n - 1]);
+      if (hold && this.cam) this.home();                                                     // 미리 보기는 지도 전체가 보이는 처음 자리로 돌아간다
+      if (n && !hold) return this.start([...w.factions.keys()][n - 1]);
       this.game = this.newGame(null); this.mode = 'pick'; this.refresh();
     }
     enter() {
@@ -212,9 +222,19 @@
       if (this.crown && !(ev && ev.repeat)) this.crown = null;
       if (this.hold) { if (!(ev && ev.repeat)) { used(); this.skipMarch(); } return; }      // 아무 키나 누르면 행군을 건너뛴다
       if ((d && shift) || PAN[code]) return super.onKey(PAN[code] || code, ev);              // 지도 옮기기
+      const q = this.qty();                                                                   // 수량을 정하는 중이면 방향키와 숫자 키가 수를 바꾼다
+      if (d && q) { used(); return this.qtyBump(d[0] ? d[0] * 100 : -d[1] * 1000); }          // ← → 100 · ↑ ↓ 1,000
       if (d) { used(); return this.step(d); }
       if (code === 'Escape') { if (this.mode === 'busy') return; if (this.sub) this.sub = null; else this.selected = null; return this.refresh(); }
       if (ev && ev.repeat) return;                                                            // 누르고 있어도 버튼은 한 번만 눌린다
+      if (q) {
+        const m = /^(?:Digit|Numpad)(\d)$/.exec(code);
+        if (m) { used(); return this.qtyType(Number(m[1])); }                                 // 숫자 키로 수를 바로 적는다
+        if (code === 'Backspace') { used(); return this.qtyType(null); }
+        if (code === 'Delete') { used(); return this.command('cancel'); }                    // 이 단계의 버튼에는 번호가 없다. 전체 화면에서는 Esc가 전체 화면을 닫으니 Delete로도 그만둔다
+        if (code === 'Home' || code === 'End') { used(); return this.command(code === 'End' ? 'qs:all' : this.sub.type === 'attack' ? 'qs:min' : 'qs:0'); }      // Home 0(침공은 최소) · End 전부
+        if (code === 'Space' && this.sub.cart) { used(); return this.command('qf:' + (this.sub.field === 'rice' ? 'gold' : 'rice')); }      // 금 ↔ 쌀
+      }
       if (n) { used(); this.layout.press(n); }
       else if (code === 'Enter' || code === 'NumpadEnter') { used(); const s = this.sub; if (s && s.step === 'to' && s.aim != null) this.command('to:' + s.aim); else this.layout.pressPrimary(); }
       else if (code === 'Space') { used(); this.nextOwn(shift ? -1 : 1); }
@@ -275,6 +295,23 @@
     /** 그 주가 화면 가장자리 밖에 있으면 화면 가운데로 데려온다. */
     reveal(id) { const P = this.pos.get(id), q = this.cam.toScreen(P.x, P.y), m = 28, e = this.engine; if (q.x < m || q.x > e.width - m || q.y < m || q.y > e.height - m) { this.cam.centerOn(P.x, P.y); this.cam.clampTo(this.grid); } }
 
+    /** 수량을 정하는 단계에서 지금 다루는 것: {key 적어 두는 칸, name, max 가진 양, val 지금 값}. 수송은 금과 쌀 가운데 고른 쪽이다. 그 단계가 아니면 null */
+    qty() {
+      const s = this.sub, p = this.mine; if (!s || s.step !== 'n' || !p) return null;
+      const key = s.cart ? (s.field === 'rice' ? 'rice' : 'gold') : 'n', max = s.cart ? p[key] : p.troops;
+      return { key, name: key === 'gold' ? '금' : key === 'rice' ? '쌀' : '병력', max, val: Math.max(0, Math.min(max, s[key] || 0)) };
+    }
+    /** 수량을 v로 맞춘다(0부터 가진 만큼까지). */
+    qtySet(v) { const q = this.qty(); if (!q) return; this.sub[q.key] = Math.max(0, Math.min(q.max, Math.floor(v))); this.sub.fresh = true; this.sfx('tick'); this.refresh(); }
+    /** 수량을 d만큼 올리거나 내린다. 전부(백 단위가 아닌 수)에서 내리면 백 단위로 맞춘다. */
+    qtyBump(d) { const q = this.qty(); if (!q) return; let v = q.val + d; if (d < 0 && q.val === q.max && q.max % 100) v = Math.ceil(v / 100) * 100; this.qtySet(v); }
+    /** 숫자 키로 수를 적는다. 처음 누른 숫자는 새로 적고 이어 누르면 뒤에 붙는다. ch가 null이면 끝자리를 지운다(Backspace). 가진 것보다 많이 적으면 가진 만큼이 된다. */
+    qtyType(ch) {
+      const q = this.qty(); if (!q) return; const s = this.sub;
+      const v = ch === null ? Math.floor(q.val / 10) : (s.fresh ? 0 : q.val) * 10 + ch;
+      s[q.key] = Math.max(0, Math.min(q.max, v)); s.fresh = v > q.max; this.sfx('tick'); this.refresh();      // 넘쳐서 가진 만큼이 되었으면 다음 숫자는 새로 적는다
+    }
+
     command(id) {
       if (id === 'zin') return this.zoomStep(1);
       if (id === 'zout') return this.zoomStep(-1);
@@ -313,8 +350,16 @@
         else if (here.includes(n)) { s.picks = picks.includes(n) ? picks.filter(x => x !== n) : [...picks, n]; this.sfx('tick'); }
       }
       else if (key === 'to' && s && s.step === 'to') {
-        s.to = Number(arg); s.step = 'n';
-        if (s.type === 'attack') { const half = Math.floor(p.troops / 2); s.fore = { half: half >= g.rules.attackMin ? g.forecast(p.id, s.to, half) : null, all: g.forecast(p.id, s.to, p.troops) }; }      // 군사가 있으면 미리 헤아려 둔다
+        s.to = Number(arg); s.step = 'n'; s.fresh = true; s.fore = null;                      // 얼마나 보낼지는 수로 정한다(qty). fresh: 숫자 키를 처음 누르면 새로 적는다
+        if (s.cart) { s.gold = 0; s.rice = 0; s.field = 'gold'; }                              // 처음 값: 수송은 금도 쌀도 0
+        else s.n = s.type === 'attack' ? p.troops : s.officer != null ? 0 : Math.floor(p.troops / 200) * 100 || p.troops;      // 침공은 전부 · 장수가 가면 0 · 병력만 보내면 절반(백 단위)
+      }
+      else if (s && s.step === 'n' && (key === 'q' || key === 'qs' || key === 'qf' || id === 'qok')) {
+        const q = this.qty();
+        if (key === 'q') return this.qtyBump(Number(arg));                                     // q:-1000 · q:-100 · q:100 · q:1000
+        if (key === 'qs') return this.qtySet(arg === 'all' ? q.max : arg === 'half' ? q.max / 2 : arg === 'min' ? g.rules.attackMin : 0);
+        if (key === 'qf') { if (s.cart) { s.field = arg === 'rice' ? 'rice' : 'gold'; s.fresh = true; this.sfx('tick'); } }      // 수송: 금과 쌀 가운데 맞출 쪽을 고른다
+        else return this.command(s.cart ? `cg:${Math.min(p.gold, s.gold || 0)}:${Math.min(p.rice, s.rice || 0)}` : 'n:' + q.val);      // qok: 정한 수로 보낸다
       }
       else if (key === 'n' && s && s.step === 'n' && !s.cart) {
         const n = Number(arg); this.sub = null;
@@ -411,7 +456,13 @@
       const pick = () => {
         L.setMenu(this.menu(), id2 => this.command(id2));
         const el = L.menuEl; if (!el || !el.dataset) return;                                   // node 시험의 가짜 화면에는 없다
-        if (this.mode === 'pick' && g.factions.size >= 10) el.dataset.cols = '3'; else delete el.dataset.cols;      // 군주가 많은 시나리오는 한 줄에 셋씩 놓는다
+        const q = this.qty();
+        if (this.mode === 'pick' && g.factions.size >= 10) el.dataset.cols = '3'; else if (q) el.dataset.cols = 'q'; else delete el.dataset.cols;      // 군주가 많은 시나리오는 한 줄에 셋씩 · 수량을 정할 때는 − · + 넷을 한 줄에 놓는다
+        if (q && !this.sub.cart && root.document) {                                            // 보낼 병력과 남는 병력을 버튼 위에 크게 적는다(수송은 금 · 쌀 버튼이 수를 보인다)
+          const r = root.document.createElement('p'), b = root.document.createElement('b'), rest = root.document.createElement('span');
+          r.className = 'sam-qty'; r.setAttribute('role', 'status'); b.textContent = `보낼 병력 ${fmt(q.val)}`; rest.textContent = `남는 병력 ${fmt(q.max - q.val)}`; r.append(b, rest); el.prepend(r);
+        }
+        if (q) for (const b of el.querySelectorAll('button[data-id^="qf:"]')) { const on = b.dataset.id === 'qf:' + q.key; b.classList.toggle('sam-on', on); b.setAttribute('aria-pressed', String(on)); }
         const picks = this.sub && this.sub.step === 'who' ? this.sub.picks || [] : [];
         for (const b of el.querySelectorAll('button[data-id^="who:"]')) { const on = picks.includes(Number(b.dataset.id.slice(4))); b.classList.toggle('sam-on', on); if (/^who:\d+$/.test(b.dataset.id)) b.setAttribute('aria-pressed', String(on)); }
       };
@@ -472,11 +523,13 @@
         }
         if (s.step === 'who') return '누가 옮겨 갈지 고른다. 여럿을 골라 함께 보낼 수 있다(다시 누르면 뺀다). 다 골랐으면 ‘고른 장수로’를 누른다. 물자 수송은 금과 쌀을 수레에 실어 이웃한 우리 주로 보낸다.' + (last || here === 1 ? empty : '');
         if (s.step === 'to') return s.type === 'move' ? (s.cart ? '수레를 어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.' : '어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.') + (s.officer != null && g.openLand(p.id).length ? ' 공백지로 가면 그 땅을 차지한다.' : '') + (last ? empty : '') : '어디를 칠지 고른다. 지도에서 붉은 테의 주를 찍어도 된다.';
-        if (s.cart) return `${g.P(s.to).name}에 금과 쌀을 얼마나 실어 보낼지 고른다. 지금 금 ${fmt(p.gold)} · 쌀 ${fmt(p.rice)}이 있다.`;
-        if (s.type === 'move') return (s.officer ? `${s.officer.map(id => g.officers.get(id).name).join(' · ')}: ` : '') + `${g.P(s.to).name}에 병력을 얼마나 딸려 보낼지 고른다.` + (last ? empty : '');
-        const F = s.fore, tell = x => x ? (x.win ? `이길 듯합니다(${x.days}일 · 약 ${fmt(x.left)} 남음)` : '이기기 어렵습니다') : '';
-        const fore = F && F.all ? ` 군사 ${F.all.advisor.name}: “${g.title}, 전부 보내면 ${tell(F.all)}.${F.half ? ` 절반이면 ${tell(F.half)}.` : ''}”` : '';
-        const f = g.fighters(p.id); return fore.trimStart() + (fore ? ' ' : '') + `${g.P(s.to).name}에 보낼 병력을 고른다. ` + (f.length ? `${f.map(o => o.name).join(' · ')}${f.length > 1 ? ' 부대로 나뉘어' : josaGa(f[0].name)} 나선다.` : `장수가 없어 원정대(무력 ${g.rules.baseStat})가 나선다.`) + (last ? ` 이기면 장수가 옮겨 가 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : '');
+        const how = ' − · +로 맞추거나 숫자 키로 바로 적는다(← → 100 · ↑ ↓ 1,000 · End 전부 · Enter).';
+        if (s.cart) return `${g.P(s.to).name}에 실어 보낼 금과 쌀을 정한다. 금이나 쌀을 누르고` + how.replace('Enter', 'Space 금 ↔ 쌀 · Enter');
+        if (s.type === 'move') return (s.officer ? `${s.officer.map(id => g.officers.get(id).name).join(' · ')}: ` : '') + `${g.P(s.to).name}에 딸려 보낼 병력을 정한다.` + how + (last ? empty : '');
+        const q = this.qty(), min = g.rules.attackMin;
+        if (!s.fore || s.fore.n !== q.val) s.fore = { n: q.val, f: q.val >= min ? g.forecast(p.id, s.to, q.val) : null };      // 군사가 있으면 그 병력으로 미리 헤아린다(수를 바꿀 때만 다시 센다)
+        const F = s.fore.f, fore = F ? `군사 ${F.advisor.name}: “${g.title}, ${J(fmt(q.val), '을', '를')} 보내면 ${F.win ? `이길 듯합니다(${F.days}일 · 약 ${fmt(F.left)} 남음)` : '이기기 어렵습니다'}.” ` : '';
+        const f = g.fighters(p.id); return fore + `${g.P(s.to).name}에 보낼 병력을 정한다(${fmt(min)}부터).` + how + ' ' + (f.length ? `${f.map(o => o.name).join(' · ')}${f.length > 1 ? ' 부대로 나뉘어' : josaGa(f[0].name)} 나선다.` : `장수가 없어 원정대(무력 ${g.rules.baseStat})가 나선다.`) + (last ? ` 이기면 장수가 옮겨 가 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : '');
       }
       if (p.acted) return "이번 달 명령을 이미 내렸다. 다른 주를 고르거나 턴 종료를 누른다. 벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않아 지금도 내릴 수 있다.";
       if (g.delegated(p.id)) return `태수 ${g.governor(p.id).name}에게 맡긴 주다. 그대로 두면 턴 종료 때 태수가 움직이고, 지금 손수 명령을 내려도 된다.`;
@@ -513,10 +566,17 @@
         if (s.step === 'who') { const tr = g.can(p.id, 'transport'), picks = s.picks || [], n = g.officersOf(p.id).filter(o => picks.includes(o.id)).length;
           return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${picks.includes(o.id) ? '✓ ' : ''}${o.name} 무${o.war}` })), { id: 'who:ok', label: n ? `고른 장수로 ${n}명` : '고른 장수로', primary: n > 0, disabled: !n, hint: n ? '고른 장수를 함께 보낸다' : '보낼 장수를 먼저 고른다' }, { id: 'who:none', label: '병력만', disabled: p.troops <= 0 || !g.friends(p.id).length }, { id: 'who:cart', label: '물자 수송', disabled: !tr.ok, hint: tr.ok ? '금과 쌀을 이웃한 우리 주로 보낸다' : tr.why }, cancel]; }
         if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? (g.vacant(q) ? `${q.name} · 공백지` : `${q.name} ${fmt(q.troops)}`) : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
-        const half = Math.floor(p.troops / 2), min = g.rules.attackMin;
-        if (s.cart) { const hg = Math.floor(p.gold / 2), hr = Math.floor(p.rice / 2); return [{ id: `cg:${hg}:0`, label: `금 절반 ${fmt(hg)}`, disabled: hg <= 0 }, { id: `cg:0:${hr}`, label: `쌀 절반 ${fmt(hr)}`, disabled: hr <= 0 }, { id: `cg:${hg}:${hr}`, label: '금과 쌀 절반씩', disabled: hg + hr <= 0 }, { id: `cg:${p.gold}:${p.rice}`, label: '금과 쌀 전부' }, cancel]; }
-        if (s.type === 'move') return [...(s.officer !== null ? [{ id: 'n:0', label: '병력 없이' }] : []), { id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half <= 0 }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, disabled: p.troops <= 0 }, cancel];
-        return [{ id: 'n:' + half, label: `절반 ${fmt(half)}`, disabled: half < min, hint: half < min ? `병력 ${fmt(min)}부터 보낼 수 있다` : '' }, { id: 'n:' + p.troops, label: `전부 ${fmt(p.troops)}`, primary: true }, cancel];
+        // 얼마나: 수로 정한다. − · + 넷(1,000 · 100) · 바로 가기 셋 · 보내기. 이 단계의 버튼에는 번호를 붙이지 않는다(숫자 키는 수를 적는 데 쓴다)
+        const q = this.qty(), min = g.rules.attackMin, k = { key: false }, stop = { ...cancel, ...k };
+        const steps = [-1000, -100, 100, 1000].map(d => ({ id: 'q:' + d, ...k, label: (d < 0 ? '−' : '+') + fmt(Math.abs(d)), disabled: d < 0 ? q.val <= 0 : q.val >= q.max }));
+        const quick = [s.type === 'attack' ? { id: 'qs:min', ...k, label: `최소 ${fmt(min)}` } : { id: 'qs:0', ...k, label: '0' }, { id: 'qs:half', ...k, label: '절반', disabled: q.max <= 0 }, { id: 'qs:all', ...k, label: '전부', disabled: q.max <= 0 }];
+        if (s.cart) {
+          const G = Math.min(p.gold, s.gold || 0), R = Math.min(p.rice, s.rice || 0), what = [G ? '금 ' + fmt(G) : '', R ? '쌀 ' + fmt(R) : ''].filter(Boolean).join(' · ');
+          return [{ id: 'qf:gold', ...k, label: `금 ${fmt(G)} / ${fmt(p.gold)}`, hint: '금을 맞춘다' }, { id: 'qf:rice', ...k, label: `쌀 ${fmt(R)} / ${fmt(p.rice)}`, hint: '쌀을 맞춘다' }, ...steps, ...quick,
+            { id: 'qok', ...k, label: what ? `보낸다 · ${what}` : '보낼 양을 정한다', primary: true, disabled: !what }, stop];
+        }
+        if (s.type === 'move') return [...steps, ...quick, { id: 'qok', ...k, label: q.val ? `보낸다 · 병력 ${fmt(q.val)}` : s.officer !== null ? '병력 없이 보낸다' : '보낼 병력을 정한다', primary: true, disabled: !q.val && s.officer === null }, stop];
+        return [...steps, ...quick, { id: 'qok', ...k, label: `친다 · 병력 ${fmt(q.val)}`, primary: true, disabled: q.val < min, hint: q.val < min ? `병력 ${fmt(min)}부터 보낼 수 있다` : '' }, stop];
       }
       const R = g.rules, busy = this.mode === 'busy' || !!this.hold, why = this.hold ? '부대가 길을 가는 중이다' : busy ? '다른 군주들의 차례다' : '우리 주를 먼저 찍는다';
       const can = id => p && !busy ? g.can(p.id, id) : { ok: false, why }, cmd = (id, label) => { const r = can(id); return { id, label, disabled: !r.ok, hint: r.ok ? '' : r.why }; };
@@ -656,7 +716,9 @@
     if (opt.autostart !== false) engine.start();
     return { engine, layout, scene, worlds, get world() { return scene.world; }, get game() { return scene.game; }, lang: DH.Sam.lang, examples: DH.Sam.examples(worlds), convention: DH.Sam.lang.describe(DH.Sam.newState()),
       readLang: text => DH.Sam.readLang(text, worlds),                          // 판을 건드리지 않고 읽어만 본다(편집기의 미리 읽기)
-      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text), save: SAVE };
+      get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text),
+      previewDonghyunLang: text => scene.applyDonghyunLang(text, true),         // 출전 전: 그 설정의 배치만 지도에 편다
+      save: SAVE };
   }
 
   DH.Sam = Object.assign(DH.Sam || {}, { SamMapScene, boot, SAVE });

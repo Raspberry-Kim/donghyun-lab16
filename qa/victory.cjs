@@ -18,7 +18,8 @@ const pw = require('/home/user/node_modules/playwright'), assert = require('node
       return { mode: __dh.scene.mode, sounds: __dh.sounds.slice(), played: __dh.snd.played, ringing: __dh.snd.ringing, on: DHPETALS.on, count: DHPETALS.count, ended: DHPETALS.ended, canvases: document.querySelectorAll('.dh-petals').length,
         inStage: !!c && c.parentNode === st, pe: c ? getComputedStyle(c).pointerEvents : null, size: c ? [c.clientWidth, c.clientHeight, st.clientWidth, st.clientHeight] : null }; });
     const click = id => p.locator(`.dh-menu button[data-id="${id}"]`).click();
-    const start = async id => { await p.selectOption('#example', id); await p.click('#run'); await p.waitForFunction(() => !__dh.waiting()); };
+    const start = async id => { await p.selectOption('#example', id); { const y = p.locator('#menu .mi:has(span:text-is("바꾼다"))'); if (await y.isVisible()) await y.click(); }      // 동현삼 v1.11: 하던 판이 있으면 지도를 바꿀지 묻는다
+      await p.click('#run'); await p.waitForFunction(() => !__dh.waiting()); };
     const wait = (what, ms = 120000) => p.waitForFunction(hang ? w => __dh.voyage.over === w && __dh.scene.mode === 'over' : w => __dh.game.over === w && __dh.scene.mode === 'over', what, { timeout: ms });
     // 승리: 동현삼은 목표한 주의 수를 지금 가진 수에 맞추고 턴을 끝낸다. 동현항은 자금을 목표보다 조금 많게 두고 시장에서 포도주를 한 단 샀다가 판다.
     const win = async (started) => {

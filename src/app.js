@@ -1,8 +1,9 @@
 /* 동현삼 앱: 공통 엔진의 지도 장면을 A 칸에 띄우고, B 칸의 동현랭 편집기가 설정을 읽어 새 판을 연다.
- * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항의 같은 파일과는 GAME 한 줄, 그리고 v1.10에서 더한 두 군데(시나리오를 먼저 읽는 read · 예제 묶음)가 다르다.
+ * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항의 같은 파일과는 GAME 한 줄, 그리고 v1.10에서 더한 두 군데(시나리오를 먼저 읽는 read · 예제 묶음), v1.11에서 고친 미리 보기(stage · swap)와 작은 시작 카드가 다르다.
  * 두 군데는 게임이 readLang이나 예제의 group을 주지 않으면 예전대로 돈다.
  * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다.
- * 효과음은 장면이 엔진에 알리는 'sfx' 사건을 여기서 받아 튼다(sfx.js · 동현큐와 같은 소리). 첫 출전 전에는 지도 위에 시작 카드를 얹고 판을 멈춘다. */
+ * 효과음은 장면이 엔진에 알리는 'sfx' 사건을 여기서 받아 튼다(sfx.js · 동현큐와 같은 소리). 출전 전에는 지도 위에 시작 카드를 얹고 판을 멈춘다.
+ * 예제를 고르거나 .dh 파일을 열면 지도가 그 설정의 배치로 바뀌고 시작 카드로 돌아간다(v1.11 · stage). 게임이 previewDonghyunLang을 주지 않으면 예전대로 코드만 바뀐다. */
 (function () {
 'use strict';
 const GAME = DH.Sam;
@@ -64,13 +65,20 @@ code.addEventListener('beforeinput', e => { const { a, ls, lead } = codeLead(); 
 let picked = '';                                       // 시작 카드에 적을 코드 이름(예제 이름 · 파일 이름 · 직접 고친 코드)
 code.oninput = e => { picked = ''; codeChanged(e); };
 code.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sortie(); } });
+let shown = '';                                        // 코드 칸에 실린 예제(물음에 '그만둔다'로 답하면 목록을 이 값으로 되돌린다)
+/** 예제를 고르면 코드를 싣고 지도를 그 설정의 배치로 바꾼다. 군주를 골라 하던 판이 있으면 한 번 묻는다 */
 function selectExample() {
   const ex = current && current.examples.find(e => e.id === $('#example').value); if (!ex) return;
-  code.value = ex.code; picked = ex.name; const note = ex.code.split('\n').find(l => l.startsWith('ㅋㅋ ')); $('#example-note').textContent = note ? note.slice(3) : ''; codeChanged();
+  swap(`하던 ${SAVE.word}을 두고 예제 ‘${ex.name}’의 지도로 바꿀까? 저장하지 않은 진행은 사라진다.`, () => {
+    shown = ex.id; code.value = ex.code; picked = ex.name; const note = ex.code.split('\n').find(l => l.startsWith('ㅋㅋ ')); $('#example-note').textContent = note ? note.slice(3) : ''; codeChanged(); stage();
+  }, () => { $('#example').value = shown; });
 }
 $('#example').onchange = selectExample;
 $('#save').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code.value + '\n'], { type: 'text/plain;charset=utf-8' })); a.download = 'sortie.dh'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
-$('#open').onchange = async e => { const f = e.target.files[0]; if (!f) return; code.value = (await f.text()).replace(/\r/g, '').replace(/\n$/, ''); picked = f.name; $('#example-note').textContent = ''; codeChanged(); e.target.value = ''; };
+$('#open').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return; const text = (await f.text()).replace(/\r/g, '').replace(/\n$/, '');
+  swap(`하던 ${SAVE.word}을 두고 ${f.name}의 지도로 바꿀까? 저장하지 않은 진행은 사라진다.`, () => { code.value = text; picked = f.name; $('#example-note').textContent = ''; codeChanged(); stage(); });
+};
 $('#run').onclick = () => sortie();
 
 /* ---------- 출전 규약: 동현랭이 출력한 정수를 '설정 번호 · 값'으로 읽는다 ---------- */
@@ -78,9 +86,23 @@ const say = (kind, text) => { result.dataset.kind = kind; result.textContent = t
 const list = rep => rep.settings.map(s => `${s.label} = ${s.text}`).join(' · ');
 /** 코드를 읽기만 한다. 시나리오(31번)를 먼저 읽어 그 판의 군주 · 주 · 장수 번호로 검사한다 */
 const read = text => (current.readLang ? current.readLang(text) : current.lang.parse(text, { ctx: { world: current.world } }));
-/** 코드를 고칠 때마다 읽기만 해 본다(판은 건드리지 않는다) */
+/** 군주를 골라 하던 판이 있는가(끝난 판은 치지 않는다) */
+const playing = () => !!current && !waiting && !!current.scene.game.player && current.scene.mode !== 'over';
+/** 지도를 바꾸는 일(go)을 한다. 하던 판이 있으면 먼저 묻고, 그만두면 back을 부른다 */
+function swap(q, go, back) { if (!playing()) return go(); confirmMenu(q, [['바꾼다', go], ['그만둔다', back || null]], back); }
+/** 출전 전 미리 보기: 지도를 코드 칸의 설정대로 다시 펴고 시작 카드를 얹는다. 판은 출전을 눌러야 시작한다. 코드에 오류가 있으면 지도를 그대로 둔다 */
+let staged = null;                                     // 지금 지도에 펴 둔 코드(같은 글이면 다시 펴지 않는다)
+function stage() {
+  if (!current || !current.previewDonghyunLang || (waiting && staged === code.value)) return;
+  if (!current.previewDonghyunLang(code.value).ok) return;
+  staged = code.value; feteOff(); if (isFull()) exitFull();
+  waiting = true; $('#full').disabled = true; status('출전 준비');
+  current.engine.pushScene(new StartCard(current.engine, current.layout));     // 미리 보기가 위에 얹힌 장면(앞의 시작 카드 · 전투)을 내렸으니 새로 얹는다
+}
+/** 코드를 고칠 때마다 읽기만 해 본다. 출전 전이면 지도도 따라 바뀐다(하던 판은 건드리지 않는다) */
 function preview() {
   if (!current) return;
+  if (waiting) stage();
   const rep = read(code.value);
   if (!rep.ok) return say('error', rep.errors.join(' '));
   say('', rep.empty ? '설정이 없다. 출전을 누르면 기본값으로 새 판이 열린다.' : `읽은 설정 ${rep.settings.length}개: ${list(rep)}. 출전을 누르면 이 값으로 새 판이 열린다.`);
@@ -91,7 +113,7 @@ function sortie() {
   clearTimeout(previewTimer);
   const rep = current.applyDonghyunLang(code.value);
   if (!rep.ok) { $('#status').textContent = '출전하지 못했다'; $('#status').dataset.kind = 'error'; SND.play('buzz'); return say('error', rep.errors.join(' ') + (waiting ? '' : ' 하던 판은 그대로 두었다.')); }
-  feteOff(); begun(); $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
+  feteOff(); staged = null; begun(); $('#status').dataset.kind = ''; $('#status').textContent = rep.empty ? '기본값으로 새 판' : `설정 ${rep.settings.length}개로 새 판`;
   say('ok', rep.empty ? '설정이 없다. 기본값으로 새 판을 열었다.' : `설정 ${rep.settings.length}개를 적용하고 새 판을 열었다: ${rep.applied.join(' · ')}`);
 }
 /** 예제 목록과 설정 번호 표를 채운다 */
@@ -187,7 +209,7 @@ function saveToFile() {
 function loadFrom(d) {
   const r = current.scene.loadGame(d);
   if (!r.ok) { toast('불러오기 실패: ' + r.why + ` 하던 ${SAVE.word}은 그대로 두었다.`, 'error'); return false; }
-  feteOff(); begun(); status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
+  feteOff(); staged = null; begun(); status(`저장한 ${SAVE.word}을 불러왔다`); say('ok', r.text + (r.applied.length ? ` · 저장될 때의 설정: ${r.applied.join(' · ')}` : ' · 저장될 때의 설정: 기본값') + '. 편집기의 코드는 그대로다.');
   fit(); return true;
 }
 async function loadFile(input) {
@@ -272,20 +294,23 @@ const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 class StartCard extends DH.Scene {
   constructor(engine, layout) { super(engine); this.layout = layout; }
   enter() {
-    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 저장해 둔 ${SAVE.word}은 코드 칸 아래 목록이나 지도 아래 불러오기로 이어 한다.` });
+    this.layout.setDetail({ title: '출전 준비', rows: [], note: `B 칸에서 동현랭 출전 코드(예제)를 고르고 코드 위의 출전을 누르면 시작한다. 지도는 지금 코드의 배치를 미리 보여 준다. 저장해 둔 ${SAVE.word}은 코드 칸 아래 목록이나 지도 아래 불러오기로 이어 한다.` });
     this.layout.setMenu([], null);   // 출전 버튼은 B 칸 하나뿐이다. 코드를 보고 누르게 한다
   }
   onKey() {}   // 시작 전에는 지도가 키를 받지 않는다
+  /** 카드는 지도 오른쪽 아래의 바다에 작게 놓는다. 지도가 지금 코드의 배치를 미리 보여 주므로 땅을 가리지 않는다 */
   render(g) {
-    const W = this.engine.width, H = this.engine.height, w = 280, h = 88, x = (W - w) / 2, y = (H - h) / 2;
+    const W = this.engine.width, H = this.engine.height, w = 178, h = 82, x = W - w - 5, y = H - h - 5, cx = x + w / 2;
     if (current && this._src !== code.value) { this._src = code.value; this._rep = read(code.value); }   // 글이 바뀔 때만 다시 읽는다
-    const rep = this._rep, fit = s => (s.length > 30 ? s.slice(0, 29) + '…' : s);
-    g.fillStyle = 'rgba(38,33,28,.22)'; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(74,66,88,.88)'; g.fillRect(x, y, w, h);
-    g.textAlign = 'center'; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `bold 13px ${FONT}`;
-    g.fillText(fit(`${SAVE.name} · ${picked || '직접 쓴 코드'}`), W / 2, y + 12);
-    g.font = `11px ${FONT}`; g.fillText(fit(!rep ? '' : !rep.ok ? '코드에 오류가 있다 · B 칸을 보자' : rep.empty ? '설정 없음 · 기본값으로 연다' : `설정 ${rep.settings.length}개 · ${rep.settings.map(s => s.label).join(' · ')}`), W / 2, y + 34);
-    g.fillStyle = '#f2b705'; g.font = `bold 12px ${FONT}`; g.fillText('B 칸의 출전을 누르면 시작한다', W / 2, y + 60);
+    const rep = this._rep, wide = s => g.measureText(s).width > w - 12, fit = s => { if (!wide(s)) return s; while (s.length > 1 && wide(s + '…')) s = s.slice(0, -1); return s + '…'; }, world = current ? current.world : null;
+    g.fillStyle = 'rgba(74,66,88,.9)'; g.fillRect(x, y, w, h);
+    g.textAlign = 'center'; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `bold 12.5px ${FONT}`;
+    const title = world ? world.title || world.meta.scenario || '' : '', name = picked || '직접 쓴 코드';
+    g.fillText(fit(name.split(': ')[0]), cx, y + 8);                                           // 예제 이름은 ':' 앞까지만 적는다(온 이름은 옆의 목록에 있고, 시나리오 제목은 아랫줄에 적는다)
+    g.font = `11px ${FONT}`; g.fillText(fit(title), cx, y + 27);
+    const sum = L => { let out = `설정 ${L.length}개`; for (let i = 0; i < L.length; i++) { const next = `${out} · ${L[i]}`, rest = L.length - i - 1; if (wide(rest ? `${next} 외 ${rest}` : next)) return i ? `${out} 외 ${L.length - i}` : out; out = next; } return out; };      // 설정 이름은 들어가는 데까지만 적고 나머지는 '외 n'
+    g.fillText(fit(!rep ? '' : !rep.ok ? '코드에 오류가 있다 · B 칸을 보자' : rep.empty ? '설정 없음 · 기본값으로 연다' : sum(rep.settings.map(s => s.label))), cx, y + 43);
+    g.fillStyle = '#f2b705'; g.font = `bold 11.5px ${FONT}`; g.fillText('출전을 누르면 시작한다', cx, y + 61);
   }
   save() { return null; }
 }

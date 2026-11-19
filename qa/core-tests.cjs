@@ -371,7 +371,7 @@ ok('동현삼 예제: 이름 앞에 번호 01~26 · 예제마다 새 판이 열�
 function fakeLayout() {
   const L = { logs: [], items: [], fn: null, detail: null,
     log(t) { L.logs.push(t); }, setInfo() {}, setDetail(d) { L.detail = d; }, setMenu(items, fn) { L.items = items; L.fn = fn; },
-    keyed() { let k = 0; return L.items.map(it => ({ ...it, n: it.key ? null : ++k })); },                      // 엔진 Layout과 같은 번호 규칙(글자를 따로 준 버튼은 건너뛴다)
+    keyed() { let k = 0; return L.items.map(it => ({ ...it, n: it.key || it.key === false ? null : ++k })); },   // 엔진 Layout과 같은 번호 규칙(글자를 따로 준 버튼과 key:false인 버튼은 건너뛴다)
     press(k) { const it = L.keyed().find(x => x.n === k); if (!it || it.disabled) return false; L.fn(it.id); return true; },
     pressPrimary() { const it = L.items.find(x => x.primary); if (!it || it.disabled) return false; L.fn(it.id); return true; } };
   return L;
@@ -492,7 +492,16 @@ ok('동현삼 키보드: 한 달을 키보드로만 보낸다(징병 → 이동 
   k.key('Space'); assert.strictEqual(s.selected, 13); k.key('Digit4'); assert.deepStrictEqual([s.sub.type, s.sub.step], ['move', 'who']); k.key('Escape'); assert.strictEqual(s.sub, null, 'Esc는 고르던 것을 그만둔다'); assert.strictEqual(s.selected, 13);
   k.key('Digit4'); const who = k.layout.keyed(); assert.strictEqual(who[who.length - 1].id, 'cancel'); k.key('Digit' + who.find(x => x.id === 'who:none').n); assert.strictEqual(s.sub.step, 'to');
   k.key('ArrowLeft'); assert.strictEqual(s.sub.aim, 12, '이웃 우리 주는 소패뿐'); assert.ok(k.layout.items.find(x => x.id === 'to:12').primary, '겨눈 대상이 노란 버튼이 된다'); k.key('Enter'); assert.deepStrictEqual([s.sub.step, s.sub.to], ['n', 12]);
-  k.key('Digit' + k.layout.keyed().find(x => /^절반/.test(x.label)).n); assert.deepStrictEqual([s.sub, g().P(13).troops, g().P(12).troops, g().P(13).acted], [null, 2500, 8500, true]);
+  // 얼마나: 수로 정한다. 버튼에는 번호가 없고 숫자 키는 수를 적는다. ← → 100 · ↑ ↓ 1,000 · Backspace · Enter
+  assert.deepStrictEqual([s.sub.n, k.layout.keyed().filter(x => x.n).length, k.layout.items.find(x => x.id === 'qok').label], [2500, 0, '보낸다 · 병력 2,500'], '병력만 보내면 절반(백 단위)에서 시작한다');
+  const seq = (...keys) => { for (const c of keys) k.key(c); return s.sub.n; };
+  assert.deepStrictEqual([seq('ArrowRight'), seq('ArrowUp'), seq('ArrowDown', 'ArrowLeft'), seq('ArrowUp', 'ArrowUp', 'ArrowUp'), seq('ArrowLeft')], [2600, 3600, 2500, 5000, 4900], '가진 것보다 많이는 못 올린다');
+  assert.deepStrictEqual([seq('Digit1'), seq('Numpad2', 'Digit0', 'Digit0'), seq('Backspace'), seq('Digit0'), seq('ArrowRight'), seq('Digit9')], [1, 1200, 120, 1200, 1300, 9], '처음 누른 숫자는 새로 적고 이어 누르면 붙는다 · 방향키를 누른 뒤에는 다시 새로 적는다');
+  assert.deepStrictEqual([seq('Digit9', 'Digit9', 'Digit9'), seq('Digit2', 'Digit5', 'Digit0', 'Digit0')], [5000, 2500], '넘치게 적으면 가진 만큼이 되고, 다음 숫자는 새로 적는다');
+  k.key('Digit7', { repeat: true }); assert.strictEqual(s.sub.n, 2500, '누르고 있는 숫자 키는 적히지 않는다'); assert.strictEqual(g().P(13).acted, false);
+  assert.deepStrictEqual([seq('End'), seq('Home'), seq('Digit2', 'Digit5', 'Digit0', 'Digit0')], [5000, 0, 2500], 'End 전부 · Home 0');
+  k.key('Delete'); assert.deepStrictEqual([s.sub, g().P(13).troops, g().P(13).acted], [null, 5000, false], 'Delete로 그만둔다(전체 화면에서는 Esc가 전체 화면을 닫는다)'); for (const c of ['Digit4', 'Digit3', 'ArrowLeft', 'Enter']) k.key(c); assert.deepStrictEqual([s.sub.step, seq('Digit2', 'Digit5', 'Digit0', 'Digit0')], ['n', 2500]);
+  k.key('Enter'); assert.deepStrictEqual([s.sub, g().P(13).troops, g().P(12).troops, g().P(13).acted], [null, 2500, 8500, true]);
   k.key('Enter'); assert.strictEqual(s.mode, 'busy', 'Enter = 노란 버튼(턴 종료)'); k.key('Digit1'); k.key('ArrowLeft'); k.key('Escape'); assert.strictEqual(s.mode, 'busy', '다른 군주들의 차례에는 키가 듣지 않는다');
   for (let i = 0; i < 40000 && s.mode === 'busy'; i++) { const t = k.engine.scene; if (t !== s) { if (t.mode === 'result') t.command('back'); else if (t.myTurn) t.command('auto'); } k.engine.step(1); }
   assert.deepStrictEqual([s.mode, g().months, k.engine.clock.label], ['play', 1, '200년 2월']);
@@ -801,7 +810,13 @@ ok('동현삼 화면: 물자 수송과 이동의 행군은 조작을 막지 않�
   const k = mk(5), s = k.scene; s.start('liubei'); const g = s.game, ids = () => k.layout.items.map(x => x.id + (x.disabled ? '!' : ''));
   // 수송: 이동 → 물자 수송 → 소패 → 금과 쌀 절반씩. 수레가 길을 가는 동안에도 다른 주에 명령을 내릴 수 있다
   s.selected = 13; s.refresh(); s.command('move'); assert.deepStrictEqual(ids(), ['who:122', 'who:ok!', 'who:none', 'who:cart', 'cancel']); s.command('who:cart'); assert.deepStrictEqual(ids(), ['to:12', 'cancel']); s.command('to:12');
-  assert.deepStrictEqual(k.layout.items.map(x => x.id), ['cg:275:0', 'cg:0:750', 'cg:275:750', 'cg:550:1500', 'cancel']); s.command('cg:275:750');
+  const lab = id => k.layout.items.find(x => x.id === id).label;
+  assert.deepStrictEqual(ids(), ['qf:gold', 'qf:rice', 'q:-1000!', 'q:-100!', 'q:100', 'q:1000', 'qs:0', 'qs:half', 'qs:all', 'qok!', 'cancel'], '금도 쌀도 0에서 시작하고, 정하기 전에는 보낼 수 없다');
+  assert.deepStrictEqual([lab('qf:gold'), lab('qf:rice'), lab('qok'), s.sub.field, k.layout.items.every(x => x.key === false)], ['금 0 / 550', '쌀 0 / 1,500', '보낼 양을 정한다', 'gold', true]);
+  s.command('q:1000'); assert.deepStrictEqual([s.sub.gold, lab('qok')], [550, '보낸다 · 금 550'], '가진 만큼까지만 오른다'); s.command('q:-100'); assert.strictEqual(s.sub.gold, 500, '전부에서 내리면 백 단위로 맞춘다'); s.command('q:-100'); assert.strictEqual(s.sub.gold, 400);
+  s.command('qs:half'); assert.strictEqual(s.sub.gold, 275); k.key('Space'); assert.deepStrictEqual([s.sub.field, s.sub.gold, s.sub.rice], ['rice', 275, 0], 'Space로 금과 쌀을 오간다');
+  k.key('Digit8'); k.key('Digit0'); k.key('Digit0'); assert.deepStrictEqual([s.sub.rice, lab('qf:rice'), lab('qok')], [800, '쌀 800 / 1,500', '보낸다 · 금 275 · 쌀 800']); k.key('ArrowLeft'); s.command('qs:all'); assert.strictEqual(s.sub.rice, 1500); s.command('qs:0'); assert.ok(lab('qok') === '보낸다 · 금 275');
+  s.command('qs:half'); s.command('qf:gold'); assert.deepStrictEqual([s.sub.field, s.sub.gold, s.sub.rice], ['gold', 275, 750]); k.key('Enter');
   assert.deepStrictEqual([g.P(13).gold, g.P(13).rice, g.P(12).gold, g.P(12).rice, g.P(13).acted, s.sub], [275, 750, 825, 2250, true, null]); assert.ok(k.layout.logs.includes('하비 → 소패: 금 275 · 쌀 750을 실어 보냈다'));
   assert.deepStrictEqual([s.marches.length, s.marches[0].kind, s.marches[0].dur, s.hold, s.saveInfo().ok], [1, 'cart', 40, null, true], '수레는 조작도 저장도 막지 않는다');
   s.selected = 12; s.refresh(); assert.ok(!k.layout.items.find(x => x.id === 'draft').disabled); k.engine.step(40); assert.strictEqual(s.marches.length, 1); k.engine.step(1); assert.strictEqual(s.marches.length, 0, '닿으면 사라진다');
@@ -922,7 +937,9 @@ ok('동현삼 화면: 이동에서 장수를 여러 명 고른다(누르면 ✓,
   assert.ok(/장수가 모두 떠나면 허창은 공백지가 된다/.test(k.layout.detail.note), '모두 고르면 주가 빈다고 알린다: ' + k.layout.detail.note);
   s.command('who:101'); s.command('who:104'); assert.deepStrictEqual(s.sub.picks, [105, 103]);
   assert.ok(k.layout.pressPrimary()); assert.deepStrictEqual([s.sub.step, s.sub.officer], ['to', [103, 105]], '고른 순서가 아니라 주에 적힌 순서로 간다'); assert.ok(ids().includes('to:11') && !ids().some(x => x.startsWith('who:')), ids().join());
-  s.command('to:11'); assert.deepStrictEqual(ids(), ['n:0', 'n:4000', 'n:8000', 'cancel']); s.command('n:4000');
+  s.command('to:11'); assert.deepStrictEqual(ids(), ['q:-1000!', 'q:-100!', 'q:100', 'q:1000', 'qs:0', 'qs:half', 'qs:all', 'qok', 'cancel']); assert.deepStrictEqual([s.sub.n, lab('qok'), !!it('qok').primary], [0, '병력 없이 보낸다', true], '장수가 가면 병력 0에서 시작한다');
+  s.command('q:1000'); s.command('q:1000'); s.command('q:100'); assert.deepStrictEqual([s.sub.n, lab('qok')], [2100, '보낸다 · 병력 2,100']); s.command('q:-1000'); s.command('q:-1000'); s.command('q:-1000'); assert.strictEqual(s.sub.n, 0, '0 아래로는 내려가지 않는다');
+  s.command('qs:all'); assert.deepStrictEqual([s.sub.n, ids().slice(2, 4)], [8000, ['q:100!', 'q:1000!']]); s.command('qs:half'); assert.strictEqual(s.sub.n, 4000); assert.ok(/진류에 딸려 보낼 병력을 정한다/.test(k.layout.detail.note), k.layout.detail.note); s.command('qok');
   for (let i = 0; i < 4000 && (s.hold || s.marches.length); i++) k.engine.step(1);
   assert.deepStrictEqual([105, 103, 101, 104].map(id => s.game.officers.get(id).province), [11, 11, 14, 14], '고른 둘만 진류로 갔다');
   assert.ok(k.layout.logs.some(t => /^허창 → 진류: (허저 · 순욱|순욱 · 허저)[이가]/.test(t)), k.layout.logs.slice(-3).join(' | '));
@@ -969,5 +986,39 @@ ok('동현삼 화면: 시나리오를 바꾸면 판 · 달력 · 군주 목록�
   const k5 = mk(6); k5.scene.command('f:liubei'); const d5 = pack(k5); assert.ok(!d5.settings.some(x => x[0] === 31)); const k6 = mk(4, code('s235')); assert.strictEqual(k6.scene.world.index, 6); assert.ok(k6.scene.loadGame(d5).ok); assert.deepStrictEqual([k6.scene.world.index, k6.engine.clock.year, k6.scene.game.factions.size], [0, 200, 9]);
   // 설정을 비우면 기본 배치로 돌아온다
   assert.ok(k.scene.applyDonghyunLang(HEAD + TAIL.trimStart()).ok || true); const k7 = mk(4, code('s208')); assert.strictEqual(k7.scene.world.index, 4); assert.ok(k7.scene.applyDonghyunLang(code('none')).ok); assert.deepStrictEqual([k7.scene.world.index, k7.engine.clock.year], [0, 200]);
+});
+ok('수량 정하기(침공): 전부에서 시작한다 · 최소 1,000보다 적으면 칠 수 없다 · 군사는 정한 병력으로 헤아린다 · 정한 수만큼만 떠난다', () => {
+  const k = mk(5), s = k.scene; s.start('liubei'); const g = s.game, it = id => k.layout.items.find(x => x.id === id);
+  assert.ok(g.setAdvisor('liubei', 121).ok === false); g.officers.get(121).int = 90; assert.ok(g.setAdvisor('liubei', 121).ok);      // 헤아림을 보려고 유비를 군사로 올린다
+  s.selected = 12; s.command('attack'); s.command('to:10');
+  assert.deepStrictEqual([s.sub.n, it('qok').label, !!it('qok').disabled, it('qs:min').label], [5000, '친다 · 병력 5,000', false, '최소 1,000']);
+  const note = () => k.layout.detail.note, f5 = g.forecast(12, 10, 5000); assert.ok(note().startsWith('군사 유비: “주군, 5,000을 보내면 ') && s.sub.fore.n === 5000 && s.sub.fore.f.win === f5.win, note());
+  s.command('q:-1000'); s.command('q:-100'); assert.deepStrictEqual([s.sub.n, it('qok').label], [3900, '친다 · 병력 3,900']); assert.ok(note().includes('3,900을 보내면') && s.sub.fore.n === 3900, note()); assert.deepStrictEqual(s.sub.fore.f, g.forecast(12, 10, 3900));
+  for (const c of ['Digit9', 'Digit0', 'Digit0']) k.key(c); assert.deepStrictEqual([s.sub.n, it('qok').disabled, it('qok').hint, s.sub.fore.f], [900, true, '병력 1,000부터 보낼 수 있다', null]); assert.ok(!note().startsWith('군사'));
+  k.key('Enter'); assert.ok(s.sub && s.sub.step === 'n' && !g.P(12).acted, '모자라면 Enter로도 떠나지 않는다');
+  s.command('qs:min'); assert.strictEqual(s.sub.n, 1000); s.command('qs:half'); assert.strictEqual(s.sub.n, 2500); k.key('ArrowRight'); k.key('ArrowRight'); assert.strictEqual(s.sub.n, 2700);
+  const st = k.engine.rng.state; s.refresh(); s.refresh(); assert.strictEqual(k.engine.rng.state, st, '헤아림은 판의 난수를 건드리지 않는다');
+  k.key('Enter'); assert.deepStrictEqual([s.sub, g.P(12).troops, g.P(12).acted, !!s.hold], [null, 2300, true, true], '2,700만 떠난다');
+  // 예전 명령(n: · cg:)도 그대로 듣는다
+  const z = mk(5), t = z.scene; t.start('liubei'); t.selected = 13; t.command('move'); t.command('who:none'); t.command('to:12'); t.command('n:1234'); assert.deepStrictEqual([t.game.P(13).troops, t.game.P(12).troops], [3766, 6234]);
+  // 전부가 백 단위가 아닐 때: 전부 → −100 → 백 단위
+  const y = mk(5), u = y.scene; u.start('liubei'); u.game.P(13).troops = 4321; u.selected = 13; u.command('move'); u.command('who:none'); u.command('to:12'); assert.strictEqual(u.sub.n, 2100, '절반을 백 단위로 내린다');
+  u.command('qs:all'); u.command('q:-100'); assert.strictEqual(u.sub.n, 4300); u.command('q:100'); assert.strictEqual(u.sub.n, 4321); u.command('q:-1000'); assert.strictEqual(u.sub.n, 3400); u.command('qs:half'); assert.strictEqual(u.sub.n, 2160);
+  u.game.P(13).troops = 150; u.sub = null; u.game.P(13).acted = false; u.command('move'); u.command('who:none'); u.command('to:12'); assert.strictEqual(u.sub.n, 150, '절반이 백이 안 되면 전부에서 시작한다'); u.game.P(13).troops = 260; u.command('cancel'); u.command('move'); u.command('who:none'); u.command('to:12'); assert.strictEqual(u.sub.n, 100);
+});
+ok('미리 보기: 설정의 배치만 지도에 펴고 판은 시작하지 않는다(군주가 정해져 있어도) · 오류가 있으면 그대로 둔다 · 그 뒤 출전하면 그 설정으로 열린다', () => {
+  const code = id => DH.Sam.examples(DH.Sam.worlds(samJ())).find(e => e.id === id).code, k = mk(4), s = k.scene, rng = k.engine.rng.state;
+  let r = s.applyDonghyunLang(code('s189'), true); assert.deepStrictEqual([r.ok, s.world.index, s.mode, s.game.player, k.engine.clock.label, s.game.factions.size, s.settings], [true, 1, 'pick', null, '189년 12월', 14, [[31, 1]]]);
+  const said = re => k.layout.logs.filter(t => re.test(t)).length; assert.deepStrictEqual([said(/동현랭 설정/), said(/^시나리오: /)], [0, 0], '미리 보기는 기록을 남기지 않는다(예제를 넘겨 볼 때마다 쌓이지 않게)'); assert.strictEqual(k.layout.items.length, 14);
+  r = s.applyDonghyunLang(code('rich'), true); assert.deepStrictEqual([r.ok, s.world.index, s.mode, s.game.player, k.engine.clock.label, s.state.start.player > 0], [true, 0, 'pick', null, '200년 1월', true], '군주가 정해진 예제도 미리 볼 때는 시작하지 않는다');
+  const world = s.world, st = s.state, g = s.game; r = s.applyDonghyunLang(code('s221').replace('뿡뿡', '뿡뿡뿡뿡뿡'), true); if (r.ok) r = s.applyDonghyunLang('나는 동현이냐?\n동현 도오옹\n', true);
+  assert.ok(!r.ok && s.world === world && s.state === st && s.game === g, '오류가 있는 코드는 지도를 바꾸지 않는다');
+  s.applyDonghyunLang(code('s235'), true); s.cam.zoom = 2; s.applyDonghyunLang(code('s221'), true); assert.ok(Math.abs(s.cam.zoom - 1.125) < 1e-9, '미리 보기는 처음 배율로 돌아간다'); assert.strictEqual(k.engine.rng.state, rng, '미리 보기는 난수를 쓰지 않는다');
+  assert.deepStrictEqual([...s.game.provinces.values()].map(p => p.owner), [...s.world.provinces.values()].map(p => p.owner), '지도의 주인이 그 시나리오의 주인이다');
+  // 하던 판(군주를 고른 뒤 · 전투 중)에서도 미리 보기로 돌아간다
+  s.applyDonghyunLang(code('s221')); assert.deepStrictEqual([said(/^시나리오: 221년/), said(/^시나리오: /)], [1, 1], '출전하면 그 배치를 한 번 적는다'); s.applyDonghyunLang(code('s221'), true); s.applyDonghyunLang(code('s221')); assert.strictEqual(said(/^시나리오: /), 1, '같은 배치로 다시 열면 또 적지 않는다');
+  s.applyDonghyunLang(code('none')); assert.strictEqual(said(/^시나리오: 200년 1월/), 1); s.command('f:liubei'); s.selected = 12; s.command('attack'); s.command('to:10'); s.command('n:5000'); s.skipMarch(); assert.ok(k.engine.scene !== s, '전투가 열렸다');
+  r = s.applyDonghyunLang(code('s208'), true); assert.deepStrictEqual([r.ok, k.engine.scene === s, s.mode, s.game.player, s.world.index, s.marches.length, s.sub], [true, true, 'pick', null, 4, 0, null]);
+  r = s.applyDonghyunLang(code('rich')); assert.deepStrictEqual([s.mode, s.game.player, s.world.index], ['play', 'liubei', 0], '출전하면 정해 둔 군주로 바로 시작한다');
 });
 console.log(`핵심 시험 ${n}개 통과`);
