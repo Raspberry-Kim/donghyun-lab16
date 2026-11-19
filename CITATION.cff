@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
-title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, with starting values and rule numbers set through the esoteric language Donghyun-lang"
+title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, duels and fire attacks, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "0.36"
+version: "1.00"
 doi: "10.5281/zenodo.24106052"
-date-released: "2026-11-18"
+date-released: "2026-11-19"
 authors:
   - family-names: Kim
     given-names: Dong Hyun
@@ -14,9 +14,27 @@ license: MIT
 repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
 url: "https://raspberry-kim.github.io/donghyun-lab16/"
 abstract: >-
-  Version 0.36 softens the border of the desktop-recommended notice box
-  to a pastel coral and lets it blink only ten times after the page opens,
-  then stay lit; rules, data and save format are unchanged.
+  Version 1.00 is the first full release. It adds marching animation
+  along the roads between castles (moves, supply carts and invasions),
+  three offices (a governor per province, one advisor and a few generals
+  per realm) with delegation of a province to its governor, three new
+  domestic values (flood control, commerce and troop drill) with seasonal
+  events (plague, flood, locusts, bumper harvest) and season-tinted land,
+  one-on-one duels between officers on the battlefield (four moves with a
+  multiplier table; the loser is captured), and fire attacks with wind,
+  rain and spreading flames on a new forest terrain. The player is
+  addressed as "my lord" at first, "Your Highness" after becoming king at
+  10 provinces and "Your Majesty" after becoming emperor at 14; the rank
+  never drops. Donghyun-lang settings grew from 22 to 32 and the examples
+  from 11 to 13; the second companion now has 120 rule notes. The choice
+  of these elements was informed by which features exist in Sangokushi
+  DS 2 (Koei, 2007), a Nintendo DS remake of Romance of the Three
+  Kingdoms IV; every formula and number is new to this work, and no
+  graphic, sound, text, number or code of that game is used. The save
+  format number is unchanged and saves up to version 0.36 still load.
+  Version 0.36 softened the border of the desktop-recommended notice box
+  to a pastel coral and let it blink only ten times after the page opens,
+  then stay lit.
   Version 0.35 made that border blink in red, once a second.
   Version 0.34 added a victory celebration: on winning, a synthesized
   fanfare of about ten seconds plays the first line of the trio tune of
@@ -31,16 +49,16 @@ abstract: >-
   shown from the first screen: one recites one of 100 passages from the Zhuangzi
   on the player's own provinces and, on other provinces, briefly describes
   the place and reports its ruler and troop numbers computed from the live
-  game state; the other gives one of 75 short notes on the rules and their
-  arithmetic, drawn from the current rule values without repeats. The map
-  opens at 1.125x in both normal and full-screen view. Game rules, data,
-  examples and Donghyun-lang settings remain unchanged, and earlier saves
-  still load.
+  game state; the other gives one of 75 short notes (120 since version 1.00)
+  on the rules and their arithmetic, drawn from the current rule values
+  without repeats. The map
+  opens at 1.125x in both normal and full-screen view.
   Donghyunsam is a browser-based, noncommercial toy that follows only the
   broad frame of Romance of the Three Kingdoms II (Koei, 1989): the player
   picks one of nine rulers on a node map of 41 provinces of late Han China
-  and gives one order per province per month (develop farmland, draft, move,
-  search, invade, relief, alliance). A province with no officer becomes
+  and gives one order per province per month (domestic work, draft, drill,
+  move, invade, search, alliance; domestic work is farmland, flood control,
+  commerce or relief). A province with no officer becomes
   vacant land that an officer can occupy by moving in. An invasion opens a 10x10 hex battlefield with terrain
   movement costs and defence modifiers; the other rulers are played by a
   simple priority-based AI. Starting values, rule numbers, the victory
@@ -53,7 +71,7 @@ abstract: >-
   are derived from Natural Earth 110m land data (public domain); province
   adjacency and all numbers are test values chosen for this work and were
   not checked against the original game. No graphic, sound, text, number or
-  code of the original game is used or extracted. Romance of the Three
+  code of the original game or of Sangokushi DS 2 is used or extracted. Romance of the Three
   Kingdoms is a series of Koei Tecmo Games; this work is unaffiliated. Input
   is keyboard, mouse or touch, with a fullscreen mode; the whole game can be
   played from the keyboard alone. A game can be saved by hand to three

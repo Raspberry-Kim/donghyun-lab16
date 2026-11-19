@@ -7,11 +7,14 @@
  *    1    군주                     0 고르는 화면 · 1~9 자료에 적힌 순서(1 조조 … 9 공손도)
  *    2    난수 시드                1~2147483646
  *    3~7  우리 주마다 시작 금 · 쌀 · 병력 · 민심 · 농지
- *    8    주 하나의 초기값         주 번호, 항목(1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지), 값       ← 여러 번 쓸 수 있다
+ *    8    주 하나의 초기값         주 번호, 항목(1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지 · 6 치수 · 7 상업 · 8 훈련), 값   ← 여러 번 쓸 수 있다
  *    10~13 징병 수량 · 징병 금 · 농지 개발 금 · 농지 1마다 쌀
  *    14~17 시혜에 드는 쌀 · 동맹에 드는 금 · 동맹 기간(달) · 장수를 사로잡을 확률(%)
+ *    18~19 군사가 되는 지력 · 장군이 되는 무력
  *    20~24 승리 조건(차지할 주 수) · 기한(달) · 전투 기한(일) · 부대 이동력 · AI 신중함(×10)
+ *    25~29 일기토 최대 합(0 없음) · 왕이 되는 주 수 · 황제가 되는 주 수 · 화계 피해 %(0 없음) · 철마다 나는 일의 확률 배율 %(0 없음)
  *    30   장수 능력치              장수 번호, 능력(1 무력 · 2 지력 · 3 매력), 값 1~100              ← 여러 번 쓸 수 있다
+ *    40~42 치수 · 상업 · 훈련에 드는 금
  *
  *   DH.Sam.applyDonghyunLang(scriptText, state, {world})  → 보고서 {ok, empty, settings, errors, applied} */
 (function (root) {
@@ -19,7 +22,7 @@
   const DH = root.DH = root.DH || {};
   const S = DH.Sam, clone = o => JSON.parse(JSON.stringify(o));
   const fmt = n => Number(n).toLocaleString('ko-KR');
-  const FIELD = [null, ['gold', '금', 0, 99999, 1], ['rice', '쌀', 0, 99999, 1], ['troops', '병력', 0, 99900, 100], ['loyalty', '민심', 0, 100, 1], ['farm', '농지', 0, 100, 1]];
+  const FIELD = [null, ['gold', '금', 0, 99999, 1], ['rice', '쌀', 0, 99999, 1], ['troops', '병력', 0, 99900, 100], ['loyalty', '민심', 0, 100, 1], ['farm', '농지', 0, 100, 1], ['flood', '치수', 0, 100, 1], ['trade', '상업', 0, 100, 1], ['drill', '훈련', 0, 100, 1]];
   const STAT = [null, ['war', '무력'], ['int', '지력'], ['cha', '매력']];
 
   /** 동현삼의 globalState. 기본값(fallback)이 들어 있다. */
@@ -41,8 +44,8 @@
       show: ([n], { world }) => (n === 0 ? '고르는 화면' : factionAt(world, n) ? factionAt(world, n).name : n + '번') },
     2: { key: 'start.seed', label: '난수 시드', min: 1, max: 2147483646, path: 'start.seed', hint: '같은 시드면 같은 판', def: '1' },
     3: startCmd('gold', 1), 4: startCmd('rice', 2), 5: startCmd('troops', 3), 6: startCmd('loyalty', 4), 7: startCmd('farm', 5),
-    8: { key: 'provinces', label: '주 초기값', multi: true, hint: '항목 1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지', def: '자료 값',
-      args: [{ label: '주 번호', min: 1, max: 999 }, { label: '항목', min: 1, max: 5 }, { label: '값', min: 0, max: 99999 }],
+    8: { key: 'provinces', label: '주 초기값', multi: true, hint: '항목 1 금 · 2 쌀 · 3 병력 · 4 민심 · 5 농지 · 6 치수 · 7 상업 · 8 훈련', def: '자료 값',
+      args: [{ label: '주 번호', min: 1, max: 999 }, { label: '항목', min: 1, max: 8 }, { label: '값', min: 0, max: 99999 }],
       check: ([p, k, v], { world }) => { const f = FIELD[k];
         if (world && !world.provinces.has(p)) return `${p}번 주는 없다`;
         return v > f[3] || v % f[4] ? `${f[1]} 값 ${fmt(v)}은 쓸 수 없다. ${fmt(f[2])}~${fmt(f[3])}${f[4] > 1 ? `, ${f[4]} 단위` : ''}만 된다` : null; },
@@ -57,6 +60,8 @@
     16: { key: 'ally.months', label: '동맹 기간(달)', min: 1, max: 120, path: 'rules.ally.months', hint: '이 동안 서로 치지 않는다' },
     17: { key: 'capture', label: '장수를 사로잡을 확률(%)', min: 0, max: 100, hint: '침공에 이겼을 때 지키던 장수마다 · 군주는 빼고', get: st => Math.round(st.rules.capture * 100),
       show: ([v]) => `${v}%`, set: (st, [v]) => { st.rules.capture = v / 100; } },
+    18: { key: 'advisor.int', label: '군사가 되는 지력', min: 1, max: 100, path: 'rules.advisor.int', hint: '이 지력부터 군사로 삼을 수 있다' },
+    19: { key: 'general.war', label: '장군이 되는 무력', min: 1, max: 100, path: 'rules.general.war', hint: '이 무력부터 장군으로 올릴 수 있다' },
     20: { key: 'stage.goal', label: '승리 조건: 차지할 주 수', min: 2, max: 999, path: 'stage.goal', hint: '이만큼 차지하면 이긴다 · 정하지 않으면 다른 세력을 모두 무너뜨려야 한다', def: '모든 주',
       check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
     21: { key: 'stage.months', label: '기한(달)', min: 0, max: 1200, path: 'stage.months', hint: '이 달 수가 지나면 진다 · 0 기한 없음' },
@@ -64,11 +69,21 @@
     23: { key: 'battle.mp', label: '부대 이동력', min: 1, max: 12, path: 'battle.mp', hint: '하루에 쓰는 이동력' },
     24: { key: 'ai.needRatio', label: 'AI 신중함(×10)', min: 10, max: 100, hint: '상대 병력의 몇 배를 모아야 치는지 · 25는 2.5배', get: st => Math.round(st.rules.ai.needRatio * 10),
       show: ([v]) => `${v / 10}배`, set: (st, [v]) => { st.rules.ai.needRatio = v / 10; } },
+    25: { key: 'battle.duel', label: '일기토 최대 합', min: 0, max: 30, path: 'battle.duel', hint: '이 합을 채우면 비긴다 · 0 일기토 없음', show: ([v]) => (v ? v + '합' : '일기토 없음') },
+    26: { key: 'rank.king', label: '왕이 되는 주 수', min: 1, max: 999, path: 'rules.rank.king', hint: '이만큼 차지하면 왕에 올라 전하라 불린다', def: '주 수의 1/4',
+      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
+    27: { key: 'rank.emperor', label: '황제가 되는 주 수', min: 1, max: 999, path: 'rules.rank.emperor', hint: '이만큼 차지하면 황제에 올라 폐하라 불린다', def: '주 수의 1/3',
+      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
+    28: { key: 'battle.fire', label: '화계 피해(%)', min: 0, max: 90, path: 'battle.fire', hint: '불이 난 칸의 부대가 날마다 잃는 병력 · 0 화계 없음', show: ([v]) => (v ? v + '%' : '화계 없음') },
+    29: { key: 'events.scale', label: '철마다 나는 일의 확률 배율(%)', min: 0, max: 300, path: 'rules.events.scale', hint: '큰물 · 메뚜기 · 돌림병 · 풍년 · 100이 보통 · 0이면 나지 않는다', show: ([v]) => (v ? v + '%' : '나지 않는다') },
     30: { key: 'officers', label: '장수 능력치', multi: true, hint: '능력 1 무력 · 2 지력 · 3 매력', def: '자료 값',
       args: [{ label: '장수 번호', min: 1, max: 99999 }, { label: '능력', min: 1, max: 3 }, { label: '값', min: 1, max: 100 }],
       check: ([id], { world }) => (world && !world.officers.has(id) ? `${id}번 장수는 없다` : null),
       show: ([id, k, v], { world }) => `${world && world.officers.has(id) ? world.officers.get(id).name : id + '번 장수'} ${STAT[k][1]} ${v}`,
-      set: (st, [id, k, v]) => st.officers.push([id, STAT[k][0], v]) }
+      set: (st, [id, k, v]) => st.officers.push([id, STAT[k][0], v]) },
+    40: { key: 'flood.gold', label: '치수에 드는 금', min: 0, max: 10000, path: 'rules.flood.gold' },
+    41: { key: 'trade.gold', label: '상업에 드는 금', min: 0, max: 10000, path: 'rules.trade.gold' },
+    42: { key: 'drill.gold', label: '훈련에 드는 금', min: 0, max: 10000, path: 'rules.drill.gold' }
   } });
 
   /** 동현랭 설정을 동현삼 globalState에 덮어쓴다. ctx.world를 주면 주 · 장수 · 군주 번호도 검사한다. */
@@ -83,7 +98,7 @@
     return lines.map(l => (l === '@' ? `ㅋㅋ ↓ 여기가 ${no}번 문장이다. 되돌아오는 자리` : l.replace('{@}', lit(no)).replace('{@번}', no + '번'))).join('\n');
   }
 
-  /** 플레이그라운드에 싣는 예제 열. name의 번호는 고르는 칸에 보이는 순서다. 01은 '설정 없음'이고, 09 · 10은 손으로 쓴 동현랭(변수 · 반복문)이다. 11은 v0.06에서 더한 민심 · 동맹 · 사로잡기 설정이다. */
+  /** 플레이그라운드에 싣는 예제 열. name의 번호는 고르는 칸에 보이는 순서다. 01은 '설정 없음'이고, 09 · 10은 손으로 쓴 동현랭(변수 · 반복문)이다. 11은 v0.06에서 더한 민심 · 동맹 · 사로잡기 설정이고, 12 · 13은 v1.00에서 더한 일기토 · 화계 · 벼슬 · 즉위 · 철마다 나는 일의 설정이다. */
   const examples = world => { const c = (list, title) => lang.compose(list, title, { world }); return [
     { id: 'none', name: '01 · 기본값(설정 없음)', code: '나는 동현이냐?\nㅋㅋ 아무것도 출력하지 않으면 기본값 그대로 시작한다\n동현이구나' },
     { id: 'rich', name: '02 · 넉넉한 유비', code: c([[1, 3], [3, 3000], [4, 20000], [10, 2000], [30, 121, 1, 90]], '유비로 시작 · 금 3,000 · 쌀 20,000 · 징병 2,000씩 · 유비 무력 90') },
@@ -112,7 +127,9 @@
       'ㅋㅋ 동현이 10보다 작으면(동현에 ㅠ를 열 번 더해 음수면) {@번} 문장으로 돌아간다',
       `뭉치 동현${'ㅠ'.repeat(10)}? 신중동역 {@}`,
       '동현이구나']) },
-    { id: 'heart', name: '11 · 민심과 동맹: 싼 시혜 · 긴 동맹', code: c([[1, 3], [6, 50], [14, 300], [15, 100], [16, 36], [17, 60]], '유비로 시작 · 우리 주 민심 50 · 시혜 쌀 300 · 동맹 금 100 · 동맹 36달 · 사로잡을 확률 60%') }
+    { id: 'heart', name: '11 · 민심과 동맹: 싼 시혜 · 긴 동맹', code: c([[1, 3], [6, 50], [14, 300], [15, 100], [16, 36], [17, 60]], '유비로 시작 · 우리 주 민심 50 · 시혜 쌀 300 · 동맹 금 100 · 동맹 36달 · 사로잡을 확률 60%') },
+    { id: 'duel', name: '12 · 무인의 시대: 긴 일기토 · 화계 없음', code: c([[1, 3], [25, 20], [28, 0], [19, 80], [42, 20]], '유비로 시작 · 일기토 20합까지 · 화계 없음 · 장군은 무력 80부터 · 훈련 금 20') },
+    { id: 'crown', name: '13 · 이른 즉위와 거친 하늘', code: c([[1, 3], [26, 3], [27, 5], [29, 200], [40, 50], [18, 80]], '유비로 시작 · 주 3곳이면 왕 · 5곳이면 황제 · 철마다 나는 일 2배 · 치수 금 50 · 군사는 지력 80부터') }
   ]; };
 
   DH.Sam = Object.assign(S, { newState, lang, applyDonghyunLang, examples });

@@ -39,7 +39,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   const tapHex = async (c, r) => { const q = await p.evaluate(([c, r]) => { const cv = document.querySelector('.dh-canvas'); cv.scrollIntoView({ block: 'center' }); const s = __dh.engine.scene, P = s.grid.center(c, r), k = s.cam.toScreen(P.x, P.y), R = cv.getBoundingClientRect(); return { x: R.left + k.x * R.width / 480, y: R.top + k.y * R.height / 360 }; }, [c, r]); await p.mouse.click(q.x, q.y); };
   const bs = () => G(() => { const s = __dh.engine.scene, b = s.b, g = s.grid; return { n: __dh.engine.scenes.length, me: s.me, side: b.side, day: b.day, winner: b.winner, mode: s.mode, auto: s.auto, sel: s.sel && s.sel.id,
     units: b.units.map(u => ({ id: u.id, name: u.name, side: u.side, c: u.c, r: u.r, troops: u.troops, done: u.done, moved: u.moved, war: u.war })), reach: [...s.reach.values()].map(v => [v.c, v.r, v.cost, b.at(v.c, v.r)]),
-    targets: s.sel ? b.targets(s.sel).map(t => ({ id: t.id, c: t.c, r: t.r, troops: t.troops, def: b.terrain(t.c, t.r).def })) : [], castle: b.castle }; });
+    targets: s.sel ? b.targets(s.sel).map(t => ({ id: t.id, c: t.c, r: t.r, troops: t.troops, def: b.defAt(t) })) : [], castle: b.castle, drill: b.drill, gen: Object.fromEntries(b.units.map(u => [u.id, u.general ? b.B.general : 0])) }; });
   const DHro = w => { const c = w.charCodeAt(w.length - 1), f = c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : 0; return (f === 0 || f === 8 ? '와' : '과') + ' 해전'; };
   const hexDist = (a, b) => { const x1 = a[0] - (a[1] - (a[1] & 1)) / 2, x2 = b[0] - (b[1] - (b[1] & 1)) / 2, dx = x1 - x2, dz = a[1] - b[1]; return Math.max(Math.abs(dx), Math.abs(dz), Math.abs(dx + dz)); };
   const px = (c, r, dx = 0, dy = 0) => p.evaluate(([c, r, dx, dy]) => { const s = __dh.engine.scene, P = s.grid.center(c, r), k = s.cam.toScreen(P.x + dx, P.y + dy), cv = document.querySelector('.dh-canvas'), f = cv.width / 480; return [...cv.getContext('2d').getImageData(Math.round(k.x * f), Math.round(k.y * f), 1, 1).data].slice(0, 3); }, [c, r, dx, dy]);
@@ -61,12 +61,12 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   // 3) 유비로 시작 → 농지 개발 · 징병 → 턴 종료
   await p.click('button[data-id="f:liubei"]');
   assert.deepStrictEqual(await info(), { 날짜: '200년 1월', 군주: '유비', 주: '2', 병력: '10,000', '남은 명령': '2' }); assert.strictEqual(await title(), '소패 小沛'); assert.strictEqual((await rows()).세력, '유비 · 우리 땅');
-  assert.deepStrictEqual(await menu(), ['develop', 'draft', 'move', 'search', 'attack', 'relief', 'ally', 'end']);
-  await p.click('button[data-id=develop]'); let r = await rows(); assert.ok(r.농지 === '51' && r.금.startsWith('450 ') && r.민심 === '67', JSON.stringify(r)); assert.ok((await logTop()).includes('농지를 넓혔다(45 → 51)'));
-  assert.deepStrictEqual(await menu(), ['develop!', 'draft!', 'move!', 'search!', 'attack!', 'relief!', 'ally!', 'end'], '한 달에 한 번'); assert.strictEqual((await info())['남은 명령'], '1'); assert.ok((await p.$eval('.dh-note', e => e.textContent)).includes('이미 내렸다'));
+  assert.deepStrictEqual(await menu(), ['civil', 'draft', 'drill', 'move', 'attack', 'search', 'ally', 'office', 'end']);
+  await p.click('button[data-id=civil]'); assert.deepStrictEqual(await menu(), ['develop', 'flood', 'trade', 'relief', 'cancel'], '내정을 누르면 네 가지가 열린다'); await p.click('button[data-id=develop]'); let r = await rows(); assert.ok(r.농지 === '51' && r.금.startsWith('450 ') && r.민심 === '67', JSON.stringify(r)); assert.ok((await logTop()).includes('농지를 넓혔다(45 → 51)'));
+  assert.deepStrictEqual(await menu(), ['civil!', 'draft!', 'drill!', 'move!', 'attack!', 'search!', 'ally!', 'office', 'end'], '한 달에 한 번(벼슬은 명령을 쓰지 않는다)'); assert.strictEqual((await info())['남은 명령'], '1'); assert.ok((await p.$eval('.dh-note', e => e.textContent)).includes('이미 내렸다'));
   await tapProv(13); assert.strictEqual(await title(), '하비 下邳'); await p.click('button[data-id=draft]'); r = await rows(); assert.deepStrictEqual([r.병력, r.민심, r.인구], ['6,000', '62', '259,000']);
   assert.deepStrictEqual([(await info()).병력, (await info())['남은 명령']], ['11,000', '0']);
-  await tapProv(11); assert.deepStrictEqual((await menu()).slice(0, 8), ['develop!', 'draft!', 'move!', 'search!', 'attack!', 'relief!', 'ally!', 'end'], '남의 땅에는 명령이 없다');
+  await tapProv(11); assert.deepStrictEqual((await menu()).slice(0, 9), ['civil!', 'draft!', 'drill!', 'move!', 'attack!', 'search!', 'ally!', 'office!', 'end'], '남의 땅에는 명령이 없다');
   await p.click('button[data-id=end]'); assert.strictEqual(await G(() => __dh.scene.mode), 'busy'); assert.ok((await menu()).includes('end!')); assert.strictEqual(await finishAI(), 0, '첫 달에는 침공받지 않는다');
   assert.deepStrictEqual(await info(), { 날짜: '200년 2월', 군주: '유비', 주: '2', 병력: '11,000', '남은 명령': '2' }); assert.ok((await logTop(3)).includes('200년 2월이 되었다'));
   const m2 = await G(() => { const g = __dh.game; return { sp: [g.P(12).gold, g.P(12).rice, g.P(12).loyalty], jl: g.P(11).troops, xc: g.P(14).troops, months: g.months }; });
@@ -74,7 +74,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   ok('동현삼: 유비로 시작 · 농지 개발(45 → 51) · 징병(+1,000, 민심 −3) · 주마다 한 달에 한 번 · 턴 종료 뒤 AI가 움직이고 달이 넘어간다');
 
   // 4) 이동(누가 → 어디로(지도 찍기) → 병력) · 수색
-  await tapProv(12); await p.click('button[data-id=move]'); assert.deepStrictEqual(await menu(), ['who:121', 'who:123', 'who:none', 'cancel']); await p.click('button[data-id="who:123"]');
+  await tapProv(12); await p.click('button[data-id=move]'); assert.deepStrictEqual(await menu(), ['who:121', 'who:123', 'who:none', 'who:cart', 'cancel']); await p.click('button[data-id="who:123"]');
   assert.deepStrictEqual(await menu(), ['to:13', 'cancel']); await step(1); await tapProv(13); assert.deepStrictEqual(await menu(), ['n:0', 'n:2500', 'n:5000', 'cancel']); assert.strictEqual(await title(), '소패 小沛', '대상을 찍어도 고른 주는 그대로다');
   await p.click('button[data-id="n:2500"]'); assert.deepStrictEqual(await G(() => { const g = __dh.game; return [g.P(12).troops, g.P(13).troops, g.officers.get(123).province, g.P(12).acted]; }), [2500, 8500, 13, true]); assert.ok((await logTop()).includes('장비가 병력 2,500과 함께 옮겨 갔다'));
   await p.click('.sam-zoom button[data-zoom=zin]'); await tapProv(13); await p.click('button[data-id=move]'); await p.click('button[data-id=cancel]'); assert.ok((await menu()).includes('search'), '그만두면 명령 메뉴로'); await p.click('.sam-zoom button[data-zoom=zout]');
@@ -82,32 +82,35 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   ok('동현삼: 이동(장비 + 병력 2,500 → 하비, 지도에서 대상 찍기) · 그만두기 · 수색');
 
   // 5) 침공받는다: 진류(12,000)가 병력이 줄어든 소패(2,500)로 쳐들어온다 → 수비 측으로 전장에 선다 → 퇴각을 되묻는다 → 맡기기
+  await p.click('button[data-id=end]'); assert.strictEqual(await finishAI(), 0, '진류는 치기 전에 한 달 조련한다'); assert.deepStrictEqual(await G(() => { const g = __dh.game; return [g.P(11).troops, g.P(11).drill, g.governor(11).name, g.months]; }), [14000, 62, '하후돈', 2], '조련(50 → 64) 뒤에 허창이 보낸 2,000이 섞여 62');
   await p.click('button[data-id=end]'); let defended = null;
   const fights = await finishAI(async () => {
-    let d = await bs(); assert.deepStrictEqual([d.me, d.side, d.mode, d.day], ['def', 'att', 'fight', 1]); assert.deepStrictEqual(await menu(), ['wait!', 'end!', 'auto!', 'retreat!'], '남의 차례에는 손댈 수 없다');
-    assert.deepStrictEqual(await info(), { 전장: '소패', 날: '1/20일', 차례: '공격 측', '공격 조조': '8,400', '수비 유비': '2,500' }); assert.ok((await logTop(2)).includes('조조 군이 진류에서 소패로 쳐들어갔다(유비 · 병력 8,400 대 2,500)'));
-    assert.deepStrictEqual(d.units.map(u => [u.side, u.name, u.troops, u.war, u.c, u.r]), [['att', '허저', 4200, 95, 1, 4], ['att', '전위', 4200, 95, 0, 2], ['def', '유비', 2500, 75, d.castle[0], d.castle[1]]], '허창에서 병력과 함께 온 허저 · 지난달 진류가 찾아낸 전위 대 성 위의 유비(하후돈은 남아 진류를 지킨다)');
+    let d = await bs(); assert.deepStrictEqual([d.me, d.side, d.mode, d.day], ['def', 'att', 'fight', 1]); assert.deepStrictEqual(await menu(), ['wait!', 'end!', 'auto!', 'retreat!', 'duel!', 'fire!'], '남의 차례에는 손댈 수 없다');
+    assert.deepStrictEqual(await info(), { 전장: '소패', 날: '1/20일', 차례: '공격 측', '공격 조조': '9,800', '수비 유비': '2,500', 날씨: '바람 ↗' }); assert.ok((await logTop(2)).includes('조조 군이 진류에서 소패로 쳐들어갔다(유비 · 병력 9,800 대 2,500)'));
+    assert.deepStrictEqual(d.units.map(u => [u.side, u.name, u.troops, u.war, u.c, u.r]), [['att', '허저', 3268, 95, 1, 4], ['att', '전위', 3266, 95, 0, 2], ['att', '곽가', 3266, 20, 0, 7], ['def', '유비', 2500, 75, d.castle[0], d.castle[1]]], '허창에서 병력과 함께 온 허저 · 곽가와 진류가 찾아낸 전위 대 성 위의 유비(태수 하후돈은 남아 진류를 지킨다)');
     for (let i = 0; i < 40 && d.side !== 'def' && !d.winner; i++) { await step(20); d = await bs(); } assert.strictEqual(d.side, 'def', '공격 측이 움직인 뒤 우리 차례가 온다'); assert.ok(d.units[0].c > 1, '공격 측 AI가 다가왔다');
-    await p.click('button[data-id=retreat]'); assert.deepStrictEqual(await menu(), ['yes', 'no']); await p.click('button[data-id=no]'); assert.deepStrictEqual(await menu(), ['wait!', 'end', 'auto', 'retreat']); assert.strictEqual((await bs()).winner, null);
+    await p.click('button[data-id=retreat]'); assert.deepStrictEqual(await menu(), ['yes', 'no']); await p.click('button[data-id=no]'); assert.deepStrictEqual(await menu(), ['wait!', 'end', 'auto', 'retreat', 'duel!', 'fire!']); assert.strictEqual((await bs()).winner, null);
     await p.click('button[data-id=auto]'); for (let i = 0; i < 200 && (d = await bs()).mode !== 'result'; i++) await step(40); assert.strictEqual(d.mode, 'result'); defended = d.winner;
     await step(40); await p.screenshot({ path: shot + '/ui-sam-defeat.png' }); await p.click('button[data-id=back]');
   });
+
   assert.ok(fights >= 1 && defended, '침공받았다'); assert.strictEqual(await G(() => __dh.engine.scenes.length), 1);
   const lost = await G(() => { const g = __dh.game; return { owner: g.P(12).owner, liu: g.officers.get(121).province, over: g.over, mode: __dh.scene.mode, hh: g.officers.get(105).province }; });
   assert.deepStrictEqual([defended, lost.owner, lost.liu, lost.hh, lost.over, lost.mode], ['att', 'cao', 13, 12, null, 'play'], '소패는 조조에게 넘어가고 유비는 하비로 물러났다 · 허저가 소패로 들어왔다');
-  assert.deepStrictEqual([(await info()).날짜, (await info()).주], ['200년 3월', '1']); assert.ok((await logTop(12)).includes('조조 군이 소패를 차지했다'));
-  ok('동현삼: 진류가 소패로 쳐들어왔다(8,400 대 2,500) → 수비 측 전장 · 퇴각 되묻기 · 맡기기 → 소패를 내주고 유비는 하비로 · 달이 넘어간다');
+  assert.deepStrictEqual([(await info()).날짜, (await info()).주], ['200년 4월', '1']); assert.ok((await logTop(12)).includes('조조 군이 소패를 차지했다'));
+  ok('동현삼: 진류가 소패로 한 달 조련한 뒤 소패로 쳐들어왔다(9,800 대 2,500) → 수비 측 전장 · 퇴각 되묻기 · 맡기기 → 소패를 내주고 유비는 하비로 · 달이 넘어간다');
 
   // 6) 침공 → 육각 전장에서 손으로 싸운다 → 주인이 바뀌고 지도로 돌아온다
   const pre = await G(() => { const g = __dh.game; return { mine: g.P(13).troops, foe: g.P(16).troops, owner: g.P(16).owner, n: g.provincesOf('liubei').length, who: g.fighters(13).map(o => o.name), ids: g.fighters(13).map(o => o.id), all: g.officersOf(13).map(o => o.id) }; }); assert.ok(pre.mine >= 8500 && pre.owner === 'cao');
   assert.strictEqual(pre.who.length, Math.min(3, pre.all.length - 1), '한 명은 남아 하비를 지킨다'); assert.deepStrictEqual(pre.who.slice(0, 2), ['관우', '장비'], '무력 순으로 나선다');
   await tapProv(13); await p.click('button[data-id=attack]'); assert.ok((await menu()).includes('to:16')); await step(1); await tapProv(16); assert.deepStrictEqual(await menu(), ['n:' + Math.floor(pre.mine / 2), 'n:' + pre.mine, 'cancel']); assert.ok((await p.$eval('.dh-note', e => e.textContent)).includes(pre.who.join(' · ') + ' 부대로 나뉘어 나선다'));
-  await p.click(`button[data-id="n:${pre.mine}"]`); let B = await bs(); assert.deepStrictEqual([B.n, B.me, B.side, B.day, B.mode], [2, 'att', 'att', 1, 'fight']);
-  assert.deepStrictEqual(await info(), { 전장: '수춘', 날: '1/20일', 차례: '공격 측', '공격 유비': fmt(pre.mine), '수비 조조': fmt(pre.foe) }); assert.strictEqual(await title(), '수춘 전투'); assert.deepStrictEqual(await menu(), ['wait!', 'end', 'auto', 'retreat']);
+  await p.click(`button[data-id="n:${pre.mine}"]`); assert.deepStrictEqual(await G(() => [__dh.engine.scenes.length, !!__dh.scene.hold]), [1, true], '부대가 수춘까지 걸어가는 동안은 지도에 머문다'); assert.ok((await p.$eval('.dh-note', e => e.textContent)).includes('부대가 길을 가는 중이다')); await step(1); await p.screenshot({ path: shot + '/ui-sam-march.png' });
+  await step(40); let B = await bs(); assert.deepStrictEqual([B.n, B.me, B.side, B.day, B.mode], [2, 'att', 'att', 1, 'fight']);
+  { const { 날씨, ...rest } = await info(); assert.deepStrictEqual(rest, { 전장: '수춘', 날: '1/20일', 차례: '공격 측', '공격 유비': fmt(pre.mine), '수비 조조': fmt(pre.foe) }); assert.ok(/^바람 [←→↖↗↙↘]$/.test(날씨), 날씨); } assert.strictEqual(await title(), '수춘 전투'); assert.deepStrictEqual(await menu(), ['wait!', 'end', 'auto', 'retreat', 'duel!', 'fire!']);
   assert.deepStrictEqual(await G(() => { const b = __dh.engine.scene.b; return [b.grid.cols, b.grid.rows, b.grid.kind]; }), [10, 10, 'hex']); assert.deepStrictEqual(B.units.map(u => u.name), [...pre.who, '만총'], '수춘은 태수 만총이 지킨다'); assert.strictEqual(B.units.filter(u => u.side === 'att').reduce((n, u) => n + u.troops, 0), pre.mine, '보낸 병력을 부대 수로 나눈다');
   const me0 = B.units[0]; assert.deepStrictEqual([me0.c, me0.r], [1, 4]); await step(1); const before = await px(0, 4, 0, 12); await tapHex(1, 4); B = await bs(); await step(1); const after = await px(0, 4, 0, 12);
   assert.strictEqual(B.sel, 'att0'); assert.ok(B.reach.length > 15 && B.reach.every(v => v[2] <= 5), '이동력 5 안쪽만'); assert.ok(before[2] > 150 && after[2] < 140 && after[0] > after[2] + 60, `갈 수 있는 칸이 노랗게 ${before} → ${after}`);
-  const COST = { plain: 1, mountain: 3, river: 4, castle: 1 }; for (const v of B.reach) if (hexDist([v[0], v[1]], [1, 4]) === 1) assert.strictEqual(v[2], COST[v[3]], '바로 옆 칸은 그 지형 값'); assert.ok(!B.reach.some(v => v[3] === 'river' && v[2] < 4) && !B.reach.some(v => v[3] === 'mountain' && v[2] < 3));
+  const COST = { plain: 1, forest: 2, mountain: 3, river: 4, castle: 1 }; for (const v of B.reach) if (hexDist([v[0], v[1]], [1, 4]) === 1) assert.strictEqual(v[2], COST[v[3]], '바로 옆 칸은 그 지형 값'); assert.ok(!B.reach.some(v => v[3] === 'river' && v[2] < 4) && !B.reach.some(v => v[3] === 'mountain' && v[2] < 3));
   const terr = await G(() => __dh.engine.scene.b.tiles.flat().reduce((o, t) => (o[t] = (o[t] || 0) + 1, o), {}));
   let hits = 0, shown = null, moves = 0;
   for (let guard = 0; guard < 80 && !B.winner; guard++) {
@@ -118,29 +121,30 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
       const go = B.reach.filter(v => v[0] !== u.c || v[1] !== u.r).sort((x, y) => hexDist([x[0], x[1]], [foe.c, foe.r]) - hexDist([y[0], y[1]], [foe.c, foe.r]) || x[2] - y[2])[0];
       if (!go) { await p.click('button[data-id=wait]'); B = await bs(); continue; }
       await tapHex(go[0], go[1]); B = await bs(); const mv = B.units.find(x => x.id === u.id); assert.deepStrictEqual([mv.c, mv.r, mv.moved], [go[0], go[1], true], '찍은 칸으로 옮겨 갔다'); moves++; }
-    if (B.targets.length) { const t = B.targets[0], me = B.units.find(x => x.id === u.id), want = Math.min(t.troops, Math.floor(me.troops * me.war * (100 - Math.round(t.def * 100)) / 10000));
+    if (B.targets.length) { const t = B.targets[0], me = B.units.find(x => x.id === u.id), want = Math.min(t.troops, Math.floor(me.troops * me.war * (100 - Math.round(t.def * 100)) * (150 + B.drill.att) * (100 + B.gen[me.id]) / (10000 * 200 * 100)));
       const row = Object.entries(await rows()).find(([k]) => k.endsWith(' 치기')); assert.ok(row && row[1].endsWith('= ' + fmt(want)), '조작 창의 피해 셈 ' + JSON.stringify(row)); if (!shown) shown = row[1];
       await step(1); let red = false; for (const dy of [-18, -19, -20, -21, -22, -23, -24]) { const c = await px(t.c, t.r, 0, dy); if (c[0] > 150 && c[1] < 110) red = true; } assert.ok(red, '칠 수 있는 적에 붉은 테');
-      await tapHex(t.c, t.r); B = await bs(); const now = B.units.find(x => x.id === t.id); assert.strictEqual(now.troops, t.troops - want, '피해 = 병력 × 무력 ÷ 100 × (1 − 지형)'); assert.ok(B.units.find(x => x.id === u.id).done, '치면 그날은 끝'); hits++; }
+      await tapHex(t.c, t.r); B = await bs(); const now = B.units.find(x => x.id === t.id); assert.strictEqual(now.troops, t.troops - want, '피해 = 병력 × 무력 ÷ 100 × (1 − 지형) × (150 + 훈련) ÷ 200'); assert.ok(B.units.find(x => x.id === u.id).done, '치면 그날은 끝'); hits++; }
     else assert.ok(B.units.find(x => x.id === u.id).done, '칠 적이 없으면 그날 일을 마친다');
   }
   assert.deepStrictEqual([B.winner, B.mode], ['att', 'result'], JSON.stringify(B)); assert.ok(hits >= 2 && moves >= 2); assert.deepStrictEqual(await menu(), ['back']); assert.strictEqual((await info()).차례, '끝'); assert.ok((await rows()).결과.startsWith('이겼다'));
   await step(40); await p.screenshot({ path: shot + '/ui-sam-result.png' }); await p.click('button[data-id=back]');
   const post = await G(() => { const g = __dh.game; return { n: __dh.engine.scenes.length, owner: g.P(16).owner, troops: g.P(16).troops, at: [...g.officers.values()].filter(o => o.faction === 'liubei').map(o => [o.id, o.province]), home: g.P(13).troops, mode: __dh.scene.mode, sel: __dh.scene.selected, acted: g.P(16).acted }; });
-  assert.deepStrictEqual([post.n, post.owner, post.home, post.mode, post.sel, post.acted], [1, 'liubei', 0, 'play', 16, true]); for (const [id, at] of post.at) assert.strictEqual(at, pre.ids.includes(id) ? 16 : 13, '나선 장수는 수춘으로, 남은 장수는 하비에'); assert.strictEqual(post.troops, B.units.filter(u => u.side === 'att').reduce((n, u) => n + u.troops, 0), '남은 병력이 그대로 들어간다');
+
+  assert.deepStrictEqual([post.n, post.owner, post.home, post.mode, post.sel, post.acted], [1, 'liubei', 0, 'play', 16, true]); for (const [id, at] of post.at) assert.strictEqual(at, pre.ids.includes(id) || !pre.all.includes(id) ? 16 : 13, '나선 장수는 수춘으로, 남은 장수는 하비에(사로잡혀 우리 편이 된 장수는 수춘에)'); assert.strictEqual(post.troops, B.units.filter(u => u.side === 'att').reduce((n, u) => n + u.troops, 0), '남은 병력이 그대로 들어간다');
   assert.strictEqual((await info()).주, String(pre.n + 1)); assert.strictEqual(await title(), '수춘 壽春'); assert.strictEqual((await rows()).세력, '유비 · 우리 땅'); assert.ok((await logTop(2)).includes('유비 군이 수춘을 차지했다'));
   await step(1); const dot = await G(() => { const s = __dh.scene, P = s.pos.get(16), k = s.cam.toScreen(P.x, P.y - 3), cv = document.querySelector('.dh-canvas'), f = cv.width / 480; return [...cv.getContext('2d').getImageData(Math.round(k.x * f), Math.round(k.y * f), 1, 1).data].slice(0, 3); });
   assert.ok(dot[1] > dot[0] + 30 && dot[1] > dot[2] + 30, '지도에서 수춘이 유비의 색으로 ' + dot);
   ok(`동현삼: 침공 → 10×10 육각 전장(${Object.entries(terr).map(([k, v]) => k + ' ' + v).join(' · ')}) · 이동 범위(평지 1 · 산 3 · 강 4) · 손으로 ${moves}번 옮기고 ${hits}번 침(${shown}) · 승리 → 수춘의 주인이 유비로 · 지도로 복귀`);
 
   // 7) 물러난다(퇴각) → 모두 잃으면 판이 끝난다 → 다시 하기
-  await G(() => { const g = __dh.game; for (const q of g.provinces.values()) if (q.owner && q.owner !== 'liubei') q.troops = 30000; }); await p.click('button[data-id=end]'); let ret = null;
+  await G(() => { const g = __dh.game; for (const q of g.provinces.values()) if (q.owner && q.owner !== 'liubei') { q.troops = 30000; q.drill = 60; } }); await p.click('button[data-id=end]'); let ret = null;      // 훈련이 55 아래면 AI는 치기 전에 조련부터 한다
   await finishAI(async () => { let d = await bs(); const where = (await info()).전장; for (let i = 0; i < 40 && d.side !== 'def' && !d.winner; i++) { await step(20); d = await bs(); }
     await p.click('button[data-id=retreat]'); await p.click('button[data-id=yes]'); d = await bs(); assert.deepStrictEqual([d.winner, d.mode], ['att', 'result']); assert.ok((await rows()).결과.includes('졌다 · 수비 측이 성을 버렸다')); ret = where;
     await step(10); await tapHex(5, 5); assert.strictEqual(await G(() => __dh.engine.scenes.length), 2, '끝난 직후의 손짓은 카드를 넘기지 않는다'); await step(40); await tapHex(5, 5); assert.strictEqual(await G(() => __dh.engine.scenes.length), 1, '결과 카드를 찍으면 지도로 돌아온다'); });
   assert.ok(ret, '침공받았다'); assert.notStrictEqual(await p.evaluate(w => [...__dh.game.provinces.values()].find(q => q.name === w).owner, ret), 'liubei', '물러난 주는 넘어갔다');
-  if (!(await G(() => __dh.game.over))) { await G(() => { const g = __dh.game; for (const q of g.provinces.values()) { if (q.owner === 'liubei') q.troops = 0; else if (q.owner) q.troops = 30000; } }); await p.click('button[data-id=end]'); await finishAI(); }
-  assert.deepStrictEqual(await G(() => [__dh.game.over, __dh.scene.mode, __dh.game.factions.get('liubei').alive, __dh.game.provincesOf('liubei').length, __dh.game.officers.get(122).status]), ['lost', 'over', false, 0, 'free']);
+  if (!(await G(() => __dh.game.over))) { await G(() => { const g = __dh.game; for (const q of g.provinces.values()) { if (q.owner === 'liubei') q.troops = 0; else if (q.owner) { q.troops = 30000; q.drill = 60; } } }); await p.click('button[data-id=end]'); await finishAI(); }
+  assert.deepStrictEqual(await G(() => [__dh.game.over, __dh.scene.mode, __dh.game.factions.get('liubei').alive, __dh.game.provincesOf('liubei').length, [...__dh.game.officers.values()].filter(o => o.faction === 'liubei' && o.status === 'active').length]), ['lost', 'over', false, 0, 0], '유비의 장수는 재야로 흩어지거나 사로잡혀 남의 편이 된다');
   assert.deepStrictEqual(await menu(), ['again']); await step(1); await p.screenshot({ path: shot + '/ui-sam-over.png' });
   await p.click('button[data-id=again]'); assert.strictEqual((await info()).군주, '고르는 중'); await p.click('button[data-id="f:cao"]');
   const caoT = fmt(await G(() => __dh.world.provincesOf('cao').reduce((n, q) => n + q.troops, 0)));
@@ -169,8 +173,8 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   const setCode = text => p.fill('#code', text), runLang = async () => { await p.click('#run'); return lang(); }, compose = list => p.evaluate(list => __dh.lang.compose(list, '', { world: __dh.world }), list);
   const label = id => p.$eval(`button[data-id="${id}"]`, e => e.textContent), note = () => p.$eval('.dh-note', e => e.textContent);
   await G(() => __dh.engine.stop());
-  let lg = await lang(); assert.deepStrictEqual([lg.ex, lg.nums, lg.state], [['none', 'rich', 'stage', 'fast', 'calm', 'weak', 'unify', 'swap', 'scale', 'loop', 'heart'], '1 2 3 4 5 6 7 8 10 11 12 13 14 15 16 17 20 21 22 23 24 30', 'ok']);
-  const exNames = await p.$$eval('#example option', a => a.map(o => o.textContent)); assert.deepStrictEqual(exNames.map(t => t.slice(0, 5)), ['01 · ', '02 · ', '03 · ', '04 · ', '05 · ', '06 · ', '07 · ', '08 · ', '09 · ', '10 · ', '11 · ']); assert.strictEqual(exNames[1], '02 · 넉넉한 유비'); assert.strictEqual(exNames[10], '11 · 민심과 동맹: 싼 시혜 · 긴 동맹');
+  let lg = await lang(); assert.deepStrictEqual([lg.ex, lg.nums, lg.state], [['none', 'rich', 'stage', 'fast', 'calm', 'weak', 'unify', 'swap', 'scale', 'loop', 'heart', 'duel', 'crown'], '1 2 3 4 5 6 7 8 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 40 41 42', 'ok']);
+  const exNames = await p.$$eval('#example option', a => a.map(o => o.textContent)); assert.deepStrictEqual(exNames.map(t => t.slice(0, 5)), ['01 · ', '02 · ', '03 · ', '04 · ', '05 · ', '06 · ', '07 · ', '08 · ', '09 · ', '10 · ', '11 · ', '12 · ', '13 · ']); assert.strictEqual(exNames[1], '02 · 넉넉한 유비'); assert.strictEqual(exNames[10], '11 · 민심과 동맹: 싼 시혜 · 긴 동맹');
   await p.selectOption('#example', 'loop'); lg = await runLang(); assert.strictEqual(lg.state, 'ok'); assert.ok(lg.out.startsWith('설정 8개를 적용하고 새 판을 열었다: 주 초기값 북평 병력 10,000 · '), lg.out); assert.deepStrictEqual(await G(() => [2, 3, 4, 5, 6, 7, 8, 9].map(n => __dh.game.P(n).troops)), Array(8).fill(10000), '반복문 예제: 원소의 여덟 주가 모두 10,000');
   await p.selectOption('#example', 'scale'); lg = await runLang(); assert.ok(lg.out.startsWith('설정 4개를 적용하고 새 판을 열었다: 군주 유비 · 우리 주 시작 금 5,000 · 우리 주 시작 쌀 20,000 · 징병 수량 2,000'), lg.out); assert.ok(lg.code.startsWith('나는 동현이냐?') && lg.code.endsWith('동현이구나'));
   await p.selectOption('#example', 'rich'); assert.ok((await lang()).code.includes('ㅋㅋ 3번')); lg = await runLang(); assert.strictEqual(lg.state, 'ok');
@@ -182,15 +186,15 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await setCode('안녕'); lg = await runLang(); assert.strictEqual(lg.state, 'error'); const badText = lg.out;
   assert.deepStrictEqual(await G(() => [__dh.game.__mark, __dh.game.P(12).gold >= 2800, __dh.state.rules.draft.troops]), [1, true, 2000], '오류가 나면 하던 판과 설정이 그대로다');
   await p.selectOption('#example', 'none'); lg = await runLang(); assert.deepStrictEqual([lg.state, lg.out], ['ok', '설정이 없다. 기본값으로 새 판을 열었다.']); assert.strictEqual((await info()).군주, '고르는 중'); assert.strictEqual(await G(() => __dh.state.rules.draft.troops), 1000);
-  ok(`동현랭 칸(동현삼): 예제 열(이름 앞 번호 01~10) · 10 반복문과 09 변수 적용 · 설정 번호 표 18줄 · ‘넉넉한 유비’ 적용(금 3,000 · 쌀 20,000 · 징병 2,000 · 유비 무력 90) · 틀린 값과 동현랭이 아닌 글(“${badText.slice(0, 40)}…”)은 하던 판을 그대로 둔다 · 설정 없음 → 기본값`);
+  ok(`동현랭 칸(동현삼): 예제 열(이름 앞 번호 01~13) · 10 반복문과 09 변수 적용 · 설정 번호 표 32줄 · ‘넉넉한 유비’ 적용(금 3,000 · 쌀 20,000 · 징병 2,000 · 유비 무력 90) · 틀린 값과 동현랭이 아닌 글(“${badText.slice(0, 40)}…”)은 하던 판을 그대로 둔다 · 설정 없음 → 기본값`);
 
   // ───────── 페이지: 시리즈 띠 · 탭 · 설명 글 · 편집기 · 화면 전환 ─────────
   const NAME = '동현삼', TABS = ['지도', '동현삼 출전 규약', '규칙', '엔진과 자료', '수학적 원리', '모델과 출처'], HEADS = { protocol: ['설정 번호', '예제 열'], rules: ['플레이 방법', '조작', '동현삼 규칙'], engine: ['엔진의 층', '게임이 얹는 법', '동현랭 어댑터', 'JSON 규격', '파일', '돌려 보기'], about: ['상표와 관계', '이 자료가 무엇이고 무엇이 아닌지', '자료 출처'] };
   const band = await p.evaluate(() => ({ n: document.querySelectorAll('.series-item').length, ctx: document.querySelector('.series-context').textContent, here: [...document.querySelectorAll('.series-item[aria-current=page]')].map(a => a.querySelector('.series-name').textContent), hrefs: [...document.querySelectorAll('a.series-item')].map(a => a.getAttribute('href')),
     ed: document.querySelector('.edition').textContent.trim(), foot: document.querySelector('footer').textContent, title: document.title, left: document.documentElement.innerHTML.match(/__[A-Z_]+__|<!--README/g) }));
-  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [19, [NAME + '™'], 18, null]); assert.ok(band.ctx.includes('열여덟 개의 작은 세계') && band.ed.startsWith('v0.36') && band.foot.includes(NAME + ' v0.36') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
+  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [19, [NAME + '™'], 18, null]); assert.ok(band.ctx.includes('열여덟 개의 작은 세계') && band.ed.startsWith('v1.00') && band.foot.includes(NAME + ' v1.00') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
   assert.ok(band.hrefs.every(h => /^https:\/\/raspberry-kim\.github\.io\/donghyun-(lang|lab\d+)\/$/.test(h)) && new Set(band.hrefs).size === 18, '띠의 주소 열여덟 개가 서로 다르다');
-  ok(`시리즈 띠 19칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v0.36 · 빌드 자리표가 남지 않았다`);
+  ok(`시리즈 띠 19칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v1.00 · 빌드 자리표가 남지 않았다`);
 
   const tabsNow = () => p.evaluate(() => ({ names: [...document.querySelectorAll('.tabs button')].map(b => b.textContent), on: [...document.querySelectorAll('.tabs button[aria-current=page]')].map(b => b.dataset.tab), shown: [...document.querySelectorAll('.tab-panel')].filter(x => !x.hidden).map(x => x.id), sw: document.documentElement.scrollWidth, run: __dh.engine.loop.running }));
   await G(() => __dh.engine.start()); let T = await tabsNow(); assert.deepStrictEqual([T.names, T.on, T.shown, T.run], [TABS, ['play'], ['tab-play'], true]);
@@ -220,7 +224,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await p.selectOption('#example', 'none'); await p.setInputFiles('#open', { name: 'mine.dh', mimeType: 'text/plain', buffer: Buffer.from(saved.replace(/\n/g, '\r\n')) }); await p.waitForTimeout(400); E = await ed(); assert.strictEqual(E.code + '\n', saved, '.dh를 열면 저장한 그대로'); assert.strictEqual(E.note, '');
   await p.focus('#code'); await p.keyboard.press('Control+Enter'); E = await ed(); assert.strictEqual(E.kind, 'ok'); assert.ok(/^설정 \d+개로 새 판$/.test(E.status) && E.out.startsWith('설정 '), E.status + ' / ' + E.out);
   const rule = await p.evaluate(() => { const d = document.querySelector('.lang-rule'); d.open = true; const t = d.querySelector('table'); return { head: [...t.querySelectorAll('th')].map(x => x.textContent), rows: [...t.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(td => td.textContent)), sw: document.documentElement.scrollWidth }; });
-  assert.deepStrictEqual(rule.head, ['번호', '설정', '값', '기본값']); assert.strictEqual(rule.rows.length, 22); assert.ok(rule.rows.every(r => r.length === 4 && /^\d+$/.test(r[0]) && r[1] && r[2]) && rule.sw <= 1280, JSON.stringify(rule.rows[0]));
+  assert.deepStrictEqual(rule.head, ['번호', '설정', '값', '기본값']); assert.strictEqual(rule.rows.length, 32); assert.ok(rule.rows.every(r => r.length === 4 && /^\d+$/.test(r[0]) && r[1] && r[2]) && rule.sw <= 1280, JSON.stringify(rule.rows[0]));
   await p.evaluate(() => document.querySelector('.ed-panel').scrollIntoView({ block: 'center' })); await p.screenshot({ path: shot + '/ui-editor.png' });
   ok(`편집기: 줄 번호와 색 입히기 · 고치는 동안 미리 읽기(판은 그대로) · Ctrl+Enter 출전 · 틀린 코드는 하던 판을 둔다 · sortie.dh 저장 → 열기(줄 끝 CRLF도) → 출전 · 설정 번호 표 ${rule.rows.length}줄`);
 
@@ -270,6 +274,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   const zp = await m.evaluate(() => { document.querySelector('.dh-canvas').scrollIntoView({ block: 'center' }); const s = __dh.scene, P = s.pos.get(38), c = s.cam.toScreen(P.x, P.y), r = document.querySelector('.dh-canvas').getBoundingClientRect(); return { x: r.left + c.x * r.width / 480, y: r.top + c.y * r.height / 360 }; });
   await m.touchscreen.tap(zp.x, zp.y); assert.strictEqual(await m.evaluate(() => __dh.scene.selected), 38);
   await tapBtn('attack'); await tapBtn('to:23'); const all = await m.evaluate(() => __dh.game.P(38).troops); await tapBtn('n:' + all);
+  assert.ok(await m.evaluate(() => !!__dh.scene.hold && __dh.engine.scenes.length === 1), '부대가 걸어가는 동안은 지도에 머문다'); await m.evaluate(() => { const cv = document.querySelector('.dh-canvas'); cv.scrollIntoView({ block: 'center' }); }); { const R = await m.evaluate(() => { const r = document.querySelector('.dh-canvas').getBoundingClientRect(); return [r.left + 20, r.top + 20]; }); await m.touchscreen.tap(...R); }      // 지도를 한 번 누르면 행군을 건너뛴다
   assert.deepStrictEqual(await m.evaluate(() => [__dh.engine.scenes.length, __dh.engine.scene.me, __dh.engine.scene.b.sides.def.name]), [2, 'att', '장로']);
   await tapCell(1, 4); const ms = await m.evaluate(() => { const s = __dh.engine.scene; __dh.engine.step(1); return { sel: s.sel && s.sel.id, reach: s.reach.size, far: [...s.reach.values()].sort((a, b) => b.c - a.c || a.cost - b.cost)[0] }; }); assert.ok(ms.sel === 'att0' && ms.reach > 10);
   const tint = await m.evaluate(() => { const c = document.querySelector('.dh-canvas'), R = c.getBoundingClientRect(); return { hl: getComputedStyle(c).webkitTapHighlightColor, px: [...c.getContext('2d').getImageData(12, 12, 1, 1).data].slice(0, 3), x: R.left + 4, y: R.top + 4 }; });
@@ -277,7 +282,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   assert.deepStrictEqual(shotPx, tint.px, '찍은 뒤에도 캔버스에 누름 표시(푸른 덧칠)가 덮이지 않는다'); assert.strictEqual(tint.hl, 'rgba(0, 0, 0, 0)');
   await m.screenshot({ path: shot + '/ui-sam-phone-battle.png' }); await tapCell(ms.far.c, ms.far.r); assert.deepStrictEqual(await m.evaluate(() => { const u = __dh.engine.scene.b.units[0]; return [u.c, u.r, u.moved]; }), [ms.far.c, ms.far.r, true]);
   const MB = await m.evaluate(() => ({ sw: document.documentElement.scrollWidth, btn: Math.min(...[...document.querySelectorAll('.dh-menu button')].map(e => e.getBoundingClientRect().height)), n: document.querySelectorAll('.dh-menu button').length, info: document.querySelector('.dh-top').getBoundingClientRect().height }));
-  assert.ok(MB.sw <= 390 && MB.btn >= 44 && MB.n === 4 && MB.info < 140, JSON.stringify(MB));
+  assert.ok(MB.sw <= 390 && MB.btn >= 44 && MB.n === 6 && MB.info < 140, JSON.stringify(MB));
   await tapBtn('auto'); for (let i = 0; i < 100 && await m.evaluate(() => __dh.engine.scene.mode !== 'result'); i++) await m.evaluate(() => __dh.engine.step(60));
   await m.evaluate(() => __dh.engine.step(40)); await m.screenshot({ path: shot + '/ui-sam-phone-result.png' }); const win = await m.evaluate(() => __dh.engine.scene.res.winner); await tapBtn('back');
   assert.deepStrictEqual(await m.evaluate(() => [__dh.engine.scenes.length, __dh.game.P(23).owner]), [1, win === 'att' ? 'liuzhang' : 'zhanglu']);
@@ -334,8 +339,8 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await s.keyboard.press('Escape'); assert.strictEqual(await gm(), null); assert.deepStrictEqual([await S(() => __dh.engine.loop.running), await onMap()], [true, true], 'Esc로 닫으면 판이 다시 돌고 키보드는 지도에 듣는다');
   await s.click('#game-save'); await s.mouse.click(12, 12); assert.strictEqual(await gm(), null, '메뉴 바깥을 누르면 닫힌다'); await S(() => __dh.engine.stop());
   await s.click('#game-save'); await s.keyboard.press('Enter'); assert.strictEqual(await gm(), null); assert.deepStrictEqual(await status(), ['브라우저 칸 1에 저장했다 · 유비 · 200년 1월', '']);
-  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '0.36', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
-  await s.click('button[data-id=develop]'); assert.strictEqual(await S(() => __dh.game.P(12).farm), 51); assert.ok(await onMap(), '버튼을 누른 뒤에도 키보드는 지도에 듣는다');
+  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '1.00', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
+  await s.click('button[data-id=civil]'); await s.click('button[data-id=develop]'); assert.strictEqual(await S(() => __dh.game.P(12).farm), 51); assert.ok(await onMap(), '버튼을 누른 뒤에도 키보드는 지도에 듣는다');
   await s.click('#game-save'); M = await gm(); assert.ok(/^유비 · 200년 1월 · 주 2 · 병력 10,000 · \d+\/\d+ \d\d:\d\d 저장$/.test(M.notes[0]), M.notes[0]); await pick('브라우저 칸 1'); M = await gm(); assert.deepStrictEqual([M.title, M.items], ['칸 1에 덮어쓸까?', ['덮어쓴다', '그만둔다']]);
   await pick('그만둔다'); assert.strictEqual((await gm()).title, '저장'); assert.strictEqual((await slot(1)).game.provinces[11].farm, 45, '그만두면 칸은 그대로다');
   await pick('브라우저 칸 1'); await s.keyboard.press('Escape'); assert.strictEqual((await gm()).title, '저장', '되묻는 창에서 Esc는 앞 메뉴로 돌아간다'); await pick('브라우저 칸 1'); await pick('덮어쓴다'); assert.strictEqual(await gm(), null);
@@ -348,7 +353,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await pick('브라우저 칸 1'); M = await gm(); assert.deepStrictEqual([M.title, M.items], ['지금 판을 두고 칸 1을 불러올까? 저장하지 않은 진행은 사라진다.', ['불러온다', '그만둔다']]); await pick('그만둔다'); assert.strictEqual((await gm()).title, '불러오기'); assert.strictEqual(await whole(), feb);
   await pick('브라우저 칸 1'); await pick('불러온다'); assert.strictEqual(await gm(), null); assert.strictEqual(await whole(), afterDev); assert.deepStrictEqual(await sInfo(), { 날짜: '200년 1월', 군주: '유비', 주: '2', 병력: '10,000', '남은 명령': '1' });
   assert.deepStrictEqual(await status(), ['저장한 판을 불러왔다', '']); assert.strictEqual(await s.$eval('#result', e => e.textContent), '저장한 판을 불러왔다 · 유비 · 200년 1월 · 저장될 때의 설정: 기본값. 편집기의 코드는 그대로다.'); assert.ok(await onMap());
-  assert.deepStrictEqual((await sMenu()).slice(0, 8), ['develop!', 'draft!', 'move!', 'search!', 'attack!', 'relief!', 'ally!', 'end'], '이번 달 명령을 내린 것도 돌아온다');
+  assert.deepStrictEqual((await sMenu()).slice(0, 9), ['civil!', 'draft!', 'drill!', 'move!', 'attack!', 'search!', 'ally!', 'office', 'end'], '이번 달 명령을 내린 것도 돌아온다');
   await s.click('button[data-id=end]'); await sFinishAI(); assert.strictEqual(await whole(), feb, '불러온 뒤 같은 명령이면 같은 판이 이어진다');
   ok('불러오기: 빈 칸은 흐리다 · 되묻는다 · 칸 1을 불러오면 저장한 달 · 남은 명령 · 고른 주가 돌아온다 · 다시 턴 종료하면 앞서와 같은 200년 2월(난수까지 같다)');
 
@@ -379,7 +384,8 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
 
   // 전투 중 · 다른 군주들의 차례: 저장은 못 하고 불러오기는 된다(전투를 접는다) · 칸 지우기
   await s.click('#game-load'); await pick('브라우저 칸 1'); await pick('불러온다'); assert.strictEqual(await whole(), afterDev); await s.keyboard.press('Space'); assert.strictEqual(await S(() => __dh.scene.selected), 13);
-  await s.click('button[data-id=attack]'); await s.click('button[data-id="to:16"]'); await s.click('.dh-menu button.dh-primary'); assert.strictEqual(await S(() => __dh.engine.scenes.length), 2);
+  await s.click('button[data-id=attack]'); await s.click('button[data-id="to:16"]'); await s.click('.dh-menu button.dh-primary'); assert.deepStrictEqual(await S(() => [__dh.engine.scenes.length, !!__dh.scene.hold]), [1, true]);
+  await s.click('#game-save'); M = await gm(); assert.deepStrictEqual([M.title, M.text], ['지금은 저장할 수 없다', '부대가 닿은 뒤에 저장할 수 있다.']); await s.keyboard.press('Escape'); await S(() => __dh.engine.step(41)); assert.strictEqual(await S(() => __dh.engine.scenes.length), 2, '부대가 닿으면 전투가 열린다');
   await s.click('#game-save'); M = await gm(); assert.deepStrictEqual([M.title, M.text], ['지금은 저장할 수 없다', '전투가 끝난 뒤에 저장할 수 있다.']); await s.keyboard.press('Escape');
   await s.click('#game-load'); await pick('브라우저 칸 1'); await pick('불러온다'); assert.deepStrictEqual([await S(() => __dh.engine.scenes.length), await whole() === afterDev, await S(() => document.querySelector('.dh-detail-title').textContent)], [1, true, '소패 小沛']);
   await s.click('button[data-id=end]'); assert.strictEqual(await S(() => __dh.scene.mode), 'busy'); await s.click('#game-save'); M = await gm(); assert.deepStrictEqual([M.title, M.text], ['지금은 저장할 수 없다', '다른 군주들의 차례가 끝난 뒤에 저장할 수 있다.']); await pick('돌아가기'); await sFinishAI(); assert.strictEqual(await whole(), feb);
@@ -410,25 +416,25 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await press('3'); assert.strictEqual(await K(() => __dh.game.player), null, '지도를 찍기 전에는 키를 듣지 않는다'); await k.mouse.click(...cvXY); assert.ok(await onMap(k));
   assert.deepStrictEqual(await badges(), ['1:f:cao', '2:f:yuan', '3:f:liubei', '4:f:liubiao', '5:f:sun', '6:f:liuzhang', '7:f:zhanglu', '8:f:mateng', '9:f:gongsundu']);
   await press('ArrowRight'); const first = await K(() => __dh.scene.selected); assert.ok(first !== null, '군주를 고르기 전에도 방향키로 주를 본다'); await press('Escape'); assert.strictEqual(await K(() => __dh.scene.selected), null);
-  await press('3'); assert.deepStrictEqual([await K(() => __dh.game.player), await K(() => __dh.scene.selected)], ['liubei', 12]); assert.deepStrictEqual(await badges(), ['1:develop', '2:draft', '3:move', '4:search', '5:attack', '6:relief', '7:ally', '8:end']);
+  await press('3'); assert.deepStrictEqual([await K(() => __dh.game.player), await K(() => __dh.scene.selected)], ['liubei', 12]); assert.deepStrictEqual(await badges(), ['1:civil', '2:draft', '3:drill', '4:move', '5:attack', '6:search', '7:ally', '8:office', '9:end']);
   await K(() => __dh.engine.step(1)); await k.screenshot({ path: shot + '/ui-key-map.png' });
   const seen = new Set([12]); for (const key of ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowRight', 'ArrowDown']) { const a = await K(() => __dh.scene.selected); await press(key); const z = await K(() => __dh.scene.selected); assert.notStrictEqual(z, a, key); seen.add(z); } assert.ok(seen.size >= 4, [...seen].join(' '));
-  // 첫 달: Space로 소패 → 3 이동 → 2 장비 → 방향키로 하비를 겨누고 Enter → 1 병력 없이 · Space로 하비 → 1 농지 개발 · + − · Enter 턴 종료
-  await press('Escape', 'Space'); assert.strictEqual(await K(() => __dh.scene.selected), 12); await press('3'); assert.strictEqual(await K(() => __dh.scene.sub.step), 'who'); assert.deepStrictEqual(await badges(), ['1:who:121', '2:who:123', '3:who:none', '4:cancel']);
+  // 첫 달: Space로 소패 → 4 이동 → 2 장비 → 방향키로 하비를 겨누고 Enter → 1 병력 없이 · Space로 하비 → 1 내정 → 1 농지 개발 · + − · Enter 턴 종료
+  await press('Escape', 'Space'); assert.strictEqual(await K(() => __dh.scene.selected), 12); await press('4'); assert.strictEqual(await K(() => __dh.scene.sub.step), 'who'); assert.deepStrictEqual(await badges(), ['1:who:121', '2:who:123', '3:who:none', '4:who:cart', '5:cancel']);
   await press('2'); assert.strictEqual(await K(() => __dh.scene.sub.step), 'to'); await press('ArrowRight'); assert.strictEqual(await K(() => __dh.scene.sub.aim), 13); await press('Enter'); assert.deepStrictEqual(await sMenu(k), ['n:0', 'n:2500', 'n:5000', 'cancel']);
   await press('1'); assert.deepStrictEqual([await K(() => __dh.game.officersOf(13).map(o => o.name).sort()), await K(() => __dh.game.P(12).troops), (await kInfo())['남은 명령']], [['관우', '장비'], 5000, '1']);
-  await press('3'); assert.strictEqual(await K(() => __dh.scene.sub), null, '흐린 버튼은 눌리지 않는다'); await press('Space'); assert.strictEqual(await K(() => __dh.scene.selected), 13); await press('1'); assert.deepStrictEqual([await K(() => __dh.game.P(13).farm > __dh.world.provinces.get(13).farm), (await kInfo())['남은 명령']], [true, '0']);
+  await press('4'); assert.strictEqual(await K(() => __dh.scene.sub), null, '흐린 버튼은 눌리지 않는다'); await press('Space'); assert.strictEqual(await K(() => __dh.scene.selected), 13); await press('1'); assert.deepStrictEqual(await badges(), ['1:develop', '2:flood', '3:trade', '4:relief', '5:cancel']); await press('1'); assert.deepStrictEqual([await K(() => __dh.game.P(13).farm > __dh.world.provinces.get(13).farm), (await kInfo())['남은 명령']], [true, '0']);
   const z0 = await K(() => __dh.scene.cam.zoom); await press('Equal'); const z1 = await K(() => __dh.scene.cam.zoom); await press('Minus'); assert.ok(z1 > z0 && await K(() => __dh.scene.cam.zoom) === z0);
   await press('Enter'); assert.strictEqual(await K(() => __dh.scene.mode), 'busy'); const busy = await K(() => __dh.scene.selected); await press('1', 'Space', 'ArrowUp'); assert.strictEqual(await K(() => __dh.scene.selected), busy, '다른 군주들의 차례에는 키를 듣지 않는다'); await sFinishAI(k); assert.strictEqual((await kInfo()).날짜, '200년 2월');
-  // 둘째 달: 유비도 병력을 모두 데리고 하비로(3 → 1 → 방향키 · Enter → 3, 소패는 공백지가 된다) → Space로 하비 → 5 침공 → 방향키로 겨눈다 → Esc로 그만두기 → 다시 5 → 방향키 → Enter → Enter(전부)
-  await press('Escape', 'Space'); assert.strictEqual(await K(() => __dh.scene.selected), 12); await press('3', '1', 'ArrowRight', 'Enter', '3'); assert.deepStrictEqual(await K(() => __dh.game.fighters(13).map(o => o.name)), ['관우', '장비'], '장수 셋이 모이면 두 부대가 나선다'); assert.deepStrictEqual(await K(() => [__dh.game.P(12).owner, __dh.game.P(12).troops]), [null, 0], '마지막 장수 유비가 병력을 모두 데리고 떠난 소패는 공백지가 된다');
+  // 둘째 달: 유비도 병력을 모두 데리고 하비로(4 → 1 → 방향키 · Enter → 3, 소패는 공백지가 된다) → Space로 하비 → 5 침공 → 방향키로 겨눈다 → Esc로 그만두기 → 다시 5 → 방향키 → Enter → Enter(전부)
+  await press('Escape', 'Space'); assert.strictEqual(await K(() => __dh.scene.selected), 12); await press('4', '1', 'ArrowRight', 'Enter', '3'); assert.deepStrictEqual(await K(() => __dh.game.fighters(13).map(o => o.name)), ['관우', '장비'], '장수 셋이 모이면 두 부대가 나선다'); assert.deepStrictEqual(await K(() => [__dh.game.P(12).owner, __dh.game.P(12).troops]), [null, 0], '마지막 장수 유비가 병력을 모두 데리고 떠난 소패는 공백지가 된다');
   await press('Space'); assert.strictEqual(await K(() => __dh.scene.selected), 13); await press('5'); assert.deepStrictEqual([await K(() => __dh.scene.sub.step), await K(() => __dh.scene.sub.aim ?? null)], ['to', null]);
   await press('ArrowDown'); const aim = await K(() => __dh.scene.sub.aim); assert.ok(aim != null); assert.strictEqual(await k.$eval('.dh-menu button.dh-primary', e => e.dataset.id), 'to:' + aim, '겨눈 주의 버튼이 노랗다'); await K(() => __dh.engine.step(1)); await k.screenshot({ path: shot + '/ui-key-aim.png' });
   await press('Escape'); assert.deepStrictEqual([await K(() => __dh.scene.sub), await K(() => __dh.scene.selected)], [null, 13], 'Esc는 고르던 것만 그만둔다'); await press('5', 'ArrowDown', 'Enter'); assert.deepStrictEqual([await K(() => __dh.scene.sub.to), (await sMenu(k)).length], [aim, 3]);
-  await press('Enter'); assert.strictEqual(await K(() => __dh.engine.scenes.length), 2, 'Enter(전부)로 전장이 열린다');
+  await press('Enter'); assert.deepStrictEqual(await K(() => [__dh.engine.scenes.length, !!__dh.scene.hold]), [1, true], 'Enter(전부)로 부대가 길을 나선다'); await press('Space'); assert.strictEqual(await K(() => __dh.engine.scenes.length), 2, '아무 키나 누르면 행군을 건너뛰고 전장이 열린다');
   // 전투: 방향키 칸 커서 → Enter로 고르고 옮긴다 → Space 다음 부대 → 1 대기 → 4 퇴각을 되묻는다 → Enter(돌아가기) → 3 맡기기 → 결과 카드에서 Enter
   const kb = () => K(() => { const z = __dh.engine.scene, b = z.b; return { cur: z.cur && [z.cur.c, z.cur.r], sel: z.sel && z.sel.id, ask: z.ask, auto: z.auto, mode: z.mode, my: z.myTurn, reach: [...z.reach.values()].map(v => [v.c, v.r]), mine: b.alive(z.me).map(u => ({ id: u.id, c: u.c, r: u.r, done: u.done, moved: u.moved })) }; });
-  let B = await kb(); assert.deepStrictEqual([B.cur, B.sel, B.my], [null, null, true]); assert.deepStrictEqual(await badges(), ['1:wait', '2:end', '3:auto', '4:retreat']);
+  let B = await kb(); assert.deepStrictEqual([B.cur, B.sel, B.my], [null, null, true]); assert.deepStrictEqual(await badges(), ['1:wait', '2:end', '3:auto', '4:retreat', '5:duel', '6:fire']);
   await press('ArrowRight'); B = await kb(); const u0 = B.mine.find(u => !u.done); assert.deepStrictEqual([B.cur, B.sel], [[u0.c, u0.r], null], '첫 방향키는 우리 부대 자리에 커서를 만든다'); await press('Enter'); B = await kb(); assert.strictEqual(B.sel, u0.id); assert.ok(B.reach.length > 0);
   const row = B.reach.filter(v => v[1] === u0.r && v[0] !== u0.c).sort((a, z) => Math.abs(a[0] - u0.c) - Math.abs(z[0] - u0.c))[0]; assert.ok(row, '같은 줄에 갈 칸이 있다');
   for (let i = 0; i < Math.abs(row[0] - u0.c); i++) await press(row[0] > u0.c ? 'ArrowRight' : 'ArrowLeft'); B = await kb(); assert.deepStrictEqual(B.cur, row); await K(() => __dh.engine.step(1)); await k.screenshot({ path: shot + '/ui-key-battle.png' });
@@ -440,7 +446,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await press('3'); for (let i = 0; i < 400 && (await kb()).mode !== 'result'; i++) await K(() => __dh.engine.step(20)); assert.strictEqual((await kb()).mode, 'result'); assert.deepStrictEqual(await badges(), ['1:back']);
   await press('Enter'); assert.strictEqual(await K(() => __dh.engine.scenes.length), 2, '결과 카드는 잠깐 본 뒤에 닫힌다'); await K(() => __dh.engine.step(40)); await press('Enter'); assert.strictEqual(await K(() => __dh.engine.scenes.length), 1); assert.ok(await onMap(k));
   await press('Space'); assert.ok(await K(() => __dh.scene.selected) !== null, '전투 뒤에도 지도가 키를 듣는다');
-  ok(`키보드만으로 두 달과 전투 하나: 지도를 찍기 전에는 듣지 않는다 · 3으로 유비 · 방향키로 주 고르기(${seen.size}곳) · Space · 3 이동(2 장비 → 방향키 · Enter → 1 병력 없이) · 1 농지 개발 · + − · Enter 턴 종료 · 5 침공 → 방향키로 겨누고 Enter 둘 → 전장에서 칸 커서 · Enter로 옮기기 · Space 다음 부대 · 1 대기 · 4 퇴각 → Enter(돌아가기) · 3 맡기기 · 결과 카드 Enter`);
+  ok(`키보드만으로 두 달과 전투 하나: 지도를 찍기 전에는 듣지 않는다 · 3으로 유비 · 방향키로 주 고르기(${seen.size}곳) · Space · 4 이동(2 장비 → 방향키 · Enter → 1 병력 없이) · 1 내정 → 1 농지 개발 · + − · Enter 턴 종료 · 5 침공 → 방향키로 겨누고 Enter 둘 → 아무 키로 행군 건너뛰기 → 전장에서 칸 커서 · Enter로 옮기기 · Space 다음 부대 · 1 대기 · 4 퇴각 → Enter(돌아가기) · 3 맡기기 · 결과 카드 Enter`);
 
   // 휴대폰(390px): 저장 줄과 메뉴가 화면 안에 · 손가락으로 저장하고 불러온다 · 버튼 번호는 숨는다
   const pc = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }), h = await pc.newPage(); h.on('pageerror', e => errs.push('h ' + e.message)); await open(h);
@@ -451,7 +457,7 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
   await tap('#game-save'); const pm = await h.evaluate(() => { const m = document.querySelector('#menu').getBoundingClientRect(), it = [...document.querySelectorAll('#menu .mi')].map(e => e.getBoundingClientRect()); return { l: m.left, r: m.right, t: m.top, b: m.bottom, h: Math.min(...it.map(x => x.height)), n: it.length, sw: document.documentElement.scrollWidth, ih: innerHeight }; });
   assert.ok(pm.l >= 0 && pm.r <= 390 && pm.t >= 0 && pm.b <= pm.ih && pm.h >= 44 && pm.n === 6 && pm.sw <= 390, JSON.stringify(pm)); await h.evaluate(() => __dh.engine.step(1)); await h.screenshot({ path: shot + '/ui-phone-save.png' });
   await tapItem('브라우저 칸 1'); assert.strictEqual(await h.$eval('#status', e => e.textContent), '브라우저 칸 1에 저장했다 · 유비 · 200년 1월'); const p0 = await whole(h);
-  await tap('button[data-id=develop]'); assert.notStrictEqual(await whole(h), p0); await tap('#game-load'); await tapItem('브라우저 칸 1'); await tapItem('불러온다'); assert.strictEqual(await whole(h), p0); assert.strictEqual(await gm(h), null);
+  await tap('button[data-id=civil]'); await tap('button[data-id=develop]'); assert.notStrictEqual(await whole(h), p0); await tap('#game-load'); await tapItem('브라우저 칸 1'); await tapItem('불러온다'); assert.strictEqual(await whole(h), p0); assert.strictEqual(await gm(h), null);
   await tap('#game-load'); await h.touchscreen.tap(8, 8); assert.strictEqual(await gm(h), null, '메뉴 바깥을 누르면 닫힌다');
   ok(`휴대폰: 저장 · 불러오기 · 전체 화면 버튼이 한 줄(높이 ${Math.round(bar.h)}px) · 메뉴가 390px 안(버튼 ${Math.round(pm.h)}px) · 손가락으로 칸 1 저장 → 불러오기 · 버튼 번호는 숨김`);
 
@@ -531,8 +537,8 @@ const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.jo
     // 전체 화면(낮은 화면 1280×720): 카드가 맨 위 · 명령 버튼이 창 안에 붙어 있다 · 배율 그대로
     await c.setViewportSize({ width: 1280, height: 720 }); await c.click('#full'); await c.waitForTimeout(400); await tapP(13); const F = await look(), fb = await E(() => { const pn = document.querySelector('.dh-panel').getBoundingClientRect(); return { n: document.querySelectorAll('.dh-menu button').length, in: [...document.querySelectorAll('.dh-menu button')].every(e => { const r = e.getBoundingClientRect(); return r.top >= pn.top && r.bottom <= pn.bottom + 1; }), over: document.querySelector('.dh-panel').scrollHeight > document.querySelector('.dh-panel').clientHeight }; });
     assert.ok(/\bfs\b/.test(F.cls) && F.first === 'sam-counsel' && F.zoom === 1.125 && F.out === 0 && F.under.length === 0 && F.card.t >= F.panel.t && F.card.b < F.panel.b && F.faces[0].w === 54, JSON.stringify([F.cls, F.zoom, F.card, F.panel]));
-    assert.deepStrictEqual(fb, { n: 8, in: true, over: true }, '조작 창이 넘쳐도 명령 버튼 여덟이 창 안에 보인다'); await c.screenshot({ path: shot + '/ui-council-full-720.png' });
-    await c.click('.dh-menu button[data-id=develop]'); assert.strictEqual(await E(() => __dh.game.P(13).acted), true, '붙어 있는 버튼이 눌린다');
+    assert.deepStrictEqual(fb, { n: 9, in: true, over: true }, '조작 창이 넘쳐도 명령 버튼 아홉이 창 안에 보인다'); await c.screenshot({ path: shot + '/ui-council-full-720.png' });
+    await c.click('.dh-menu button[data-id=civil]'); await c.click('.dh-menu button[data-id=develop]'); assert.strictEqual(await E(() => __dh.game.P(13).acted), true, '붙어 있는 버튼이 눌린다');
     await c.setViewportSize({ width: 1512, height: 982 }); await c.waitForTimeout(300); const F2 = await look(); assert.ok(F2.faces[0].w === 72 && F2.zoom === 1.125 && F2.under.length === 0 && F2.sw <= F2.iw, JSON.stringify(F2.faces)); await c.screenshot({ path: shot + '/ui-council-full-1512.png' });
             await cx.close();
     ok('두 낭자: 출전 전부터 조작 창 맨 위에서 마주 본다 · 남의 땅은 군주와 병력(판의 값) · 우리 땅은 『장자』와 원문 링크 · 같은 주를 다시 누르면 다음 구절 · 두 테마 명암비 4.5 이상 · 처음 배율 1.125와 배율의 단 · 전체 화면에서 명령 버튼이 창 안'); }

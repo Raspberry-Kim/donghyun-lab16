@@ -1,5 +1,5 @@
 /* 동현삼 · 두 낭자 — 조작 창 맨 위에서 주군(플레이어)을 돕는 숨은 조언자.
- *   동행낭자  늘 '주군, …'으로 말을 연다. 우리 땅을 고르면 『장자』의 구절 100가지 가운데 하나를 읊고,
+ *   동행낭자  늘 '주군, …'으로 말을 연다. 왕에 오르신 뒤에는 '전하, …', 황제에 오르신 뒤에는 '폐하, …'로 바뀐다(판의 title). 우리 땅을 고르면 『장자』의 구절 100가지 가운데 하나를 읊고,
  *             우리 땅이 아닌 주를 고르면 그 땅이 어떤 곳인지와 지금의 군주 · 병력을 판의 값에서 셈해 아뢴다.
  *   수행낭자  동행낭자의 말이 바뀔 때마다 규칙과 수학적 원리를 한 마디씩 한다. 수치는 지금 판의 규칙 값(동현랭 설정 포함)에서 꺼낸다.
  * 구절과 한 마디는 주머니에서 꺼낸다: 섞어 넣은 것을 다 꺼낼 때까지 같은 것이 다시 나오지 않는다.
@@ -172,6 +172,9 @@
 
   /** 피해 식(sam-battle.js의 damage와 같다): 병력 × 무력 × (100 − round(100δ)) ÷ 10000, 내림 */
   const hit = (troops, war, def) => Math.floor(troops * war * (100 - Math.round(def * 100)) / 10000);
+  /** 세금 식(sam-rules.js의 income과 같다. 태수 없음): 인구 × 민심 × (floor + 상업) ÷ (taxDiv × 100 × 100), 내림 */
+  const tax = (c, pop, loy, trade = c.R.trade.start) => Math.floor(pop * loy * (c.R.trade.floor + trade) / (c.R.taxDiv * 100 * 100));
+  const up = (d, v, k = 'intDiv') => d.base + Math.floor(v / d[k]);
   /** 수행낭자의 한 마디. c = {R 내정 규칙, B 전투 수치, T 지형, g 판}. 수치는 모두 c에서 꺼낸다(동현랭으로 바꾼 값이 그대로 나온다). */
   const TIPS = [
     // ── 내정
@@ -181,8 +184,8 @@
     c => `농지 개발은 금 ${c.R.develop.gold}에 농지를 ${c.R.develop.base} + (지력 ÷ ${c.R.develop.intDiv}의 몫)만큼 넓힙니다. 지력 80이면 ${c.R.develop.base + Math.floor(80 / c.R.develop.intDiv)}입니다.`,
     c => `농지를 개발하면 민심도 ${c.R.develop.loyalty} 오릅니다. 농지는 ${c.R.farmMax}까지 넓힐 수 있습니다.`,
     c => `농지 1마다 달마다 쌀 ${J(c.R.ricePerFarm, '이', '가')} 들어옵니다. 농지 50이면 쌀 ${fmt(50 * c.R.ricePerFarm)}입니다.`,
-    c => `세금은 인구 ÷ ${fmt(c.R.taxDiv)} × 민심 ÷ 100입니다. 인구 20만에 민심 70이면 달마다 금 ${fmt(Math.floor(200000 / c.R.taxDiv * 70 / 100))}입니다.`,
-    c => `세금은 민심에 비례합니다. 인구 20만인 주는 민심 40에서 금 ${fmt(Math.floor(200000 / c.R.taxDiv * 40 / 100))}, 민심 100에서 금 ${J(Math.floor(200000 / c.R.taxDiv), '을', '를')} 냅니다.`,
+    c => `세금은 인구 ÷ ${fmt(c.R.taxDiv)} × 민심% × (${c.R.trade.floor} + 상업)%입니다. 인구 20만에 민심 70 · 상업 ${c.R.trade.start}이면 달마다 금 ${fmt(tax(c, 200000, 70))}입니다.`,
+    c => `세금은 민심에 비례합니다. 인구 20만에 상업 ${c.R.trade.start}인 주는 민심 40에서 금 ${fmt(tax(c, 200000, 40))}, 민심 100에서 금 ${J(tax(c, 200000, 100), '을', '를')} 냅니다.`,
     c => `병사 ${fmt(c.R.upkeepDiv)}명이 달마다 쌀 1을 먹습니다. 병력 10,000이면 쌀 ${fmt(Math.ceil(10000 / c.R.upkeepDiv))}입니다.`,
     c => `쌀이 떨어진 주에서는 그 달에 병력의 ${pct(c.R.desert)}%가 흩어집니다.`,
     c => `민심이 ${c.R.loyaltyRest} 아래인 주는 가만히 두어도 달마다 1씩 오릅니다.`,
@@ -192,7 +195,31 @@
     c => `재야 장수가 없는 주에서 수색하면 ${pct(c.R.search.goldChance)}% 확률로 금 ${c.R.search.goldMin}~${J(c.R.search.goldMax, '을', '를')} 얻습니다.`,
     c => `시혜는 쌀 ${J(c.R.relief.rice, '을', '를')} 풀어 민심을 ${c.R.relief.base} + (매력 ÷ ${c.R.relief.chaDiv}의 몫)만큼 올립니다. 매력 80이면 ${c.R.relief.base + Math.floor(80 / c.R.relief.chaDiv)}입니다.`,
     () => '주마다 한 달에 명령 하나입니다. 주가 늘수록 한 달에 할 수 있는 일도 늡니다.',
-    () => '명령은 그 주에 있는 장수 가운데 그 일에 맞는 능력이 가장 높은 이가 맡습니다. 개발은 지력, 징병 · 수색 · 시혜 · 동맹은 매력입니다.',
+    () => '명령은 그 주에 있는 장수 가운데 그 일에 맞는 능력이 가장 높은 이가 맡습니다. 농지 · 치수 · 상업은 지력, 훈련은 무력, 징병 · 수색 · 시혜 · 동맹은 매력입니다.',
+    c => `치수는 금 ${c.R.flood.gold}에 치수를 ${c.R.flood.base} + (지력 ÷ ${c.R.flood.intDiv}의 몫)만큼 올립니다. 지력 80이면 ${up(c.R.flood, 80)}이고, ${c.R.flood.max}까지 오릅니다.`,
+    c => `7월에 큰물이 들 확률은 ${pct(c.R.events.flood * c.R.events.scale / 100)}% × (100 − 치수)%입니다. 치수 30이면 ${+(c.R.events.flood * c.R.events.scale * 0.7).toFixed(1)}%, 치수 80이면 ${+(c.R.events.flood * c.R.events.scale * 0.2).toFixed(1)}%입니다.`,
+    c => `큰물이 들면 그 주는 농지의 ${pct(c.R.events.floodFarm)}%와 쌀의 ${pct(c.R.events.floodRice)}%를 잃습니다. 둑은 미리 쌓아 두셔야 합니다.`,
+    c => `상업은 금 ${c.R.trade.gold}에 상업을 ${c.R.trade.base} + (지력 ÷ ${c.R.trade.intDiv}의 몫)만큼 올립니다. 지력 80이면 ${up(c.R.trade, 80)}입니다.`,
+    c => `세금은 (${c.R.trade.floor} + 상업)%로 걷힙니다. 상업을 ${c.R.trade.start}에서 ${c.R.trade.max}까지 올리면 세금이 ${+((c.R.trade.floor + c.R.trade.max) / (c.R.trade.floor + c.R.trade.start)).toFixed(2)}배가 됩니다.`,
+    c => `훈련은 금 ${c.R.drill.gold}에 훈련을 ${c.R.drill.base} + (무력 ÷ ${c.R.drill.warDiv}의 몫)만큼 올립니다. 무력 90이면 ${up(c.R.drill, 90, 'warDiv')}입니다.`,
+    () => '부대가 주는 피해에는 (150 + 훈련) ÷ 200이 곱해집니다. 훈련 50이면 1배, 80이면 1.15배, 100이면 1.25배입니다.',
+    c => `갓 뽑은 병사의 훈련은 ${c.R.drill.recruit}입니다. 훈련 80인 병력 4,000에 1,000을 더 뽑으면 (4,000 × 80 + 1,000 × ${c.R.drill.recruit}) ÷ 5,000 = ${J(Math.round((4000 * 80 + 1000 * c.R.drill.recruit) / 5000), '이', '가')} 됩니다.`,
+    () => '병력이 다른 주로 옮겨 가면 두 병력의 훈련을 병력 수로 가중해 평균합니다. 가중평균은 수가 많은 쪽으로 기웁니다.',
+    () => '이동 명령으로 금과 쌀을 이웃한 우리 주로 실어 보낼 수 있습니다. 전선의 군량이 모자랄 때 쓰시지요.',
+    () => '1월에는 돌림병, 7월에는 큰물, 8월에는 메뚜기, 10월에는 풍년이 들 수 있습니다. 주마다 따로 셈합니다.',
+    c => `10월에 풍년이 들 확률은 주마다 ${pct(c.R.events.bumper * c.R.events.scale / 100)}%입니다. 풍년이 든 주는 ${c.R.events.bumperMonths}달 치 수확을 한꺼번에 얻습니다.`,
+    c => `메뚜기 떼는 쌀의 ${pct(c.R.events.locustRice)}%를, 돌림병은 인구의 ${pct(c.R.events.plaguePop)}%와 병력의 ${pct(c.R.events.plagueTroops)}%를 앗아 갑니다.`,
+    c => `확률 p인 일이 n개 주에 따로 일어나면 평균 n × p곳에 일어납니다. 우리 주가 10곳이면 10월 풍년은 평균 ${+(10 * c.R.events.bumper * c.R.events.scale / 100).toFixed(1)}곳입니다.`,
+    // ── 벼슬 · 호칭
+    c => `태수는 그 주의 세금을 매력 ÷ ${c.R.gov.div / 100} %, 수확을 지력 ÷ ${c.R.gov.div / 100} % 늘립니다. 매력과 지력이 80이면 둘 다 ${+(80 * 100 / c.R.gov.div).toFixed(1)}%입니다.`,
+    c => `태수의 무력 ÷ ${c.R.gov.defDiv / 100}이 성의 방어 보정에 %p로 더해집니다. 무력 80인 태수가 지키면 성의 부대는 피해를 ${pct(c.T.castle.def + 80 / c.R.gov.defDiv)}% 덜 받습니다.`,
+    () => '태수는 다른 장수가 있으면 침공에 나서지 않고 주를 지킵니다. 무력이 높은 장수는 태수보다 선봉이 어울립니다.',
+    c => `군사는 지력 ${c.R.advisor.int} 이상인 장수 한 명입니다. 동맹 확률에 지력 ÷ ${c.R.advisor.allyDiv / 100} %p를, 화계 성공률에 ${pct(DH.Sam.FIRE.advisor)}%p를 더합니다.`,
+    () => '군사가 있으면 침공할 주를 고를 때 승산을 헤아려 줍니다. 같은 병력으로 싸움을 미리 돌려 본 결과이니, 직접 싸우시면 달라질 수 있습니다.',
+    c => `장군은 무력 ${c.R.general.war} 이상인 장수로, 1 + (우리 주 ÷ ${c.R.general.per}의 몫)명까지 둘 수 있습니다. 장군의 부대는 피해를 ${c.B.general ?? DH.Sam.BATTLE.general}% 더 줍니다.`,
+    () => '태수가 있는 주는 위임할 수 있습니다. 내정만 맡기면 시혜 · 수색 · 훈련 · 내정을, 군사까지 맡기면 징병 · 이동 · 침공도 태수가 알아서 합니다.',
+    () => '군주가 머무는 주는 위임할 수 없습니다. 벼슬을 내리는 데는 그 달의 명령이 들지 않습니다.',
+    c => `우리 주가 ${c.g.thrones.king}곳이 되면 왕에, ${c.g.thrones.emperor}곳이 되면 황제에 오르십니다. 한번 오른 자리는 땅을 잃어도 내려오지 않습니다.`,
     // ── 공백지 · 장수
     () => '장수가 한 명도 없는 주는 공백지가 됩니다. 남은 병력은 흩어져 백성으로 돌아갑니다.',
     () => '공백지는 침공이 아니라 이동으로 차지합니다. 이웃한 우리 주에서 장수가 들어가면 됩니다.',
@@ -201,7 +228,7 @@
     () => '땅을 모두 잃은 세력은 사라지고, 그 장수들은 재야로 흩어집니다.',
     // ── 침공
     c => `침공에는 병력 ${fmt(c.R.attackMin)} 이상을 보내야 합니다.`,
-    c => `침공군은 부대 ${c.R.maxUnits}개까지 나뉩니다. 장수가 둘 이상이면 한 명은 남아 주를 지킵니다.`,
+    c => `침공군은 부대 ${c.R.maxUnits}개까지 나뉩니다. 장수가 둘 이상이면 한 명은 남아 주를 지킵니다. 태수가 있으면 태수가 남습니다.`,
     c => `장수 없이 싸우는 부대는 무력 ${c.R.baseStat}으로 셈합니다.`,
     c => `주를 빼앗으면 그 주의 민심이 ${c.R.conquerLoyalty} 내려갑니다.`,
     () => '지키는 병력이 없는 주는 싸우지 않고 넘어갑니다.',
@@ -226,8 +253,8 @@
     c => `다른 군주는 전선에서 먼 주의 병력이 ${fmt(c.R.ai.moveMin)} 이상이면 그 ${pct(c.R.ai.moveRatio)}%를 전선 쪽으로 옮깁니다.`,
     // ── 전투
     c => `전장은 가로 ${c.B.cols}칸, 세로 ${c.B.rows}칸의 육각 격자입니다. 같은 주에서는 언제나 같은 전장이 펼쳐집니다.`,
-    c => `부대의 이동력은 하루 ${c.B.mp}입니다. 칸에 들어갈 때 평지 ${c.T.plain.cost} · 산 ${c.T.mountain.cost} · 강 ${c.T.river.cost} · 성 ${J(c.T.castle.cost, '이', '가')} 듭니다.`,
-    c => `피해는 병력 × 무력 ÷ 100입니다. 병력 1,000에 무력 70인 부대는 평지의 적에게 ${J(hit(1000, 70, c.T.plain.def), '을', '를')} 입힙니다.`,
+    c => `부대의 이동력은 하루 ${c.B.mp}입니다. 칸에 들어갈 때 평지 ${c.T.plain.cost} · 숲 ${c.T.forest ? c.T.forest.cost : 2} · 산 ${c.T.mountain.cost} · 강 ${c.T.river.cost} · 성 ${J(c.T.castle.cost, '이', '가')} 듭니다.`,
+    c => `피해는 병력 × 무력 ÷ 100에 지형과 훈련을 곱한 값입니다. 훈련 50인 병력 1,000에 무력 70인 부대는 평지의 적에게 ${J(hit(1000, 70, c.T.plain.def), '을', '를')} 입힙니다.`,
     c => `산에 선 부대는 피해를 ${pct(c.T.mountain.def)}% 덜 받고, 성에 선 부대는 ${pct(c.T.castle.def)}% 덜 받습니다.`,
     c => `병력 1,000에 무력 70인 부대가 치면 산의 적은 ${fmt(hit(1000, 70, c.T.mountain.def))}, 성의 적은 ${J(hit(1000, 70, c.T.castle.def), '을', '를')} 잃습니다.`,
     () => '맞은 부대는 그 자리에서 되받아치지 않습니다. 먼저 치는 쪽이 이롭습니다.',
@@ -238,6 +265,26 @@
     () => '적 부대가 선 칸은 지나갈 수 없습니다. 아군 부대는 지나가되 겹쳐 설 수 없습니다.',
     c => `강은 방어 보정이 없고 이동력만 ${c.T.river.cost} 듭니다. 강 위에 멈추면 이로울 것이 없습니다.`,
     c => `수비 측 부대는 적이 ${c.B.engage}칸 안으로 들어오면 맞으러 나갑니다. 성을 지키는 부대는 자리를 뜨지 않습니다.`,
+    // ── 일기토
+    () => '일기토는 장수가 이끄는 부대가 옆 칸의 적 장수에게 청합니다. 한 전투에 쪽마다 한 번입니다.',
+    c => `일기토는 기력 ${DH.Sam.DUEL.hp}으로 시작합니다. 한 합에 주는 피해는 (무력 ÷ ${DH.Sam.DUEL.warDiv} + 0~${DH.Sam.DUEL.roll - 1}) × 수의 배율 × (100 + 무력 차)%이고, 기력이 먼저 다하는 쪽이 집니다.`,
+    () => '일기토의 수는 넷입니다. 강공은 방어를 깨고, 방어는 공격과 급소를 받아치고, 급소는 강공의 빈틈을 찌릅니다.',
+    () => '강공은 공격 · 강공 · 방어에 1.5배로 들어갑니다. 그러나 상대가 급소를 내면 한 대도 맞히지 못하고 1.4배로 맞습니다.',
+    c => `일기토에서 진 장수는 사로잡히고 그 부대는 병력의 ${pct(DH.Sam.DUEL.lose)}%를 잃습니다. 군주는 사로잡히지 않고 몸을 뺍니다.`,
+    c => `일기토를 피하면 그 부대의 병력 ${pct(DH.Sam.DUEL.refuse)}%가 흩어집니다. 다른 군주의 장수는 무력이 ${DH.Sam.DUEL.lag}까지 뒤져도 받아 줍니다.`,
+    () => '일기토를 이긴 장수는 무력이 1 오릅니다. 사로잡은 장수는 그 전투까지 이겨야 우리 편이 됩니다.',
+    c => (c.B.duel > 0 ? `일기토는 ${c.B.duel}합까지 겨룹니다. 그때까지 승부가 나지 않으면 비깁니다.` : '이 판에는 일기토가 없습니다(동현랭 설정 25번이 0입니다).'),
+    c => `일기토에서는 무력이 1 앞설 때마다 피해를 ${DH.Sam.DUEL.edge}% 더 주고 ${DH.Sam.DUEL.edge}% 덜 받습니다. 무력 90과 80이 공격만 주고받으면 한 합의 평균 피해는 약 ${Math.round((Math.floor(90 / DH.Sam.DUEL.warDiv) + (DH.Sam.DUEL.roll - 1) / 2) * (100 + 10 * DH.Sam.DUEL.edge) / 100)}과 ${Math.round((Math.floor(80 / DH.Sam.DUEL.warDiv) + (DH.Sam.DUEL.roll - 1) / 2) * (100 - 10 * DH.Sam.DUEL.edge) / 100)}입니다.`,
+    // ── 화계
+    c => `화계는 옆 칸에 불을 놓습니다. 성공률은 ${pct(DH.Sam.FIRE.base)}% + 지력 ÷ ${DH.Sam.FIRE.intDiv / 100} %이고, 군사가 있으면 ${pct(DH.Sam.FIRE.advisor)}%p가 더 붙습니다. 지력 90이면 ${pct(DH.Sam.FIRE.base + 90 / DH.Sam.FIRE.intDiv)}%입니다.`,
+    c => (c.B.fire > 0 ? `불이 난 칸의 부대는 불이 붙을 때와 날이 바뀔 때마다 병력의 ${c.B.fire}%를 잃습니다. 평지와 산의 불은 ${DH.Sam.FIRE.days}일, 숲의 불은 ${DH.Sam.FIRE.forestDays}일 갑니다.` : '이 판에는 화계가 없습니다(동현랭 설정 28번이 0입니다).'),
+    c => `불은 날이 바뀔 때 바람이 부는 쪽 칸으로 번집니다. 평지와 산으로는 ${pct(DH.Sam.FIRE.spread)}%, 숲으로는 ${pct(DH.Sam.FIRE.forestSpread)}% 확률입니다.`,
+    c => `날마다 ${pct(DH.Sam.FIRE.rain)}% 확률로 비가 옵니다. 비가 오는 날에는 불이 모두 꺼지고 불을 놓을 수도 없습니다.`,
+    c => `바람은 날마다 ${pct(DH.Sam.FIRE.turn)}% 확률로 60° 돕니다. 불을 놓기 전에 전장 위의 바람 방향을 보시지요.`,
+    c => `숲은 이동력 ${c.T.forest ? c.T.forest.cost : 2}가 들고 피해를 ${pct(c.T.forest ? c.T.forest.def : 0.2)}% 덜 받습니다. 그러나 불이 가장 오래 타고 가장 잘 번지는 곳입니다.`,
+    () => '강과 성에는 불이 붙지 않습니다. 불타는 칸은 지나갈 수 없으니 길을 막는 데도 쓸 수 있습니다.',
+    c => `성공률 p인 화계의 기대 피해는 p × 병력 × ${c.B.fire}%입니다. 다른 군주의 장수는 이 값이 칼로 치는 피해보다 클 때만 불을 놓습니다.`,
+    c => `병력의 ${c.B.fire}%씩 세 번 잃으면 남는 병력은 ${+(1 - c.B.fire / 100).toFixed(2)}³ = ${pct(Math.pow(1 - c.B.fire / 100, 3))}%입니다. 불 속에 오래 서 있지 마시지요.`,
     // ── 수학적 원리
     () => '지도와 전장은 홀수 줄을 반 칸 민 육각 격자입니다. 중심에서 꼭짓점까지가 a이면 칸의 폭은 √3·a, 줄 간격은 1.5·a입니다.',
     () => '육각 칸 사이의 거리는 정육면체 좌표로 잽니다. x + y + z = 0이고, 거리는 세 좌표 차이 가운데 가장 큰 값입니다.',
@@ -256,7 +303,11 @@
     () => '방향키로 주를 고르고 숫자 키로 명령을 내릴 수 있습니다. Space는 명령이 남은 다음 우리 주로 갑니다.',
     () => '지도는 지도 위의 + · − 아이콘이나 + · − 키로 키우고 줄입니다. 크게 키우면 주마다 병력이 함께 보입니다.',
     () => 'Shift와 방향키, 또는 W · A · S · D로 지도를 옮깁니다. 끌어도 됩니다.',
-    () => '저장은 우리 차례의 지도에서만 됩니다. 전투가 한창일 때는 끝난 뒤에 저장하시지요.'
+    () => '저장은 우리 차례의 지도에서만 됩니다. 전투가 한창일 때는 끝난 뒤에 저장하시지요.',
+    () => '부대가 이웃한 주로 떠나면 지도에 행군이 보입니다. 아무 키나 누르거나 지도를 누르면 건너뜁니다.',
+    c => `동현랭 설정 25번은 일기토의 최대 합, 28번은 화계 피해입니다. 지금 값은 ${c.B.duel}합 · ${c.B.fire}%이고, 0을 적으면 그 요소가 없어집니다.`,
+    c => `동현랭 설정 26번과 27번은 왕과 황제에 오르는 주 수입니다. 지금 값은 ${c.g.thrones.king}곳 · ${c.g.thrones.emperor}곳입니다.`,
+    () => '지도의 빛깔은 철 따라 바뀝니다. 봄 3~5월, 여름 6~8월, 가을 9~11월, 겨울 12~2월입니다.'
   ];
 
   /** 0 … n−1을 섞어 담은 주머니. 뒤에서부터 꺼낸다. 방금 나온 것(last)이 새 주머니의 첫 차례가 되지 않게 한다. */
@@ -289,23 +340,24 @@
         const near = me ? p.adj.map(id => g.P(id)).filter(q => q.owner === me) : [];
         out.push('지금은 주인 없는 공백지입니다.');
         out.push(!me ? '이웃한 주에서 장수가 들어가면 싸우지 않고 차지합니다.' : near.length ? `이웃한 우리 ${near.map(q => q.name).join(' · ')}에서 장수를 보내시면 싸우지 않고 차지합니다.` : '우리 땅과 맞닿아 있지 않아 아직은 장수를 보낼 수 없습니다.');
-        return '주군, ' + out.join(' ');
+        return g.title + ', ' + out.join(' ');
       }
       const fa = g.factions.get(p.owner), lead = g.officers.get(fa.leader), home = lead && lead.faction === p.owner && lead.status === 'active' ? g.P(lead.province) : null;
       const own = g.provincesOf(p.owner).length, n = g.officersOf(p.id).length, lord = lead ? lead.name : fa.name;
       out.push((home && home.id === p.id ? `군주 ${DH.josa(lord, '이', '가')} 이곳에 머물고 있으며, 병력은` : home ? `군주 ${DH.josa(lord, '은', '는')} ${home.name}에 있고, 이곳의 병력은` : `군주는 ${lord}이고, 이곳의 병력은`) + ` ${fmt(p.troops)}, 장수는 ${n}명입니다.`);
       out.push(own > 1 ? `${fa.name} 세력은 모두 ${own}주, 병력 ${fmt(g.troopsOf(p.owner))}입니다.` : `${fa.name} 세력의 땅은 이곳 하나입니다.`);
       if (me && g.allied(me, p.owner)) { const pact = g.alliesOf(me).find(x => x.id === p.owner); out.push(`우리와는 동맹이라 앞으로 ${pact ? pact.months : 0}달 동안 서로 치지 않습니다.`); }
-      return '주군, ' + out.join(' ');
+      return g.title + ', ' + out.join(' ');
     }
     /** 고른 주가 없을 때: 우리 세력의 지금 형편 */
     static realm(g, mode) {
       const own = g.provincesOf(g.player), left = own.filter(p => !p.acted).length, sum = `우리 땅은 ${own.length}주, 병력은 모두 ${fmt(g.troopsOf(g.player))}입니다.`;
-      if (mode === 'over') return g.over === 'won' ? `주군, 뜻을 이루셨습니다. ${sum}` : '주군, 이번에는 뜻을 이루지 못하셨습니다. 다시 하기를 누르시면 새 판이 열립니다.';
-      if (mode === 'busy') return `주군, 지금은 다른 군주들의 차례입니다. ${sum}`;
-      return `주군, ${sum} ` + (left ? `이번 달 명령이 남은 주는 ${left}곳입니다.` : '이번 달 명령은 모두 내리셨습니다. 턴 종료를 누르시면 달이 넘어갑니다.');
+      const T = g.title;
+      if (mode === 'over') return g.over === 'won' ? `${T}, 뜻을 이루셨습니다. ${sum}` : `${T}, 이번에는 뜻을 이루지 못하셨습니다. 다시 하기를 누르시면 새 판이 열립니다.`;
+      if (mode === 'busy') return `${T}, 지금은 다른 군주들의 차례입니다. ${sum}`;
+      return `${T}, ${sum} ` + (left ? `이번 달 명령이 남은 주는 ${left}곳입니다.` : '이번 달 명령은 모두 내리셨습니다. 턴 종료를 누르시면 달이 넘어갑니다.');
     }
-    static quoteLine(q) { return `주군, 『장자』 「${CHAPTER[q[0]]}」의 한 구절입니다. “${q[2]}”`; }
+    static quoteLine(q, title = '주군') { return `${title}, 『장자』 「${CHAPTER[q[0]]}」의 한 구절입니다. “${q[2]}”`; }
     /** 지도 장면의 지금 상태에 두 낭자의 말을 맞춘다. 동행낭자의 말이 바뀌었으면 수행낭자가 새 한 마디를 꺼낸다.
      *  @param sc {game, selected, mode} @returns {boolean} 말이 바뀌었는지 */
     sync(sc) {
@@ -316,7 +368,7 @@
       else if (me && sc.mode !== 'pick' && sel.owner === me) {
         key = 'q' + sel.id;
         quote = key !== this.key || nudge || !this.quote ? QUOTES[this.draw('quotes', QUOTES.length)] : this.quote;
-        a = Council.quoteLine(quote);
+        a = Council.quoteLine(quote, g.title);
       } else { key = 'r' + sel.id; a = Council.region(g, sel); }
       this.key = key; this.quote = quote;
       if (a === this.a) return false;

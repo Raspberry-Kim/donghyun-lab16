@@ -1,7 +1,8 @@
 /* 동현삼 · 그림 — 지도의 성과 산·숲·물결, 전장의 장수와 지형을 픽셀 그림으로 그린다(동현항의 배와 같은 방식).
  *   칸 하나가 글자 하나다. 같은 색으로 이어진 칸을 한 줄씩 묶어 두고(runs), 칸 경계를 기기 픽셀에 맞춰 반올림해 칠한다.
  *   그래서 어떤 배율에서도 칸 사이에 틈이나 번짐이 없다. 그림은 판의 값을 바꾸지 않는다(난수도 쓰지 않는다).
- *   DH.Sam.Art.draw(g, 이름, x, y, 칸 크기, 색 표, {flip, ax, ay})  (x,y)는 그림의 가로 가운데 · 세로 바닥 */
+ *   DH.Sam.Art.draw(g, 이름, x, y, 칸 크기, 색 표, {flip, ax, ay})  (x,y)는 그림의 가로 가운데 · 세로 바닥
+ *   v1.00: 지도를 걷는 수레(cart), 전장의 불꽃(flame · flame2), 철마다 다른 지도 꾸밈 색(landPal)을 더했다. */
 (function (root) {
   'use strict';
   const DH = root.DH = root.DH || {};
@@ -138,6 +139,40 @@
       'oWWWWWWgggggWWWWwwo',
       'ooooooooooooooooooo',
     ],
+    /* 지도 · 물자를 실은 수레(오른쪽을 본다): o 테두리 · G 자루 · y 묶은 끈 · W 수레 · p 끌채 · k 바퀴 */
+    cart: [
+      '..oooooo.....',
+      '.oGGyGGGo....',
+      'oGGGGGyGGo...',
+      'oWWWWWWWWWopp',
+      'oWWWWWWWWWo..',
+      '.okko..okko..',
+      '..oo....oo...',
+    ],
+    /* 전장 · 불꽃(두 장을 번갈아 그린다): r 붉은 가장자리 · O 주황 · Y 노란 속 */
+    flame: [
+      '....r....',
+      '...rr....',
+      '...rOr...',
+      '..rOOr.r.',
+      '.rrOYOrr.',
+      '.rOYYOOr.',
+      'rOOYYYOr.',
+      'rOYYYYOOr',
+      '.rOYYYOr.',
+    ],
+    flame2: [
+      '.....r...',
+      '....rr...',
+      '...rOr...',
+      '.r.rOOr..',
+      '.rrOYOrr.',
+      '.rOOYYOr.',
+      '.rOYYYOOr',
+      'rOOYYYYOr',
+      '.rOYYYOr.',
+    ],
+
   };
   /** 글자 줄을 같은 색끼리 묶는다: [줄, 시작 칸, 길이, 글자] */
   const runs = rows => { const out = []; rows.forEach((r, y) => { for (let x = 0; x < r.length;) { const ch = r[x]; let n = 1; while (r[x + n] === ch) n++; if (ch !== '.') out.push([y, x, n, ch]); x += n; } }); return out; };
@@ -168,9 +203,19 @@
     return { o: INK, H: mix(color, INK, 0.45), r: '#c0321f', S: '#f0c9a0', e: INK, A: color, a: mix(color, INK, 0.3), c: mix(color, '#ffffff', 0.35), f: mix(color, '#ffffff', 0.1), p: '#4a3424', s: '#dfe3e6', ...HORSE[n % 3] };
   }
   const LAND = { l: '#d3c092', m: '#b39c6c', s: '#fbf7ef', k: '#8f7a58', t: '#9db57a', u: '#7f9a62', b: '#7a5c3a', v: '#d6e9f1', g: '#a9bb7c' };
+  const CART = { o: INK, G: '#e6d6ae', y: '#b9a26a', W: '#9a6a3c', p: '#4a3424', k: '#5f4e36' };
+  const FLAME = { r: '#c0321f', O: '#f08a1d', Y: '#ffd95a' };
+  /** 철(0 봄 · 1 여름 · 2 가을 · 3 겨울)에 맞는 지도 꾸밈 색. 봄은 연둣빛, 여름은 짙은 풀빛, 가을은 단풍, 겨울은 눈 덮인 산과 앙상한 숲이다. */
+  const SEASON = [
+    { ...LAND, t: '#b3cc86', u: '#93b06a' },
+    { ...LAND, t: '#86ad68', u: '#688f52', l: '#cdbf8c' },
+    { ...LAND, t: '#d99a4e', u: '#b8703a', l: '#d6bd88', m: '#b5975f' },
+    { ...LAND, t: '#e9ece8', u: '#b9c2bf', l: '#f1efe8', m: '#c4bca9', v: '#e6f0f4' }
+  ];
+  const landPal = s => SEASON[s] || LAND;
   const FIELD = { l: '#a8926a', m: '#7f6a4a', s: '#fbf7ef', k: '#5f4e36', t: '#7fa05a', u: '#5f8046', b: '#6b4a2f', v: '#e4f1f6', g: '#aab77e' };
   /** 칸마다 늘 같은 수(0~1). 꾸밈 그림을 어디에 둘지 정한다(판의 난수와는 따로다). */
   const hash = (c, r, k = 0) => { let h = (c * 73856093) ^ (r * 19349663) ^ (k * 83492791); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
-  DH.Sam = Object.assign(DH.Sam || {}, { Art: { draw, castlePal, unitPal, hash, LAND, FIELD, sprites: SPR } });
+  DH.Sam = Object.assign(DH.Sam || {}, { Art: { draw, castlePal, unitPal, landPal, hash, LAND, FIELD, CART, FLAME, sprites: SPR } });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
