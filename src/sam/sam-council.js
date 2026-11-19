@@ -2,6 +2,7 @@
  *   동행낭자  늘 '주군, …'으로 말을 연다. 왕에 오르신 뒤에는 '전하, …', 황제에 오르신 뒤에는 '폐하, …'로 바뀐다(판의 title). 우리 땅을 고르면 『장자』의 구절 100가지 가운데 하나를 읊고,
  *             우리 땅이 아닌 주를 고르면 그 땅이 어떤 곳인지와 지금의 군주 · 병력을 판의 값에서 셈해 아뢴다.
  *   수행낭자  동행낭자의 말이 바뀔 때마다 규칙과 수학적 원리를 한 마디씩 한다. 수치는 지금 판의 규칙 값(동현랭 설정 포함)에서 꺼낸다.
+ *             달이 바뀔 때 우리 주에 재야 장수가 있으면 한 마디 대신 어느 주에 누가 있는지 아뢴다(tell).
  * 구절과 한 마디는 주머니에서 꺼낸다: 섞어 넣은 것을 다 꺼낼 때까지 같은 것이 다시 나오지 않는다.
  * 주머니의 난수는 판의 난수(engine.rng)와 따로 돈다. 낭자의 말이 수색 · 동맹 · 전투 결과를 바꾸지 않는다.
  * 얼굴은 동현항 v1.27의 협력자 초상을 그대로 가져왔다: 동행낭자는 제물포(얼굴 12), 수행낭자는 나가사키(얼굴 15). 서로 마주 보게 오른쪽 얼굴만 좌우로 뒤집는다.
@@ -307,7 +308,11 @@
     () => '부대가 이웃한 주로 떠나면 지도에 행군이 보입니다. 아무 키나 누르거나 지도를 누르면 건너뜁니다.',
     c => `동현랭 설정 25번은 일기토의 최대 합, 28번은 화계 피해입니다. 지금 값은 ${c.B.duel}합 · ${c.B.fire}%이고, 0을 적으면 그 요소가 없어집니다.`,
     c => `동현랭 설정 26번과 27번은 왕과 황제에 오르는 주 수입니다. 지금 값은 ${c.g.thrones.king}곳 · ${c.g.thrones.emperor}곳입니다.`,
-    () => '지도의 빛깔은 철 따라 바뀝니다. 봄 3~5월, 여름 6~8월, 가을 9~11월, 겨울 12~2월입니다.'
+    () => '지도의 빛깔은 철 따라 바뀝니다. 봄 3~5월, 여름 6~8월, 가을 9~11월, 겨울 12~2월입니다.',
+    () => '우리 주에 재야 장수가 있으면 지도의 성 왼쪽 위에 노란 마름모가 뜨고, 수색 버튼에 몇 명인지 적힙니다. 달이 바뀔 때마다 제가 아뢰겠습니다.',
+    () => '이동할 때 장수를 여럿 골라 함께 보낼 수 있습니다. 모두 떠나면 그 주는 공백지가 되니 한 명은 남기시지요.',
+    () => '동현랭 설정 31번은 시나리오입니다. 0은 200년 1월의 기본 배치이고, 1부터 6까지는 189 · 194 · 201 · 208 · 221 · 235년에 시작합니다.',
+    () => '동현랭 설정 9번은 우리 주의 금 · 쌀 · 민심 배율입니다. 300을 적으면 우리만 세 배로 시작합니다. 민심은 100에서 멈춥니다.'
   ];
 
   /** 0 … n−1을 섞어 담은 주머니. 뒤에서부터 꺼낸다. 방금 나온 것(last)이 새 주머니의 첫 차례가 되지 않게 한다. */
@@ -324,13 +329,15 @@
     constructor(seed) {
       this.rng = new DH.RNG(seed ?? ((Date.now() ^ (Math.random() * 0x100000000)) >>> 0));
       this.bags = { quotes: [], tips: [] }; this.last = { quotes: -1, tips: -1 };
-      this.key = 'intro'; this.nudge = false; this.quote = null; this.el = null;
+      this.key = 'intro'; this.nudge = false; this.quote = null; this.el = null; this.news = null;
       this.a = INTRO[0]; this.b = INTRO[1];
     }
     /** 주머니에서 하나 꺼낸다. 비었으면 다시 섞어 채운다. */
     draw(name, n) { const b = this.bags; if (!b[name].length) b[name] = refill(this.rng, n, this.last[name]); return (this.last[name] = b[name].pop()); }
     /** 다음에 맞출 때 우리 땅의 구절을 새로 꺼내게 한다(같은 주를 다시 누를 때 · 달이 바뀔 때 · 판을 열 때). */
     poke() { this.nudge = true; }
+    /** 수행낭자가 다음에 할 말을 정해 준다(재야 장수 소식). 한 번 말하면 비운다. 주머니는 쓰지 않고 저장하지도 않는다. */
+    tell(text) { this.news = text || null; }
     /** 지금 판의 수치 묶음: 내정 규칙 · 전투 수치 · 지형 */
     static ctx(g) { const B = g.battleRules || DH.Sam.BATTLE; return { g, R: g.rules, B, T: B.terrain || DH.Sam.TERRAIN }; }
     /** 우리 땅이 아닌 주: 어떤 곳인지 + 지금의 군주 · 병력 · 그 세력 전체. 모두 판의 지금 값에서 셈한다. */
@@ -371,8 +378,9 @@
         a = Council.quoteLine(quote, g.title);
       } else { key = 'r' + sel.id; a = Council.region(g, sel); }
       this.key = key; this.quote = quote;
-      if (a === this.a) return false;
-      this.a = a; this.b = key === 'intro' ? INTRO[1] : TIPS[this.draw('tips', TIPS.length)](Council.ctx(g));
+      const news = key === 'intro' ? null : this.news; this.news = null;
+      if (a === this.a && !news) return false;
+      this.a = a; this.b = key === 'intro' ? INTRO[1] : news || TIPS[this.draw('tips', TIPS.length)](Council.ctx(g));      // 소식이 있으면 한 마디 대신 그것을 아뢴다
       return true;
     }
     /** 저장: 주머니에 남은 것과 난수 상태(무엇이 이미 나왔는지 이어 간다). */

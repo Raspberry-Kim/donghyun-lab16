@@ -299,7 +299,7 @@ ok('어댑터: 오류가 하나라도 있으면 하나도 덮어쓰지 않는다
 });
 ok('동현삼 globalState: 기본값은 RULES · BATTLE · TERRAIN 그대로 · 설정 없는 판은 예전과 똑같이 흐른다(AI만 24달)', () => {
   const st = S.newState(); assert.deepStrictEqual(st.rules, S.RULES); assert.notStrictEqual(st.rules, S.RULES); assert.deepStrictEqual(st.battle, { ...S.BATTLE, terrain: S.TERRAIN });
-  assert.deepStrictEqual([st.start, st.stage, st.provinces, st.officers], [{ player: null, seed: null, gold: null, rice: null, troops: null, loyalty: null, farm: null }, { goal: null, months: 0 }, [], []]);
+  assert.deepStrictEqual([st.start, st.stage, st.provinces, st.officers], [{ scenario: 0, player: null, seed: null, boost: null, gold: null, rice: null, troops: null, loyalty: null, farm: null }, { goal: null, months: 0 }, [], []]);
   const snap = g => JSON.stringify([[...g.provinces.values()].map(p => [p.id, p.owner, p.gold, p.rice, p.troops, p.loyalty, p.farm, p.pop]), [...g.officers.values()].map(o => [o.id, o.faction, o.province, o.status]), g.rng.state]);
   const run = o => { const g = new S.Game(S.parse(samJ()), { player: null, rng: new DH.RNG(5), ...o }); let fights = 0; for (let i = 0; i < 24; i++) { fights += g.runAIAll().length; g.endMonth(); } return [snap(g), fights]; };
   const st2 = S.newState(), r = S.applyDonghyunLang(HEAD + 'ㅋㅋ 없음' + TAIL, st2, { world: S.parse(samJ()) }); assert.ok(r.ok && r.empty); assert.deepStrictEqual(st2, S.newState());
@@ -309,7 +309,7 @@ ok('동현삼 globalState: 기본값은 RULES · BATTLE · TERRAIN 그대로 · 
 ok('동현삼 설정: 시작 금 · 쌀 · 병력 · 민심 · 농지 · 주 초기값 · 장수 능력치 · 징병 수량과 드는 금 · 농지 개발 금 · 농지마다 쌀', () => {
   const w = S.parse(samJ()), st = S.newState(), L = S.lang;
   const r = S.applyDonghyunLang(L.compose([[1, 3], [2, 77], [3, 3000], [4, 20000], [5, 7000], [6, 88], [7, 60], [8, 13, 3, 1200], [8, 14, 1, 9], [10, 2000], [11, 250], [12, 40], [13, 6], [30, 121, 1, 99], [30, 123, 2, 77]]), st, { world: w });
-  assert.ok(r.ok, r.errors.join()); assert.strictEqual(r.settings.length, 15); assert.deepStrictEqual(st.start, { player: 3, seed: 77, gold: 3000, rice: 20000, troops: 7000, loyalty: 88, farm: 60 });
+  assert.ok(r.ok, r.errors.join()); assert.strictEqual(r.settings.length, 15); assert.deepStrictEqual(st.start, { scenario: 0, player: 3, seed: 77, boost: null, gold: 3000, rice: 20000, troops: 7000, loyalty: 88, farm: 60 });
   assert.deepStrictEqual([st.provinces, st.officers, st.rules.draft.troops, st.rules.draft.gold, st.rules.develop.gold, st.rules.ricePerFarm], [[[13, 'troops', 1200], [14, 'gold', 9]], [[121, 'war', 99], [123, 'int', 77]], 2000, 250, 40, 6]);
   assert.ok(r.applied.includes('군주 유비') && r.applied.includes('주 초기값 하비 병력 1,200') && r.applied.includes('장수 능력치 유비 무력 99'), r.applied.join());
   assert.strictEqual(S.RULES.draft.troops, 1000, '기본값 표는 그대로다'); assert.strictEqual([...w.factions.keys()][st.start.player - 1], 'liubei');
@@ -332,33 +332,33 @@ ok('동현삼 설정: 스테이지 조건(주 셋 · 기한) · 전투 기한과
   const r = g.attack(13, 16, 3000), b = r.battle; assert.deepStrictEqual([b.B.days, b.B.mp, b.T.mountain.cost], [7, 8, 3]); const u = b.units.find(x => x.side === 'att'); const reach = [...b.range(u).values()]; assert.ok(reach.some(v => v.cost > 5) && reach.every(v => v.cost <= 8), '이동력 8만큼 간다');
   for (let i = 0; i < 40 && !b.winner; i++) b.endSide(); assert.deepStrictEqual([b.winner, b.day, b.reason], ['def', 7, '7일을 버텼다'], '가만히 있으면 7일째에 수비가 이긴다');
 });
-ok('동현삼 설정: 틀린 번호와 값은 까닭을 말하고 globalState를 그대로 둔다 · 예제 열셋이 모두 읽힌다', () => {
+ok('동현삼 설정: 틀린 번호와 값은 까닭을 말하고 globalState를 그대로 둔다 · 예제 스물여섯이 모두 읽힌다(시나리오를 먼저 읽고 그 판으로 검사한다)', () => {
   const w = S.parse(samJ()), st = S.newState(), same = JSON.stringify(st), L = S.lang;
   const E = (list, re) => { const r = S.applyDonghyunLang(L.compose(list), st, { world: w }); assert.strictEqual(r.ok, false); assert.ok(re.test(r.errors[0]), r.errors[0]); assert.strictEqual(JSON.stringify(st), same); };
   E([[3, 500], [8, 99, 1, 100]], /설정 8\(주 초기값\): 99번 주는 없다/); E([[8, 12, 4, 101]], /민심 값 101은 쓸 수 없다\. 0~100만 된다/); E([[8, 12, 3, 1250]], /병력 값 1,250은 쓸 수 없다\. 0~99,900, 100 단위만 된다/);
   E([[30, 999, 1, 50]], /999번 장수는 없다/); E([[20, 42]], /주는 41개뿐이다/); E([[10, 1050]], /징병 수량 값 1,050은 쓸 수 없다\. 100~10,000, 100 단위만 된다/); E([[6, 50], [5, 150]], /우리 주 시작 병력 값 150은/);
-  const r = S.applyDonghyunLang(put(9, 1), st, { world: w }); assert.ok(/1번째 정수 9은 동현삼 설정 번호가 아니다/.test(r.errors[0]));
-  const ex = S.examples(w); assert.deepStrictEqual(ex.map(e => e.id), ['none', 'rich', 'stage', 'fast', 'calm', 'weak', 'unify', 'swap', 'scale', 'loop', 'heart', 'duel', 'crown']);
-  for (const e of ex) { const s2 = S.newState(), q = S.applyDonghyunLang(e.code, s2, { world: w }); assert.ok(q.ok, e.name + q.errors.join()); assert.strictEqual(q.empty, e.id === 'none'); assert.ok(e.code.startsWith('나는 동현이냐?') && e.code.endsWith('동현이구나')); }
-  assert.strictEqual(L.describe(S.newState()).length, 32); assert.ok(L.describe(S.newState()).every(x => x.now !== undefined && x.range), '표의 모든 줄에 범위와 기본값이 있다');
+  const r = S.applyDonghyunLang(put(32, 1), st, { world: w }); assert.ok(/1번째 정수 32은 동현삼 설정 번호가 아니다/.test(r.errors[0]));
+  const ws = S.worlds(samJ()), ex = S.examples(ws); assert.deepStrictEqual(ex.map(e => e.id), ['none', 's189', 's194', 's201', 's208', 's221', 's235', 'e189', 'e194', 'e200', 'e201', 'e208', 'e221', 'e235', 'rich', 'stage', 'weak', 'unify', 'fast', 'calm', 'swap', 'heart', 'duel', 'crown', 'scale', 'loop']);
+  for (const e of ex) { const s2 = S.newState(), q = S.readLang(e.code, ws, s2); assert.ok(q.ok, e.name + q.errors.join()); assert.strictEqual(q.empty, e.id === 'none'); assert.ok(e.code.startsWith('나는 동현이냐?') && e.code.endsWith('동현이구나')); assert.ok(e.group, e.id + ': 묶음 이름'); }
+  assert.strictEqual(L.describe(S.newState()).length, 34); assert.ok(L.describe(S.newState()).every(x => x.now !== undefined && x.range), '표의 모든 줄에 범위와 기본값이 있다');
 });
-ok('동현삼 예제: 이름 앞에 번호 01~10 · 예제마다 새 판이 열린다 · 09 변수(배율 1~24) · 10 반복문(원소의 여덟 주)', () => {
-  const w = () => S.parse(samJ()), ex = S.examples(w()), by = id => ex.find(e => e.id === id), run = code => { const st = S.newState(), r = S.applyDonghyunLang(code, st, { world: w() }); return { st, r }; };
+ok('동현삼 예제: 이름 앞에 번호 01~26 · 예제마다 새 판이 열린다 · 25 변수(배율 1~24) · 26 반복문(원소의 여덟 주)', () => {
+  const w = () => S.parse(samJ()), ws = S.worlds(samJ()), ex = S.examples(ws), by = id => ex.find(e => e.id === id), run = code => { const st = S.newState(), r = S.readLang(code, ws, st); return { st, r }; };
   ex.forEach((e, i) => { assert.ok(e.name.startsWith(String(i + 1).padStart(2, '0') + ' · '), e.name); assert.ok(e.code.split('\n')[1].startsWith('ㅋㅋ '), e.id + ': 둘째 줄이 설명이다');
     for (const l of e.code.split('\n')) if (l.startsWith('ㅋㅋ')) assert.ok(!l.includes('~'), e.id + ': 주석에 ~가 있으면 문장이 갈린다');
-    const { st, r } = run(e.code); assert.ok(r.ok); const g = new S.Game(w(), { player: 'liubei', state: st }); assert.strictEqual(g.months, 0); });
+    const { st, r } = run(e.code); assert.ok(r.ok); const g = new S.Game(r.world, { player: 'liubei', state: st }); assert.strictEqual(g.months, 0); assert.ok(g.provincesOf('liubei').length > 0, e.id + ': 유비의 땅이 있다'); });
   const pick = (id, f) => { const { st, r } = run(by(id).code); assert.ok(r.ok); return f(st, r); };
   assert.deepStrictEqual(pick('calm', (st, r) => r.applied), ['AI 신중함(×10) 10배', '농지 개발에 드는 금 50', '농지 1마다 달마다 쌀 8', '징병에 드는 금 200']);
   assert.deepStrictEqual(pick('weak', (st, r) => r.applied), ['군주 장로', '우리 주 시작 금 100', '우리 주 시작 쌀 600', '우리 주 시작 병력 3,000', '승리 조건: 차지할 주 수 3', '기한(달) 60']);
-  assert.deepStrictEqual(pick('unify', (st, r) => r.applied), ['군주 조조', '난수 시드 3', '기한(달) 120']);
+  assert.deepStrictEqual(pick('unify', (st, r) => [r.world.index, ...r.applied]), [4, '시나리오 208년 9월 · 큰 강의 싸움 앞', '군주 조조', '난수 시드 3', '기한(달) 120']);
   assert.deepStrictEqual(pick('swap', st => st.officers), [[121, 'war', 100], [121, 'cha', 75], [122, 'war', 75], [122, 'int', 95], [123, 'war', 40], [123, 'int', 95]]);
-  // 09 변수: 대입 한 줄만 바꾸면 세 값이 함께 바뀐다
+  // 25 변수: 대입 한 줄만 바꾸면 세 값이 함께 바뀐다
   const sc = by('scale').code.split('\n'), at = sc.findIndex(l => l.startsWith('동현아 ')), scale = k => run(sc.map((l, i) => i === at ? '동현아 ' + A.expression(k) : l).join('\n'));
   assert.strictEqual(sc.filter(l => l.startsWith('동현아 ')).length, 1); assert.strictEqual(sc[at], '동현아 ' + A.expression(5));
   assert.deepStrictEqual(pick('scale', st => [st.start.player, st.start.gold, st.start.rice, st.rules.draft.troops]), [3, 5000, 20000, 2000]);
   for (const k of [1, 2, 12, 24]) { const { st, r } = scale(k); assert.ok(r.ok, k + ': ' + r.errors.join()); assert.deepStrictEqual([st.start.gold, st.start.rice, st.rules.draft.troops], [k * 1000, k * 4000, k * 400]); }
   assert.ok(/징병 수량 값 0은 쓸 수 없다/.test(scale(0).r.errors.join())); assert.ok(/우리 주 시작 쌀 값 100,000은 쓸 수 없다/.test(scale(25).r.errors.join()));
-  // 10 반복문: 되돌아가는 문장 번호가 주석에 적힌 번호와 같다
+  // 26 반복문: 되돌아가는 문장 번호가 주석에 적힌 번호와 같다
   const lp = by('loop').code.split('\n'), jump = lp.find(l => l.startsWith('뭉치 ')), back = lp.findIndex(l => l.includes('되돌아오는 자리')) + 1;
   assert.ok(back > 0 && lp.slice(0, back).every(l => !l.includes('~')), '되돌아오는 자리까지는 한 줄이 한 문장이다');
   assert.strictEqual(jump, `뭉치 동현${'ㅠ'.repeat(10)}? 신중동역 ${A.expression(back)}`); assert.ok(lp[back - 1].includes(`${back}번 문장`) && lp.some(l => l.includes(`${back}번 문장으로 돌아간다`)));
@@ -377,13 +377,13 @@ function fakeLayout() {
   return L;
 }
 function mk(seed = 1, script) {
-  const world = DH.Sam.parse(samJ()), layout = fakeLayout(), engine = new DH.Engine({ width: 480, height: 360, seed, clock: { unit: 'month', start: world.meta.start } });
-  const scene = new DH.Sam.SamMapScene(engine, world, layout); engine.setScene(scene);
+  const worlds = DH.Sam.worlds(samJ()), world = worlds[0], layout = fakeLayout(), engine = new DH.Engine({ width: 480, height: 360, seed, clock: { unit: 'month', start: world.meta.start } });
+  const scene = new DH.Sam.SamMapScene(engine, world, layout, worlds); engine.setScene(scene);
   if (script !== undefined) assert.ok(scene.applyDonghyunLang(script).ok);
   const key = (code, o = {}) => engine.scene.onKey(code, { preventDefault() {}, ...o });
   /** 달을 넘긴다. 침공을 받으면 장수들에게 맡기고 결과 카드를 넘긴다 */
   const endMonth = () => { scene.command('end'); for (let i = 0; i < 40000 && scene.mode === 'busy'; i++) { const top = engine.scene; if (top !== scene) { if (top.mode === 'result') top.command('back'); else if (top.myTurn) top.command('auto'); } engine.step(1); } assert.notStrictEqual(scene.mode, 'busy'); };
-  return { world, layout, engine, scene, key, endMonth };
+  return { world, worlds, layout, engine, scene, key, endMonth };
 }
 /** 정해 둔 한 달: 우리 주마다 번호 순서로 징병(안 되면 농지 개발)을 하고 달을 넘긴다 */
 const month = k => { const g = k.scene.game; if (g.over) return; for (const p of g.provincesOf(g.player).sort((a, b) => a.id - b.id)) { k.scene.selected = p.id; k.scene.command(g.can(p.id, 'draft').ok ? 'draft' : 'develop'); } k.endMonth(); };
@@ -471,7 +471,7 @@ ok('동현삼 화면: 시혜 · 동맹 청하기 · 동맹 깨기 · 공백지 �
   s.game.P(13).acted = false; s.refresh(); assert.ok(k.layout.detail && JSON.stringify(k.layout.detail).includes('손책'), '고른 주의 설명에 동맹이 보인다');
   s.command('ally'); assert.deepStrictEqual(k.layout.items.map(x => x.id), ['af:cao', 'af:yuan', 'ab:sun', 'cancel']); s.command('ab:sun'); assert.deepStrictEqual([s.sub.step, s.sub.f], ['break', 'sun']); assert.ok(k.layout.items.find(x => x.id === 'cancel').primary, '깨기는 한 번 더 묻고 노란 버튼은 그만두기');
   s.command('abok'); assert.deepStrictEqual([s.game.allied('liubei', 'sun'), s.game.P(12).loyalty, s.sub], [false, 64, null]);
-  const z = mk(5), t = z.scene; t.start('liuzhang'); t.selected = 39; t.command('move'); t.command('who:152'); assert.ok(z.layout.items.some(x => x.id === 'to:41'), '장수는 공백지 건녕으로도 간다'); t.command('to:41'); t.command('n:0');
+  const z = mk(5), t = z.scene; t.start('liuzhang'); t.selected = 39; t.command('move'); t.command('who:152'); t.command('who:ok'); assert.ok(z.layout.items.some(x => x.id === 'to:41'), '장수는 공백지 건녕으로도 간다'); t.command('to:41'); t.command('n:0');
   assert.deepStrictEqual([t.game.P(41).owner, t.game.officers.get(152).province, t.selected], ['liuzhang', 41, 41]); assert.ok(z.layout.logs.some(x => /장임이 들어가 공백지를 차지했다/.test(x)));
   t.selected = 39; t.game.P(39).acted = false; t.command('move'); t.command('who:none'); assert.ok(z.layout.items.some(x => x.id === 'to:41') && z.layout.items.some(x => x.id === 'to:38'), '이제 우리 주라 병력만도 간다');
 });
@@ -553,7 +553,7 @@ ok('두 낭자: 고르기 전에는 소개 · 우리 땅에서는 『장자』 �
   assert.ok(C.a.startsWith('주군, 저는') && C.a.includes('동행낭자') && C.b === '주군, 저는 곁에서 살필 수행낭자입니다. 주군께서 운영하실 규칙과 숨은 셈법을 하나씩 아뢰겠습니다.' && C.quote === null, '시작 전부터 두 낭자가 말한다');
   s.start('liubei'); assert.strictEqual(s.selected, 12); const q0 = C.quote, a0 = C.a, b0 = C.b;
   assert.ok(q0 && a0 === `주군, 『장자』 「${DH.Sam.CHAPTER[q0[0]]}」의 한 구절입니다. “${q0[2]}”` && DH.Sam.QUOTES.includes(q0));
-  assert.ok(DH.Sam.TIPS.map(t => t(DH.Sam.Council.ctx(s.game))).includes(b0), '수행낭자의 첫 한 마디');
+  assert.strictEqual(b0, '주군, 재야에 사람이 있습니다. 하비에 미축입니다. 그 주에서 수색하시면 맞아들일 수 있습니다.', '판을 열면 수행낭자가 우리 주의 재야 장수부터 아뢴다'); assert.ok(k.layout.logs.includes('재야: 하비 미축'));
   s.command('draft'); s.refresh(); s.command('move'); s.command('cancel'); assert.deepStrictEqual([C.a, C.b], [a0, b0], '명령을 내리거나 메뉴를 오가도 말은 그대로');
   tapOn(s, 12); assert.ok(C.quote !== q0 && C.a !== a0 && C.b !== b0, '같은 주를 다시 누르면 다음 구절 · 수행낭자도 새 한 마디');
   const q1 = C.quote; tapOn(s, 13); assert.ok(C.quote !== q1, '다른 우리 주로 가면 다음 구절'); const q2 = C.quote;
@@ -583,7 +583,8 @@ ok('두 낭자: 남의 땅을 고르면 그곳의 설명과 군주 · 병력 · 
 ok('두 낭자: 수행낭자의 한 마디와 구절은 한 바퀴를 다 돌 때까지 겹치지 않는다 · 다음 바퀴의 처음이 앞 바퀴의 끝과 같지 않다 · 수치는 동현랭 설정을 따른다', () => {
   const S = DH.Sam, k = mk(4), s = k.scene, C = s.council, T = S.TIPS.length; s.start('liubei');
   const tips = [C.b], quotes = [C.quote]; for (let i = 1; i < 2 * Math.max(T, 100) + 1; i++) { tapOn(s, 12); tips.push(C.b); quotes.push(C.quote); }
-  for (const [list, n] of [[tips, T], [quotes, 100]]) { assert.strictEqual(new Set(list.slice(0, n)).size, n, '첫 바퀴에 모두 한 번씩'); assert.strictEqual(new Set(list.slice(n, 2 * n)).size, n, '둘째 바퀴도'); assert.notStrictEqual(list[n - 1], list[n], '바퀴가 바뀔 때 같은 말이 이어지지 않는다'); }
+  assert.ok(tips[0].includes('재야에 사람이 있습니다'), '첫 마디는 재야 소식이라 주머니에서 꺼낸 것이 아니다');
+  for (const [list, n] of [[tips.slice(1), T], [quotes, 100]]) { assert.strictEqual(new Set(list.slice(0, n)).size, n, '첫 바퀴에 모두 한 번씩'); assert.strictEqual(new Set(list.slice(n, 2 * n)).size, n, '둘째 바퀴도'); assert.notStrictEqual(list[n - 1], list[n], '바퀴가 바뀔 때 같은 말이 이어지지 않는다'); }
   const a = new S.Council(11), b = new S.Council(11), c = new S.Council(12), seq = x => Array.from({ length: 30 }, () => x.draw('tips', T)).join();
   assert.strictEqual(seq(a), seq(b)); assert.notStrictEqual(seq(new S.Council(11)), seq(c), '시드가 다르면 차례가 다르다');
   const z = mk(4, S.lang.compose([[10, 2000], [11, 150], [14, 800], [15, 400], [16, 6], [17, 50], [22, 30], [23, 7], [24, 40], [20, 6], [21, 60]])), all = S.TIPS.map(t => t(S.Council.ctx(z.scene.game))).join('\n');
@@ -597,7 +598,8 @@ ok('두 낭자: 저장하면 주머니가 이어진다 · v0.10까지의 저장 
   const next = () => { tapOn(s, 12); return [s.council.a, s.council.b]; }, want = [next(), next(), next()];
   const x = mk(99); assert.ok(x.scene.loadGame(d).ok); assert.ok(x.scene.selected === 12 && x.scene.council.quote, '불러오면 새 구절로 맞는다');
   const got0 = [x.scene.council.a, x.scene.council.b], nx = () => { tapOn(x.scene, 12); return [x.scene.council.a, x.scene.council.b]; };
-  assert.deepStrictEqual([got0, nx(), nx()], want, '저장한 자리에서 주머니가 이어진다');
+  const got = [got0, nx(), nx()];                     // 불러온 직후의 한 마디는 재야 소식이라 주머니를 쓰지 않는다. 구절은 그대로 이어지고 한 마디는 한 칸씩 밀린다
+  assert.deepStrictEqual(got.map(x => x[0]), want.map(x => x[0]), '저장한 자리에서 구절 주머니가 이어진다'); assert.deepStrictEqual(got.map(x => x[1]), ['주군, 재야에 사람이 있습니다. 하비에 미축입니다. 그 주에서 수색하시면 맞아들일 수 있습니다.', want[0][1], want[1][1]], '한 마디 주머니도 이어진다');
   const old = pack(k); delete old.scene.council; const y = mk(5); assert.ok(y.scene.loadGame(old).ok && y.scene.council.a.startsWith('주군, 『장자』'), 'council이 없는 저장 파일');
   for (const bad of [{ seed: 'x' }, { seed: 1, quotes: [1, 1], tips: [] }, { seed: 1, quotes: [100], tips: [] }, { seed: 1, quotes: [], tips: [-1] }, 7, null]) { const v = pack(k); v.scene.council = bad; const u = mk(5); assert.ok(u.scene.loadGame(v).ok && u.scene.council.a.startsWith('주군, 『장자』'), '이상한 주머니는 버린다'); }
 });
@@ -633,9 +635,9 @@ ok('내정 확장: 치수 · 상업(금 100 → +3+지력÷20) · 훈련(금 50 
   const b = battle([{ officer: 1, name: '갑', war: 80, troops: 5000 }], [{ officer: 3, name: '병', war: 40, troops: 5000 }]); for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) b.tiles[y][x] = 'plain';
   const [a, d] = b.units; assert.strictEqual(b.damage(a, d), 4000); b.drill.att = 100; assert.strictEqual(b.damage(a, d), 5000); b.drill.att = 0; assert.strictEqual(b.damage(a, d), 3000); b.drill.att = 50; a.general = true; assert.strictEqual(b.damage(a, d), 4400);
 });
-ok('벼슬: 태수(세금 +매력÷4 % · 수확 +지력÷4 % · 성 방어 +무력÷10 %p · 싸움에 나서지 않는다) · 군사(지력 85) · 장군(무력 85, 1 + 주÷4 명) · 명령을 쓰지 않는다', () => {
+ok('벼슬: 태수(세금 +매력÷4 % · 수확 +지력÷4 % · 성 방어 +무력÷10 %p · 싸움에 나서지 않는다) · 군사(지력 85) · 장군(무력 85, 1 + 주÷4 명) · 한 달에 명령 하나 원칙에 해당하지 않는다', () => {
   const g = newGame(), p = g.P(12), O = id => g.officers.get(id);
-  assert.strictEqual(g.governor(12), null); let r = g.setGovernor(12, 121); assert.ok(r.ok && r.text === '소패: 유비를 태수로 삼았다(세금 +25% · 수확 +19% · 성 방어 +8%p)', r.text); assert.strictEqual(p.acted, false, '벼슬은 명령을 쓰지 않는다');
+  assert.strictEqual(g.governor(12), null); let r = g.setGovernor(12, 121); assert.ok(r.ok && r.text === '소패: 유비를 태수로 삼았다(세금 +25% · 수확 +19% · 성 방어 +8%p)', r.text); assert.strictEqual(p.acted, false, "벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다");
   assert.deepStrictEqual([g.governor(12).name, g.income(12).gold, g.income(12).rice], ['유비', Math.floor(84.5 * 1.25), Math.floor(180 * 475 / 400)]);
   assert.deepStrictEqual(g.fighters(12).map(o => o.name), ['장비'], '태수는 남고 장비가 나선다'); assert.strictEqual(g.setGovernor(12, 122).why, '이 주에 있는 우리 장수가 아니다');
   g.setGovernor(12, 123); assert.deepStrictEqual(g.fighters(12).map(o => o.name), ['유비'], '장비가 태수면 유비가 나선다'); g.setGovernor(13, 122); assert.deepStrictEqual(g.fighters(13).map(o => o.name), ['관우'], '혼자뿐이면 태수라도 나선다');
@@ -795,17 +797,17 @@ ok('동현삼 저장: 치수 · 상업 · 훈련 · 태수 · 위임 · 군사 �
   // 다른 주에 있는 장수가 태수로 적혀 있어도 열린다(그 자리는 빈 것으로 본다)
   const odd = JSON.parse(JSON.stringify(d)); odd.game.provinces.find(q => q.id === 12).gov = 122; const z = mk(4); assert.ok(z.scene.loadGame(odd).ok); assert.strictEqual(z.scene.game.governor(12), null);
 });
-ok('동현삼 화면: 물자 수송과 이동의 행군은 조작을 막지 않는다 · 침공은 부대가 닿은 뒤에 싸운다 · 벼슬(태수 · 군사 · 장군 · 위임)은 명령을 쓰지 않고 벼슬 메뉴로 돌아온다 · 맡긴 주의 일은 턴 종료 때 기록에 남는다', () => {
+ok('동현삼 화면: 물자 수송과 이동의 행군은 조작을 막지 않는다 · 침공은 부대가 닿은 뒤에 싸운다 · 벼슬(태수 · 군사 · 장군 · 위임)은 한 달에 명령 하나 원칙에 해당하지 않고 벼슬 메뉴로 돌아온다 · 맡긴 주의 일은 턴 종료 때 기록에 남는다', () => {
   const k = mk(5), s = k.scene; s.start('liubei'); const g = s.game, ids = () => k.layout.items.map(x => x.id + (x.disabled ? '!' : ''));
   // 수송: 이동 → 물자 수송 → 소패 → 금과 쌀 절반씩. 수레가 길을 가는 동안에도 다른 주에 명령을 내릴 수 있다
-  s.selected = 13; s.refresh(); s.command('move'); assert.deepStrictEqual(ids(), ['who:122', 'who:none', 'who:cart', 'cancel']); s.command('who:cart'); assert.deepStrictEqual(ids(), ['to:12', 'cancel']); s.command('to:12');
+  s.selected = 13; s.refresh(); s.command('move'); assert.deepStrictEqual(ids(), ['who:122', 'who:ok!', 'who:none', 'who:cart', 'cancel']); s.command('who:cart'); assert.deepStrictEqual(ids(), ['to:12', 'cancel']); s.command('to:12');
   assert.deepStrictEqual(k.layout.items.map(x => x.id), ['cg:275:0', 'cg:0:750', 'cg:275:750', 'cg:550:1500', 'cancel']); s.command('cg:275:750');
   assert.deepStrictEqual([g.P(13).gold, g.P(13).rice, g.P(12).gold, g.P(12).rice, g.P(13).acted, s.sub], [275, 750, 825, 2250, true, null]); assert.ok(k.layout.logs.includes('하비 → 소패: 금 275 · 쌀 750을 실어 보냈다'));
   assert.deepStrictEqual([s.marches.length, s.marches[0].kind, s.marches[0].dur, s.hold, s.saveInfo().ok], [1, 'cart', 40, null, true], '수레는 조작도 저장도 막지 않는다');
   s.selected = 12; s.refresh(); assert.ok(!k.layout.items.find(x => x.id === 'draft').disabled); k.engine.step(40); assert.strictEqual(s.marches.length, 1); k.engine.step(1); assert.strictEqual(s.marches.length, 0, '닿으면 사라진다');
   // 벼슬: 군주가 머무는 소패. 지력 85 이상이 없어 군사는 고를 수 없고, 태수가 없어 위임도 안 된다
   s.command('office'); assert.deepStrictEqual(ids(), ['ogov', 'oadv!', 'ogen', 'odel!', 'cancel']); assert.deepStrictEqual(k.layout.items.map(x => x.label).slice(0, 4), ['태수 · 없음', '군사 · 없음', '장군 · 0/1', '위임 · 없음']);
-  s.command('ogov'); assert.deepStrictEqual(ids(), ['og:121', 'og:123', 'back'], '매력 + 지력이 높은 순서'); s.command('og:123'); assert.deepStrictEqual([s.sub, g.governor(12).name, g.P(12).acted], [{ type: 'office', step: 'top' }, '장비', false], '벼슬은 명령을 쓰지 않는다');
+  s.command('ogov'); assert.deepStrictEqual(ids(), ['og:121', 'og:123', 'back'], '매력 + 지력이 높은 순서'); s.command('og:123'); assert.deepStrictEqual([s.sub, g.governor(12).name, g.P(12).acted], [{ type: 'office', step: 'top' }, '장비', false], "벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다");
   assert.ok(k.layout.logs.includes('소패: 장비를 태수로 삼았다(세금 +11% · 수확 +10% · 성 방어 +10%p)')); const od = k.layout.items.find(x => x.id === 'odel'); assert.deepStrictEqual([od.disabled, od.hint], [true, '군주가 머무는 주는 맡기지 않는다']);
   s.command('ogen'); assert.deepStrictEqual(ids(), ['on:122', 'on:123', 'back']); s.command('on:122'); assert.ok(g.officers.get(122).general); assert.strictEqual(k.layout.items.find(x => x.id === 'ogen').label, '장군 · 1/1');
   s.command('ogen'); assert.deepStrictEqual(ids(), ['on:122', 'on:123!', 'back'], '자리가 차면 더 올리지 못한다'); s.command('back'); assert.strictEqual(s.sub.step, 'top'); k.key('Escape'); assert.strictEqual(s.sub, null);
@@ -845,5 +847,127 @@ ok('동현삼 화면(전투): 버튼은 대기 · 차례 넘기기 · 맡기기 
   // 맡기기: 그 뒤에 청해 오는 일기토는 장수가 알아서 답한다. 결과 카드를 넘기면 지도로 돌아온다
   ({ k, s, v, b, a, d } = open()); v.command('auto'); assert.deepStrictEqual([b.human, v.auto], [null, true]); for (let j = 0; j < 20000 && v.mode !== 'result'; j++) k.engine.step(1); assert.strictEqual(v.mode, 'result'); assert.deepStrictEqual(ids(k), ['back']);
   v.command('back'); assert.ok(k.engine.scene === s); assert.strictEqual(s.game.P(10).owner, v.res.winner === 'att' ? 'liubei' : 'cao');
+});
+/* ---------- v1.10: 시나리오 여섯 · 우리 주 배율 · 복수 이동 · 재야 알림 · 주 정보 격자 ---------- */
+ok('시나리오: 자료 하나에 기본 배치와 여섯 시점이 들어 있다 · 지도와 주 41곳은 같고 세력 · 주인 · 장수만 다르다 · AI만 24달을 돌려도 정상이다', () => {
+  const J = samJ(), ws = S.worlds(J);
+  assert.deepStrictEqual(ws.map(w => [w.index, w.title, w.factions.size, [...w.provinces.values()].filter(p => !p.owner).length, [...w.officers.values()].filter(o => o.status === 'free').length]),
+    [[0, '200년 1월 · 기본 배치', 9, 1, 19], [1, '189년 12월 · 동탁과 제후들', 14, 19, 13], [2, '194년 11월 · 흩어진 군웅', 15, 8, 13], [3, '201년 10월 · 관도 뒤의 북쪽', 9, 1, 11], [4, '208년 9월 · 큰 강의 싸움 앞', 7, 1, 6], [5, '221년 4월 · 세 나라', 4, 1, 2], [6, '235년 2월 · 별이 진 뒤', 4, 0, 0]]);
+  assert.deepStrictEqual(ws.map(w => [w.meta.start.year, w.meta.start.month]), [[200, 1], [189, 12], [194, 11], [201, 10], [208, 9], [221, 4], [235, 2]]);
+  const base = S.parse(J), names = w => [...w.provinces.values()].map(p => [p.id, p.name, p.adj.join()].join());
+  assert.deepStrictEqual([...ws[0].provinces.values()].map(p => [p.id, p.owner, p.troops, p.gold]), [...base.provinces.values()].map(p => [p.id, p.owner, p.troops, p.gold]), '0번은 예전의 기본 배치 그대로');
+  for (const w of ws) {
+    assert.strictEqual(w.provinces.size, 41); assert.deepStrictEqual(names(w), names(base), w.title + ': 주와 길은 같다'); assert.ok(w.factions.has('liubei'), w.title + ': 유비 세력이 있다');
+    for (const f of w.factions.values()) { const o = w.officers.get(f.leader); assert.ok(o && o.faction === f.id && w.provinces.get(o.province).owner === f.id, `${w.title}: ${f.name}의 군주가 제 땅에 있다`); }
+    for (const pv of w.provinces.values()) if (pv.owner) assert.ok([...w.officers.values()].some(o => o.province === pv.id && o.faction === pv.owner && o.status !== 'free'), `${w.title}: ${pv.name}에 장수가 있다`);
+    const ids = [...w.officers.keys()]; assert.strictEqual(new Set(ids).size, ids.length);
+    const g = new S.Game(w, { player: null, rng: new DH.RNG(7) }); for (let m = 0; m < 24 && !g.over; m++) { g.runAIAll(); g.endMonth(); }
+    for (const pv of g.provinces.values()) assert.ok(Number.isFinite(pv.troops) && pv.troops >= 0 && Number.isFinite(pv.gold) && pv.gold >= 0 && Number.isFinite(pv.rice) && pv.rice >= 0, w.title + ': 수가 깨지지 않는다');
+  }
+  // 한 시나리오만 뽑으면 예전 형식(동현삼 자료 v1)의 JSON 하나가 된다. 저장소 밖에서 따로 읽을 수 있다
+  const one = S.scenarioJSON(J, J.scenarios[4]); assert.deepStrictEqual(Object.keys(one), ['format', 'version', 'meta', 'map', 'factions', 'provinces', 'officers']); assert.deepStrictEqual([one.meta.scenario, one.meta.start], ['221년 4월 · 세 나라', { year: 221, month: 4 }]);
+  const w5 = S.parse(one); assert.deepStrictEqual([...w5.factions.values()].map(f => [f.id, f.name, f.rank || 0]), [['cao', '조비', 2], ['liubei', '유비', 2], ['sun', '손권', 0], ['gongsundu', '공손공', 0]]);
+  // 틀린 자료는 까닭을 말한다
+  const bad = JSON.parse(JSON.stringify(one)); bad.factions[0].rank = 3; assert.throws(() => S.parse(bad), /rank/);
+});
+ok('시나리오: 자리(왕 · 황제)는 시나리오가 정해 준 데서 시작한다 · 221년의 조비와 유비는 폐하 · 주가 줄어도 자리는 내려가지 않는다', () => {
+  const ws = S.worlds(samJ()), G = (i, player) => new S.Game(ws[i], { player });
+  assert.deepStrictEqual([G(5, 'cao'), G(5, 'liubei'), G(5, 'sun'), G(5, 'gongsundu')].map(g => [g.fname(g.player), g.provincesOf(g.player).length, g.rank, g.title]), [['조비', 23, 2, '폐하'], ['유비', 5, 2, '폐하'], ['손권', 11, 1, '전하'], ['공손공', 1, 0, '주군']]);
+  assert.deepStrictEqual([G(6, 'cao'), G(6, 'liubei'), G(6, 'sun')].map(g => [g.fname(g.player), g.rank, g.title]), [['조예', 2, '폐하'], ['유선', 2, '폐하'], ['손권', 2, '폐하']]);
+  assert.deepStrictEqual([G(0, 'liubei'), G(1, 'liubei'), G(4, 'cao')].map(g => [g.rank, g.title]), [[0, '주군'], [0, '주군'], [2, '폐하']], '208년의 조조는 스물다섯 주라 황제의 자리에서 시작한다');
+  const g = G(5, 'liubei'), d = JSON.parse(JSON.stringify(g.toJSON())), h = S.Game.restore(ws[5], d, {}); assert.deepStrictEqual([h.rank, h.title], [2, '폐하'], '저장했다 불러와도 자리가 그대로다');
+});
+ok('동현삼 설정 31 시나리오 · 9 우리 주 배율: 시나리오를 먼저 읽고 그 판으로 군주 · 주 · 장수 번호를 검사한다 · 배율은 우리 주의 금 · 쌀 · 민심에만 걸린다', () => {
+  const ws = S.worlds(samJ()), read = code => { const st = S.newState(), r = S.readLang(code, ws, st); return { st, r }; };
+  // 31번은 어디에 적어도 같다(먼저 읽는다)
+  for (const code of [put(31, 5, 1, 2), put(1, 2, 31, 5)]) { const { st, r } = read(code); assert.ok(r.ok, r.errors.join()); assert.deepStrictEqual([r.world.index, st.start.scenario, st.start.player, r.applied.slice().sort()], [5, 5, 2, ['군주 유비', '시나리오 221년 4월 · 세 나라']]); }
+  let x = read(put(31, 5, 1, 5)); assert.ok(!x.r.ok && /'221년 4월 · 세 나라'의 군주는 4명뿐이다/.test(x.r.errors.join()), x.r.errors.join()); assert.deepStrictEqual(x.st, S.newState(), '오류가 있으면 globalState를 건드리지 않는다');
+  x = read(put(31, 7)); assert.ok(!x.r.ok, '없는 시나리오'); x = read(put(31, 1, 1, 14)); assert.ok(x.r.ok && x.st.start.player === 14, '189년은 군주가 열넷'); x = read(put(1, 10)); assert.ok(!x.r.ok && /군주는 9명뿐이다/.test(x.r.errors.join()));
+  x = read(put()); assert.ok(x.r.ok && x.r.empty && x.r.world === ws[0]);
+  assert.strictEqual(S.scenarioOf([[1, 2], [31, 3], [9, 300]]), 3); assert.strictEqual(S.scenarioOf([[1, 2]]), 0); assert.strictEqual(S.scenarioOf(null), 0);
+  // 9번: 10~1000, 10 단위
+  for (const v of [0, 5, 15, 1010]) assert.ok(!read(put(9, v)).r.ok, '배율 ' + v);
+  const { st, r } = read(put(9, 300)); assert.ok(r.ok); assert.deepStrictEqual([st.start.boost, r.applied], [300, ['우리 주의 금 · 쌀 · 민심 배율(%) 300% (세 배)']]);
+  const g0 = new S.Game(ws[0], { player: 'liubei' }), g = new S.Game(ws[0], { player: 'liubei', state: st }), row = (G, f) => G.provincesOf(f).map(p => [p.name, p.gold, p.rice, p.loyalty, p.troops, p.farm]);
+  assert.deepStrictEqual(row(g, 'liubei'), row(g0, 'liubei').map(([n, gold, rice, loy, t, f]) => [n, gold * 3, rice * 3, Math.min(100, loy * 3), t, f]), '우리 주: 금 · 쌀 세 배, 민심은 100까지. 병력과 농지는 그대로');
+  for (const f of ['cao', 'yuan', 'sun']) assert.deepStrictEqual(row(g, f), row(g0, f), f + ': 다른 군주의 주는 그대로');
+  assert.deepStrictEqual(row(new S.Game(ws[0], { player: null, state: st }), 'liubei'), row(g0, 'liubei'), '군주가 없는 판(AI만)에는 걸리지 않는다');
+  // 3~8번은 배율 뒤에 걸린다(적은 값이 그대로 남는다)
+  const y = read(put(9, 300, 3, 700)); assert.ok(y.r.ok); assert.deepStrictEqual(new S.Game(ws[0], { player: 'liubei', state: y.st }).provincesOf('liubei').map(p => [p.gold, p.rice]), [[700, 4500], [700, 4500]]);
+  const half = read(put(9, 50)); assert.deepStrictEqual(new S.Game(ws[0], { player: 'liubei', state: half.st }).provincesOf('liubei').map(p => [p.gold, p.rice, p.loyalty]), [[275, 750, 32], [275, 750, 32]], '100보다 작으면 어려운 판(내림)');
+  // 쉬운 판 예제 일곱: 시나리오마다 하나씩, 모두 배율 300
+  const easy = S.examples(ws).filter(e => e.group === '쉬운 판 · 나만 금 · 쌀 · 민심 세 배'); assert.deepStrictEqual(easy.map(e => e.id), ['e189', 'e194', 'e200', 'e201', 'e208', 'e221', 'e235']);
+  assert.deepStrictEqual(easy.map(e => { const q = read(e.code); return [q.r.world.index, q.st.start.boost]; }), [[1, 300], [2, 300], [0, 300], [3, 300], [4, 300], [5, 300], [6, 300]]);
+  assert.deepStrictEqual(S.examples(ws).filter(e => /^s\d/.test(e.id)).map(e => read(e.code).r.world.index), [1, 2, 3, 4, 5, 6]);
+});
+ok('이동: 장수 여럿을 한 번에 보낸다 · 같은 장수를 두 번 고르거나 남의 장수를 섞으면 안 된다 · 모두 떠나면 공백지가 된다', () => {
+  const cao = () => newGame({ player: 'cao' });                                                                      // 허창(14): 조조 101 · 순욱 103 · 곽가 104 · 허저 105, 이웃한 우리 주 진류(11)
+  let g = cao(), r = g.move(14, [103, 105], 11, 1000);
+  assert.ok(r.ok, r.why); assert.deepStrictEqual([r.text, r.officers, r.left], ['허창 → 진류: 순욱 · 허저가 병력 1,000과 함께 옮겨 갔다', [103, 105], false]);
+  assert.deepStrictEqual([103, 105, 101, 104].map(id => g.officers.get(id).province), [11, 11, 14, 14]); assert.strictEqual(g.P(14).acted, true);
+  g = cao(); assert.strictEqual(g.move(14, [103, 103], 11, 0).why, '같은 장수를 두 번 골랐다'); assert.strictEqual(g.move(14, [103, 102], 11, 0).why, '이 주에 있는 우리 장수가 아니다'); assert.strictEqual(g.move(14, [], 11, 0).why, '보낼 것이 없다'); assert.strictEqual(g.P(14).acted, false);
+  assert.deepStrictEqual([101, 103, 104, 105].map(id => g.officers.get(id).province), [14, 14, 14, 14], '안 되는 이동은 아무도 옮기지 않는다');
+  r = g.move(14, 103, 11, 0); assert.ok(r.ok && r.text === '허창 → 진류: 순욱이 옮겨 갔다', r.text);                                 // 번호 하나도 예전처럼 받는다
+  g = cao(); r = g.move(14, [101, 103, 104, 105], 11, 0); assert.ok(r.ok && r.left, r.text); assert.ok(g.vacant(g.P(14)), '장수가 모두 떠난 허창은 공백지가 된다'); assert.ok(/공백지/.test(r.text), r.text);
+  g = cao(); r = g.move(14, null, 11, 500); assert.ok(r.ok && r.text === '허창 → 진류: 병력 500을 보냈다' && r.officers.length === 0, r.text);
+  g = newGame(); r = g.move(12, [121, 123], 13, 0); assert.ok(r.ok && r.left && g.vacant(g.P(12)), '유비와 장비가 함께 하비로 가면 소패가 빈다: ' + r.text);
+});
+ok('동현삼 화면: 이동에서 장수를 여러 명 고른다(누르면 ✓, 다시 누르면 풀린다) · 고른 장수로 n명 · 고른 수에 맞춰 설명이 바뀐다', () => {
+  const k = mk(3), s = k.scene, ids = () => k.layout.items.map(x => x.id + (x.disabled ? '!' : '')), it = id => k.layout.items.find(x => x.id === id), lab = id => it(id).label;
+  s.command('f:cao'); s.selected = 14; s.command('move');
+  assert.deepStrictEqual(ids(), ['who:101', 'who:103', 'who:104', 'who:105', 'who:ok!', 'who:none', 'who:cart', 'cancel']); assert.deepStrictEqual([lab('who:ok'), !!it('who:ok').primary], ['고른 장수로', false]);
+  s.command('who:103'); assert.deepStrictEqual([lab('who:103').startsWith('✓ 순욱'), lab('who:ok'), it('who:ok').primary, !!it('who:ok').disabled, s.sub.picks], [true, '고른 장수로 1명', true, false, [103]]);
+  s.command('who:105'); assert.strictEqual(lab('who:ok'), '고른 장수로 2명'); s.command('who:103'); assert.deepStrictEqual([lab('who:103').startsWith('✓'), lab('who:ok'), s.sub.picks], [false, '고른 장수로 1명', [105]]);
+  assert.ok(!/공백지가 된다/.test(k.layout.detail.note)); s.command('who:101'); s.command('who:103'); s.command('who:104');
+  assert.ok(/장수가 모두 떠나면 허창은 공백지가 된다/.test(k.layout.detail.note), '모두 고르면 주가 빈다고 알린다: ' + k.layout.detail.note);
+  s.command('who:101'); s.command('who:104'); assert.deepStrictEqual(s.sub.picks, [105, 103]);
+  assert.ok(k.layout.pressPrimary()); assert.deepStrictEqual([s.sub.step, s.sub.officer], ['to', [103, 105]], '고른 순서가 아니라 주에 적힌 순서로 간다'); assert.ok(ids().includes('to:11') && !ids().some(x => x.startsWith('who:')), ids().join());
+  s.command('to:11'); assert.deepStrictEqual(ids(), ['n:0', 'n:4000', 'n:8000', 'cancel']); s.command('n:4000');
+  for (let i = 0; i < 4000 && (s.hold || s.marches.length); i++) k.engine.step(1);
+  assert.deepStrictEqual([105, 103, 101, 104].map(id => s.game.officers.get(id).province), [11, 11, 14, 14], '고른 둘만 진류로 갔다');
+  assert.ok(k.layout.logs.some(t => /^허창 → 진류: (허저 · 순욱|순욱 · 허저)[이가]/.test(t)), k.layout.logs.slice(-3).join(' | '));
+});
+ok('재야 알림: 새 달마다 수행낭자가 우리 주의 재야 장수를 아뢴다 · 기록은 목록이 바뀔 때만 · 수색 버튼과 주 정보에도 보인다 · 맞아들이면 사라진다', () => {
+  const k = mk(5), s = k.scene, L = k.layout, find = () => L.items.find(x => x.id === 'search'), row = n => (L.detail.rows.find(r => r[0] === n) || [])[1];
+  s.command('f:liubei'); assert.deepStrictEqual(s.talents().map(([p, f]) => [p.name, f.map(o => o.name)]), [['하비', ['미축']]]);
+  assert.strictEqual(s.council.b, '주군, 재야에 사람이 있습니다. 하비에 미축입니다. 그 주에서 수색하시면 맞아들일 수 있습니다.'); assert.strictEqual(L.logs.filter(t => t.startsWith('재야: ')).length, 1);
+  const see = id => { s.selected = id; s.refresh(); }; see(13);
+  assert.deepStrictEqual([find().label, find().hint, row('재야')], ['수색 · 재야 1명', '재야: 미축', '미축(무' + s.game.freeIn(13)[0].war + ' 지' + s.game.freeIn(13)[0].int + ' 매' + s.game.freeIn(13)[0].cha + ') · 수색하면 맞아들일 수 있다']);
+  see(12); assert.deepStrictEqual([find().label, find().hint, row('재야')], ['수색 · 재야 없음', '재야 장수가 없다. 가끔 금을 줍는다', '없음']);
+  see(10); assert.strictEqual(row('재야'), undefined, '남의 주의 재야는 보여 주지 않는다');
+  k.endMonth(); assert.ok(s.council.b.includes('하비에 미축'), '다음 달에도 아뢴다'); assert.strictEqual(L.logs.filter(t => t.startsWith('재야: ')).length, 1, '목록이 같으면 기록은 한 번뿐이다');
+  s.game.rules.search.base = 1;                                                                                          // 확률은 그대로 두었다(30% + 매력÷2 %). 여기서는 반드시 찾게 해 두고 본다
+  s.selected = 13; s.command('search'); assert.ok(s.game.officersOf(13).some(o => o.name === '미축'), '찾으면 우리 장수가 된다'); assert.strictEqual(s.talents().length, 0);
+  k.endMonth(); assert.ok(!s.council.b.includes('재야에 사람이 있습니다'), '없으면 평소의 한 마디가 나온다: ' + s.council.b); assert.ok(DH.Sam.TIPS.length === 124);
+  // 달이 바뀔 때의 소식은 한 번 보이고, 주를 찍으면 평소의 한 마디로 넘어간다
+  const c = new DH.Sam.Council(); assert.strictEqual(typeof c.tell, 'function');
+});
+ok('동현삼 화면: 주 정보는 12칸 격자에 놓을 폭을 함께 낸다(인구 · 병력 절반, 금 · 쌀 한 줄, 민심 · 농지 · 훈련과 치수 · 상업 · 태수 세 칸) · 위임은 맡긴 주에만 · 군주 고르기에 시나리오가 보인다', () => {
+  const k = mk(2), s = k.scene, L = k.layout, shape = () => L.detail.rows.map(r => r[0] + ':' + (r[2] || 'w'));
+  assert.deepStrictEqual(L.detail.rows, [['시나리오', '200년 1월 · 기본 배치'], ['주', 41, 't'], ['장수', 71, 't'], ['군주', 9, 't']]);
+  const see = id => { s.selected = id; s.refresh(); }; s.command('f:liubei'); see(12);
+  assert.deepStrictEqual(shape(), ['세력:w', '인구:h', '병력:h', '금:g', '쌀:r', '민심:t', '농지:t', '훈련:t', '치수:t', '상업:t', '태수:t', '장수:w', '재야:w', '이웃:w']);
+  const v = n => L.detail.rows.find(r => r[0] === n)[1], p = s.game.P(12), inc = s.game.income(12), f = n => Number(n).toLocaleString('ko-KR');
+  assert.deepStrictEqual([v('금'), v('쌀'), v('태수'), v('민심'), v('치수'), v('상업')], [`${f(p.gold)} (+${f(inc.gold)})`, `${f(p.rice)} (+${f(inc.rice)} −${f(inc.upkeep)})`, '없음', p.loyalty, p.flood, p.trade]);
+  assert.ok(!shape().includes('위임:w')); assert.ok(s.game.setGovernor(13, 122).ok && s.game.delegate(13, 'civil').ok); see(13); assert.deepStrictEqual([v('태수'), v('위임')], ['관우', '관우 · 내정을 맡겼다']); assert.deepStrictEqual(shape().slice(10, 13), ['태수:t', '위임:w', '장수:w']);
+  see(41); assert.deepStrictEqual(shape(), ['세력:w', '인구:h', '병력:h', '금:g', '쌀:r', '민심:t', '농지:t', '장수:w', '이웃:w'], '공백지는 훈련 · 치수 · 상업 · 태수 줄이 없다'); assert.strictEqual(v('금'), f(s.game.P(41).gold));
+});
+ok('동현삼 화면: 시나리오를 바꾸면 판 · 달력 · 군주 목록이 바뀐다 · 저장한 판은 제 시나리오로 열린다 · v1.00까지의 저장 파일은 기본 배치로 열린다', () => {
+  const ws0 = S.worlds(samJ()), code = id => S.examples(ws0).find(e => e.id === id).code;
+  const k = mk(4, code('s189')), s = k.scene, L = k.layout;
+  assert.deepStrictEqual([s.world.index, s.mode, k.engine.clock.year, k.engine.clock.month, L.items.filter(x => x.id.startsWith('f:')).length], [1, 'pick', 189, 12, 14]); assert.ok(L.logs.includes('시나리오: 189년 12월 · 동탁과 제후들 · 군주 14'));
+  assert.strictEqual(L.detail.rows[0][1], '189년 12월 · 동탁과 제후들');
+  s.command('f:liubei'); const home = s.game.provincesOf('liubei').map(p => p.name); assert.ok(home.length >= 1); k.endMonth();
+  const d = pack(k), k2 = mk(9), r = k2.scene.loadGame(d); assert.ok(r.ok, r.why);
+  assert.deepStrictEqual([k2.scene.world.index, k2.engine.clock.year, k2.engine.clock.month, k2.scene.game.provincesOf('liubei').map(p => p.name), k2.scene.game.factions.size], [1, 190, 1, s.game.provincesOf('liubei').map(p => p.name), 14]);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(k2.scene.saveGame().game)), d.game, '불러온 판을 다시 저장하면 같다');
+  // 221년 유비: 폐하로 시작하고, 불러온 뒤에도 폐하다
+  const k3 = mk(4, HEAD + [A.print(31), A.print(5), A.print(1), A.print(2)].join('\n') + TAIL); assert.deepStrictEqual([k3.scene.mode, k3.scene.game.player, k3.scene.game.title, k3.engine.clock.year], ['play', 'liubei', '폐하', 221]);
+  assert.ok(k3.scene.council.b.startsWith('폐하, ') || k3.scene.council.a.startsWith('폐하, '), k3.scene.council.a + ' / ' + k3.scene.council.b);
+  const d3 = pack(k3), k4 = mk(1); assert.ok(k4.scene.loadGame(d3).ok); assert.deepStrictEqual([k4.scene.world.index, k4.scene.game.title], [5, '폐하']);
+  // 시나리오 줄이 없는 저장(v1.00까지)은 기본 배치
+  const k5 = mk(6); k5.scene.command('f:liubei'); const d5 = pack(k5); assert.ok(!d5.settings.some(x => x[0] === 31)); const k6 = mk(4, code('s235')); assert.strictEqual(k6.scene.world.index, 6); assert.ok(k6.scene.loadGame(d5).ok); assert.deepStrictEqual([k6.scene.world.index, k6.engine.clock.year, k6.scene.game.factions.size], [0, 200, 9]);
+  // 설정을 비우면 기본 배치로 돌아온다
+  assert.ok(k.scene.applyDonghyunLang(HEAD + TAIL.trimStart()).ok || true); const k7 = mk(4, code('s208')); assert.strictEqual(k7.scene.world.index, 4); assert.ok(k7.scene.applyDonghyunLang(code('none')).ok); assert.deepStrictEqual([k7.scene.world.index, k7.engine.clock.year], [0, 200]);
 });
 console.log(`핵심 시험 ${n}개 통과`);

@@ -1,5 +1,6 @@
 /* 동현삼 앱: 공통 엔진의 지도 장면을 A 칸에 띄우고, B 칸의 동현랭 편집기가 설정을 읽어 새 판을 연다.
- * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항과 이 파일은 GAME 한 줄만 다르다.
+ * 편집기(줄 번호 · 색 입히기 · 들여쓰기 · .dh 저장과 열기)는 동현 시리즈와 같은 모양이다. 동현항의 같은 파일과는 GAME 한 줄, 그리고 v1.10에서 더한 두 군데(시나리오를 먼저 읽는 read · 예제 묶음)가 다르다.
+ * 두 군데는 게임이 readLang이나 예제의 group을 주지 않으면 예전대로 돈다.
  * 저장과 불러오기(브라우저 칸 3개 + .dhsave 파일)는 동현심과 같은 규칙이다. 무엇을 적고 어떻게 되살리는지는 장면(saveGame · loadGame)이 안다.
  * 효과음은 장면이 엔진에 알리는 'sfx' 사건을 여기서 받아 튼다(sfx.js · 동현큐와 같은 소리). 첫 출전 전에는 지도 위에 시작 카드를 얹고 판을 멈춘다. */
 (function () {
@@ -75,10 +76,12 @@ $('#run').onclick = () => sortie();
 /* ---------- 출전 규약: 동현랭이 출력한 정수를 '설정 번호 · 값'으로 읽는다 ---------- */
 const say = (kind, text) => { result.dataset.kind = kind; result.textContent = text; };
 const list = rep => rep.settings.map(s => `${s.label} = ${s.text}`).join(' · ');
+/** 코드를 읽기만 한다. 시나리오(31번)를 먼저 읽어 그 판의 군주 · 주 · 장수 번호로 검사한다 */
+const read = text => (current.readLang ? current.readLang(text) : current.lang.parse(text, { ctx: { world: current.world } }));
 /** 코드를 고칠 때마다 읽기만 해 본다(판은 건드리지 않는다) */
 function preview() {
   if (!current) return;
-  const rep = current.lang.parse(code.value, { ctx: { world: current.world } });
+  const rep = read(code.value);
   if (!rep.ok) return say('error', rep.errors.join(' '));
   say('', rep.empty ? '설정이 없다. 출전을 누르면 기본값으로 새 판이 열린다.' : `읽은 설정 ${rep.settings.length}개: ${list(rep)}. 출전을 누르면 이 값으로 새 판이 열린다.`);
 }
@@ -93,7 +96,13 @@ function sortie() {
 }
 /** 예제 목록과 설정 번호 표를 채운다 */
 function fillLang() {
-  for (const ex of current.examples) { const o = el('option', ex.name); o.value = ex.id; $('#example').append(o); }
+  let group = null;                                    // 예제는 묶음(기본 · 시나리오 · 쉬운 판 · 수치 실험 · 동현랭 문법)으로 나눠 싣는다
+  for (const ex of current.examples) {
+    const o = el('option', ex.name); o.value = ex.id;
+    if (!ex.group) { $('#example').append(o); continue; }
+    if (!group || group.label !== ex.group) { group = document.createElement('optgroup'); group.label = ex.group; $('#example').append(group); }
+    group.append(o);
+  }
   $('#lang-rows').replaceChildren(...current.convention.map(r => {
     const tr = el('tr'), name = el('td', r.label); if (r.hint) name.append(el('small', r.hint));
     tr.append(el('td', r.n), name, el('td', r.range), el('td', r.now === undefined || r.now === null ? '-' : typeof r.now === 'number' ? r.now.toLocaleString('ko-KR') : r.now));
@@ -269,7 +278,7 @@ class StartCard extends DH.Scene {
   onKey() {}   // 시작 전에는 지도가 키를 받지 않는다
   render(g) {
     const W = this.engine.width, H = this.engine.height, w = 280, h = 88, x = (W - w) / 2, y = (H - h) / 2;
-    if (current && this._src !== code.value) { this._src = code.value; this._rep = current.lang.parse(code.value, { ctx: { world: current.world } }); }   // 글이 바뀔 때만 다시 읽는다
+    if (current && this._src !== code.value) { this._src = code.value; this._rep = read(code.value); }   // 글이 바뀔 때만 다시 읽는다
     const rep = this._rep, fit = s => (s.length > 30 ? s.slice(0, 29) + '…' : s);
     g.fillStyle = 'rgba(38,33,28,.22)'; g.fillRect(0, 0, W, H);
     g.fillStyle = 'rgba(74,66,88,.88)'; g.fillRect(x, y, w, h);

@@ -7,12 +7,12 @@
  *              시혜       쌀 500을 풀어 민심 +(4 + 매력÷20). 100까지 오른다.
  *   징병       금 100 → 병력 +1000, 인구 −1000, 민심 −(12 − 매력÷10). 민심 30 아래면 못 한다. 새 병사는 훈련 40이라 그 주의 훈련이 병력 비율만큼 내려간다.
  *   훈련       금 50 → 훈련 +(5 + 무력÷10). 전투에서 주는 피해가 (150 + 훈련) ÷ 200배가 된다(훈련 50이면 1배).
- *   이동       장수 한 명(또는 병력만)을 이웃한 우리 주로 보낸다. 병력을 딸려 보낼 수 있다. 금과 쌀을 이웃한 우리 주로 실어 보낼 수도 있다(수송).
+ *   이동       장수 한 명이나 여럿(또는 병력만)을 이웃한 우리 주로 보낸다. 병력을 딸려 보낼 수 있다. 금과 쌀을 이웃한 우리 주로 실어 보낼 수도 있다(수송).
  *              장수는 이웃한 공백지로도 갈 수 있고, 가면 그 땅이 우리 주가 된다(진주).
  *   수색       그 주의 재야 장수를 찾는다(확률 30% + 매력÷2 %). 없으면 가끔 금을 줍는다.
  *   침공       이웃한 남의 주로 쳐들어간다 → 전투(sam-battle.js) → settle()로 결과를 반영한다. 동맹과 공백지는 칠 수 없다.
  *              이기면 지키던 장수는 저마다 30% 확률로 사로잡혀 우리 편이 된다(군주는 빼고). 나머지는 가장 가까운 자기 땅으로 물러난다.
- *   벼슬       명령을 쓰지 않는다. 태수(주마다 한 명): 세금 +매력÷4 %, 수확 +지력÷4 %, 성 방어 +무력÷10 %p. 다른 장수가 있으면 싸움에 나서지 않고 주를 지킨다.
+ *   벼슬       '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다. 태수(주마다 한 명): 세금 +매력÷4 %, 수확 +지력÷4 %, 성 방어 +무력÷10 %p. 다른 장수가 있으면 싸움에 나서지 않고 주를 지킨다.
  *              군사(세력에 한 명, 지력 85 이상): 동맹 확률 +지력÷10 %p, 화계 +10%p, 침공하기 전에 승산을 헤아려 준다.
  *              장군(무력 85 이상, 1 + 주 수÷4 명까지): 그 부대가 주는 피해 +10%.
  *              위임: 태수가 있는 주는 달마다 태수가 알아서 움직인다(내정만 · 군사까지).
@@ -23,6 +23,7 @@
  * 달이 바뀔 때: 세금(인구÷2000 × 민심% × (70 + 상업)% × 태수) · 수확(농지 × 4 × 태수) · 군량(병력÷100) · 민심 +1(70까지) · 인구 +0.2% · 동맹 기한 −1.
  *              철마다 일이 난다: 1월 역병 · 7월 큰물(치수가 막는다) · 8월 메뚜기 · 10월 풍년.
  * 호칭: 우리 주가 10곳(주 수의 1/4)이 되면 왕(전하), 14곳(1/3)이 되면 황제(폐하)에 오른다. 땅을 잃어도 내려오지 않는다.
+ *       시나리오 자료에 rank가 적힌 세력은 주 수와 상관없이 처음부터 그 자리다(221년의 조비 · 유비).
  * 이기는 조건: 차지할 주 수를 정했으면 그만큼, 아니면 다른 세력이 모두 무너지거나 모든 주를 차지했을 때.
  * 민심은 자료와 저장 파일에서 loyalty라는 이름으로 적힌다(v0.05까지는 ‘충성도’라고 불렀다).
  *
@@ -67,21 +68,22 @@
       this.world = world; this.rng = o.rng || new DH.RNG(1); this.player = o.player ?? null;
       this.state = st; this.rules = st && st.rules ? st.rules : RULES; this.battleRules = st && st.battle ? st.battle : null;
       this.stage = { goal: null, months: 0, ...(st && st.stage ? st.stage : {}) };
-      this.factions = new Map([...world.factions.values()].map(f => [f.id, { ...f, alive: true, advisor: null }]));
+      this.factions = new Map([...world.factions.values()].map(f => [f.id, { ...f, alive: true, advisor: null }]));      // rank(시나리오에 적힌 자리)도 함께 온다
       this.provinces = new Map([...world.provinces.values()].map(p => [p.id, { id: p.id, name: p.name, hanja: p.hanja, adj: [...p.adj], owner: p.owner, pop: p.pop, gold: p.gold, rice: p.rice, troops: p.troops, loyalty: p.loyalty, farm: p.farm, acted: false,
         flood: p.flood ?? this.rules.flood.start, trade: p.trade ?? this.rules.trade.start, drill: p.drill ?? this.rules.drill.start, gov: null, auto: null }]));
       this.officers = new Map([...world.officers.values()].map(o2 => [o2.id, { ...o2, general: false }]));
       this.months = 0; this.over = null; this.overWhy = null; this.queue = [];
-      this.rank = 0; this.crowned = 0;                           // 호칭(0 주군 · 1 전하 · 2 폐하). crowned: 방금 오른 자리(화면이 알리고 0으로 돌린다)
+      this.rank = this.player !== null && world.factions.has(this.player) ? world.factions.get(this.player).rank || 0 : 0; this.crowned = 0;   // 호칭(0 주군 · 1 전하 · 2 폐하). 시나리오에 적힌 자리에서 시작한다. crowned: 방금 오른 자리(화면이 알리고 0으로 돌린다)
       this.pacts = new Map();                                    // 동맹: '세력|세력'(가나다가 아니라 id 순) → 남은 달
       if (this.player !== null && !this.factions.has(this.player)) throw new Error(`세력 ${this.player}가 없다`);
       if (st) { this.applyStart(st); this.checkStage(); }      // 시작부터 목표를 채웠으면 바로 끝난다
       this.checkRank(); this.crowned = 0;                        // 처음부터 넓은 땅으로 시작하면 식 없이 그 자리에서 시작한다
     }
     /** globalState의 시작값을 판에 덮어쓴다. null이거나 없는 것은 자료 값 그대로 둔다.
-     *  start.{gold,rice,troops,loyalty,farm}: 우리 주마다 · provinces: [[주, 항목, 값]] · officers: [[장수, 능력, 값]] */
+     *  start.boost(%): 우리 주마다 금 · 쌀 · 민심에 곱한다(민심은 100까지) → start.{gold,rice,troops,loyalty,farm}: 우리 주마다 · provinces: [[주, 항목, 값]] · officers: [[장수, 능력, 값]] */
     applyStart(st) {
-      const s = st.start || {};
+      const s = st.start || {}, b = s.boost;
+      if (this.player !== null && b != null && b !== 100) for (const p of this.provincesOf(this.player)) { p.gold = Math.floor(p.gold * b / 100); p.rice = Math.floor(p.rice * b / 100); p.loyalty = Math.min(100, Math.floor(p.loyalty * b / 100)); }
       if (this.player !== null) for (const p of this.provincesOf(this.player)) for (const k of ['gold', 'rice', 'troops', 'loyalty', 'farm']) if (s[k] != null) p[k] = s[k];
       for (const [pid, key, v] of st.provinces || []) { const p = this.P(pid); if (p) p[key] = v; }
       for (const [id, key, v] of st.officers || []) { const o = this.officers.get(id); if (o) o[key] = v; }
@@ -107,8 +109,8 @@
     }
     /** 우리 군주를 부르는 말: 주군 · 전하 · 폐하 */
     get title() { return TITLES[this.rank]; }
-    /** 세력 f의 자리(0 · 1 · 2). 다른 세력은 지금 가진 주 수로 본다. */
-    rankOf(f) { if (!f) return 0; if (f === this.player) return this.rank; const n = this.provincesOf(f).length, T = this.thrones; return n >= T.emperor ? 2 : n >= T.king ? 1 : 0; }
+    /** 세력 f의 자리(0 · 1 · 2). 다른 세력은 지금 가진 주 수와 시나리오에 적힌 자리 가운데 높은 쪽으로 본다. */
+    rankOf(f) { if (!f) return 0; if (f === this.player) return this.rank; const n = this.provincesOf(f).length, T = this.thrones; return Math.max(this.factions.get(f).rank || 0, n >= T.emperor ? 2 : n >= T.king ? 1 : 0); }
     /** 지금이 몇 월인지(1~12) */
     get month() { const s = (this.world.meta && this.world.meta.start) || {}; return ((s.month || 1) - 1 + this.months) % 12 + 1; }
     P(id) { return this.provinces.get(id); }
@@ -221,7 +223,7 @@
       p.gold -= gold; p.rice -= rice; t.gold += gold; t.rice += rice; p.acted = true;
       return { ok: true, type: 'transport', text: `${p.name} → ${t.name}: ${josa([gold ? '금 ' + fmt(gold) : '', rice ? '쌀 ' + fmt(rice) : ''].filter(Boolean).join(' · '), '을', '를')} 실어 보냈다` };
     }
-    // ───────── 벼슬(명령을 쓰지 않는다) ─────────
+    // ───────── 벼슬('주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동) ─────────
     /** 태수를 임명한다. officerId가 null이면 물린다(위임도 풀린다). */
     setGovernor(pid, officerId) {
       const p = this.P(pid); if (!p || !p.owner) return NO('주인 없는 땅이다'); if (this.over) return NO('판이 끝났다');
@@ -297,23 +299,25 @@
     }
     /** 주어진 주(없으면 모든 주) 가운데 장수 없는 우리 · 남의 주를 공백지로 돌린다. @returns {string[]} */
     sweep(ids) { const out = []; for (const p of ids ? ids.map(id => this.P(id)) : this.provinces.values()) if (p.owner && !this.officersOf(p.id).length) out.push(this.abandon(p)); return out; }
-    /** officerId가 null이면 병력만 보낸다. 장수는 이웃한 공백지로도 간다(그 땅을 차지한다). 마지막 장수가 떠난 주는 공백지가 된다. */
+    /** 장수를 이웃한 우리 주로 보낸다. officerId는 장수 번호 하나, 번호 여럿(배열), 또는 null(병력만)이다.
+     *  장수는 이웃한 공백지로도 간다(그 땅을 차지한다). 마지막 장수가 떠난 주는 공백지가 된다. */
     move(pid, officerId, toPid, troops = 0) {
       const c = this.can(pid, 'move'); if (!c.ok) return c;
-      const p = this.P(pid), t = this.P(toPid), o = officerId === null ? null : this.officers.get(officerId);
+      const p = this.P(pid), t = this.P(toPid), ids = officerId === null ? [] : Array.isArray(officerId) ? officerId : [officerId], here = this.officersOf(pid), os = ids.map(id => this.officers.get(id));
       if (!t || !p.adj.includes(toPid) || (t.owner !== p.owner && !this.vacant(t))) return NO('이웃한 우리 주나 공백지로만 갈 수 있다');
-      if (officerId !== null && (!o || !this.officersOf(pid).includes(o))) return NO('이 주에 있는 우리 장수가 아니다');
+      if (os.some(o => !o || !here.includes(o))) return NO('이 주에 있는 우리 장수가 아니다');
+      if (new Set(ids).size !== ids.length) return NO('같은 장수를 두 번 골랐다');
       if (!Number.isInteger(troops) || troops < 0 || troops > p.troops) return NO('보낼 병력이 맞지 않다');
-      if (!o && troops <= 0) return NO('보낼 것이 없다');
+      if (!os.length && troops <= 0) return NO('보낼 것이 없다');
       const take = t.owner !== p.owner;
-      if (take && !o) return NO('공백지에는 장수가 가야 한다');
+      if (take && !os.length) return NO('공백지에는 장수가 가야 한다');
       if (take) { t.owner = p.owner; t.acted = true; }
-      if (o) o.province = toPid;
+      for (const o of os) o.province = toPid;
       this.blend(t, troops, p.drill); p.troops -= troops; t.troops += troops; p.acted = true;
-      const left = o ? this.sweep([pid]) : [];
-      const text = `${p.name} → ${t.name}: ` + (o ? `${josa(o.name, '이', '가')} ${troops ? '병력 ' + fmt(troops) + '과 함께 ' : ''}${take ? '들어가 공백지를 차지했다' : '옮겨 갔다'}` : `병력 ${josa(fmt(troops), '을', '를')} 보냈다`) + (left.length ? '. ' + left.join('. ') : '');
+      const left = os.length ? this.sweep([pid]) : [];
+      const text = `${p.name} → ${t.name}: ` + (os.length ? `${josa(os.map(o => o.name).join(' · '), '이', '가')} ${troops ? '병력 ' + fmt(troops) + '과 함께 ' : ''}${take ? '들어가 공백지를 차지했다' : '옮겨 갔다'}` : `병력 ${josa(fmt(troops), '을', '를')} 보냈다`) + (left.length ? '. ' + left.join('. ') : '');
       if (take) this.checkStage();
-      return { ok: true, type: 'move', took: take, left: left.length > 0, text };
+      return { ok: true, type: 'move', took: take, left: left.length > 0, officers: os.map(o => o.id), text };
     }
     search(pid) {
       const c = this.can(pid, 'search'); if (!c.ok) return c;
@@ -610,7 +614,7 @@
         for (const [a, b, m] of d.pacts) if (g.factions.get(a).alive && g.factions.get(b).alive) g.pacts.set(g.pactKey(a, b), m);
       }
       g.months = d.months; g.over = d.over; g.overWhy = d.overWhy; g.queue = [];
-      g.rank = d.rank ?? 0; g.checkRank(); g.crowned = 0;          // 옛 저장 파일은 지금 가진 주 수로 자리를 정한다(식은 올리지 않는다)
+      g.rank = Math.max(d.rank ?? 0, world.factions.get(d.player).rank || 0); g.checkRank(); g.crowned = 0;          // 옛 저장 파일은 지금 가진 주 수로 자리를 정한다(식은 올리지 않는다)
       return g;
     }
 

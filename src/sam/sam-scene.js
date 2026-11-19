@@ -1,7 +1,10 @@
 /* 동현삼 · 지도 장면 — 육각 지도 위의 41개 주에서 한 달에 한 번씩 명령을 내린다. 규칙은 sam-rules.js에 있다.
  *   군주를 고른다 → 우리 주를 찍는다 → 내정(농지 개발 · 치수 · 상업 · 시혜) · 징병 · 훈련 · 이동 · 침공 · 수색 · 동맹 가운데 하나 → 턴 종료.
- *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다. 이동에서는 금과 쌀을 수레에 실어 보낼 수도 있다.
- *   벼슬(태수 · 군사 · 장군 · 위임)은 명령을 쓰지 않는다. 위임한 주는 턴 종료를 누를 때 태수가 알아서 움직인다.
+ *   이동과 침공은 조작 창에서 차례로 고른다(누가 → 어디로 → 병력). 어디로는 지도의 주를 찍어도 된다. 이동에서는 장수를 여럿 골라 함께 보낼 수 있고, 금과 쌀을 수레에 실어 보낼 수도 있다.
+ *   벼슬(태수 · 군사 · 장군 · 위임)은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다. 위임한 주는 턴 종료를 누를 때 태수가 알아서 움직인다.
+ *   재야: 우리 주에 재야 장수가 있으면 지도의 성 왼쪽 위에 노란 마름모가 뜨고, 주 정보의 '재야' 줄과 수색 버튼에 적힌다. 달이 바뀔 때마다 수행낭자가 어느 주에 누가 있는지 아뢴다.
+ *   시나리오: 자료에 든 판 배치(200년 1월의 기본 배치와 189 · 194 · 201 · 208 · 221 · 235년) 가운데 하나를 동현랭 설정 31번으로 고른다. 지도와 주는 같고 주인과 장수가 다르다.
+ *   주 정보: 조작 창의 주 정보는 12칸 격자에 줄여 적는다(인구 · 병력 / 금 · 쌀 / 민심 · 농지 · 훈련 / 치수 · 상업 · 태수가 한 줄씩).
  *   행군: 이동 · 수송 · 침공을 하면 깃발 든 부대(또는 수레)가 길을 따라 걸어간다. 침공은 부대가 닿은 뒤에 전투가 열린다. 화면을 누르거나 키를 누르면 건너뛴다.
  *   철: 봄 3~5월 · 여름 6~8월 · 가을 9~11월 · 겨울 12~2월에 따라 땅과 숲의 빛이 바뀐다.
  *   즉위: 주가 늘어 왕 · 황제에 오르면 카드가 뜨고, 두 낭자가 부르는 말이 주군 → 전하 → 폐하로 바뀐다.
@@ -35,8 +38,9 @@
   const CIVIL = ['develop', 'flood', 'trade', 'relief'], ORDERS = { develop: 'pop', flood: 'pop', trade: 'coin', relief: 'pop', draft: 'foot', drill: 'drum', search: 'ping' };
 
   class SamMapScene extends DH.MapScene {
-    constructor(engine, world, layout) {
-      super(engine); this.world = world; this.layout = layout;
+    /** @param worlds 고를 수 있는 판 배치들(DH.Sam.worlds). 주지 않으면 world 하나뿐이다. */
+    constructor(engine, world, layout, worlds) {
+      super(engine); this.world = world; this.layout = layout; this.worlds = worlds && worlds.length ? worlds : [world];
       this.state = DH.Sam.newState();                             // globalState: 기본값. 동현랭 설정이 오면 새로 지어 덮어쓴다
       this.game = this.newGame(null);                              // 군주를 고르기 전에는 구경만 한다
       this.mode = 'pick'; this.selected = null; this.sub = null; this.pause = 0; this.flash = null;
@@ -48,13 +52,22 @@
     /** 동현랭 설정을 받아 globalState를 새로 짓고 판을 다시 연다. 오류가 있으면 지금 판을 그대로 둔다.
      *  @returns 보고서 {ok, empty, settings, errors, applied} */
     applyDonghyunLang(scriptText) {
-      const st = DH.Sam.newState(), rep = DH.Sam.applyDonghyunLang(scriptText, st, { world: this.world });
+      const st = DH.Sam.newState(), rep = DH.Sam.readLang(scriptText, this.worlds, st);      // 시나리오(31번)를 먼저 읽어 판을 고른 뒤 그 판에 비춰 검사한다
       if (!rep.ok) return rep;
       this.state = st; this.settings = rep.settings.map(x => [x.n, ...x.values]);
       while (this.engine.scene && this.engine.scene !== this) this.engine.popScene();          // 전투 중이었으면 접는다
+      this.setWorld(rep.world);
       this.layout.log(rep.empty ? '동현랭 설정이 없다. 기본값으로 새 판을 연다' : `동현랭 설정 ${rep.settings.length}개를 적용했다: ${rep.applied.join(' · ')}`);
       this.restart();
       return rep;
+    }
+    /** 판 배치(시나리오)를 바꾼다. 지도와 주는 같으니 세력 색만 다시 짓는다. 바뀌었으면 true */
+    setWorld(w) {
+      if (!w || w === this.world) return false;
+      this.world = w;
+      if (this.grid && this.tiles) { const pal = this.palette(this.grid); this.seasons = pal.seasons; this.tiles.tileAt = pal.tileAt; this.tiles.styles = pal.seasons[this.season]; }
+      this.layout.log(`시나리오: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`);
+      return true;
     }
     /** 새 판. 설정에 군주가 정해져 있으면 바로 시작하고, 아니면 고르는 화면으로 간다. */
     restart() {
@@ -74,7 +87,7 @@
       this.home();
       e.clock.setActors([]);
       this._off = [e.on('clock:turn', d => this.layout.log(`${d.year}년 ${d.month}월이 되었다`))];
-      this.layout.log(`${w.meta.scenario || '시작'} · 주 ${w.provinces.size} · 군주 ${w.factions.size}`);
+      this.layout.log(`${w.title || w.meta.scenario || '시작'} · 주 ${w.provinces.size} · 군주 ${w.factions.size}`);
       this.refresh();
     }
     exit() { this._off.forEach(f => f()); }
@@ -158,7 +171,22 @@
       this.layout.log(`${DH.Sam.ro(f.name)} 시작한다. 우리 주를 찍고 한 달에 한 번씩 명령을 내린다`); this.sfx('zone');
       this.council.poke();
       this.layout.log(`이기는 조건: ${all ? '다른 세력을 모두 무너뜨린다(또는 모든 주를 차지한다)' : `주 ${g.goal}개를 차지한다`}` + (g.stage.months ? ` · ${g.stage.months}달 안에` : ''));
+      this.announce(true);
       this.settled();
+    }
+    /** 우리 주에 있는 재야 장수: [[주, [장수…]], …] (주 번호 순서) */
+    talents() {
+      const g = this.game; if (!g.player) return [];
+      return g.provincesOf(g.player).sort((a, b) => a.id - b.id).map(p => [p, g.freeIn(p.id).sort((a, b) => a.id - b.id)]).filter(([, f]) => f.length);
+    }
+    /** 새 달(또는 판을 열 때)에 우리 주의 재야 장수를 수행낭자가 아뢴다. 기록에는 목록이 바뀌었을 때만(force면 늘) 한 줄 남긴다. 없으면 평소의 한 마디가 나온다. */
+    announce(force) {
+      const g = this.game, T = this.talents(), line = T.map(([p, f]) => `${p.name} ${f.map(o => o.name).join(' · ')}`).join(' / ');
+      if (!T.length || g.over) { this._talent = ''; return; }
+      const head = T.slice(0, 4).map(([p, f]) => `${p.name}에 ${f.map(o => o.name).join(' · ')}`).join(', '), more = T.length > 4 ? ` 외 ${T.length - 4}곳` : '';
+      this.council.tell(`${g.title}, 재야에 사람이 있습니다. ${head}${more}입니다. 그 주에서 수색하시면 맞아들일 수 있습니다.`);
+      if (force || line !== this._talent) this.layout.log(`재야: ${line}`);
+      this._talent = line;
     }
     /** 이동·침공에서 지금 찍을 수 있는 주들 */
     candidates() {
@@ -263,7 +291,7 @@
       else if (ORDERS[id]) { this.sub = null; this.say(g[id](p.id), ORDERS[id]); }
       else if (id === 'civil') this.sub = { type: 'civil' };
       else if (id === 'office') this.sub = { type: 'office', step: 'top' };
-      else if (s && s.type === 'office') {                                                    // 벼슬: 명령을 쓰지 않는다. 정한 뒤에는 벼슬 메뉴로 돌아온다
+      else if (s && s.type === 'office') {                                                    // 벼슬: '주마다 한 달에 명령 하나' 원칙에 해당하지 않는다(acted를 건드리지 않는다). 정한 뒤에는 벼슬 메뉴로 돌아온다
         const num = arg === 'none' ? null : Number(arg); let r = null;
         if (['ogov', 'oadv', 'ogen', 'odel'].includes(id)) s.step = id.slice(1);
         else if (key === 'og') r = g.setGovernor(p.id, num);
@@ -276,9 +304,14 @@
       else if (key === 'af' && s && s.type === 'ally' && s.step === 'f') { this.sub = null; const r = g.ally(p.id, arg); this.say(r, r.made ? 'cheer' : 'tick'); }
       else if (key === 'ab' && s && s.type === 'ally' && s.step === 'f') { s.f = arg; s.step = 'break'; }
       else if (id === 'abok' && s && s.type === 'ally' && s.step === 'break') { this.sub = null; this.say(g.breakPact(p.id, s.f), 'alert'); }
-      else if (id === 'move') this.sub = { type: 'move', step: 'who' };
+      else if (id === 'move') this.sub = { type: 'move', step: 'who', picks: [] };                // picks: 함께 보낼 장수들(누를 때마다 켜고 끈다)
       else if (id === 'attack') this.sub = { type: 'attack', step: 'to' };
-      else if (key === 'who' && s && s.step === 'who') { s.cart = arg === 'cart'; s.officer = arg === 'none' || s.cart ? null : Number(arg); s.step = 'to'; }
+      else if (key === 'who' && s && s.step === 'who') {                                        // s.officer: 보낼 장수 번호들(배열) · 병력만이나 수레면 null
+        const here = g.officersOf(p.id).map(o => o.id), picks = (s.picks || []).filter(x => here.includes(x)), n = Number(arg);
+        if (arg === 'cart' || arg === 'none') { s.cart = arg === 'cart'; s.officer = null; s.step = 'to'; }
+        else if (arg === 'ok') { if (picks.length) { s.cart = false; s.officer = here.filter(x => picks.includes(x)); s.step = 'to'; } }
+        else if (here.includes(n)) { s.picks = picks.includes(n) ? picks.filter(x => x !== n) : [...picks, n]; this.sfx('tick'); }
+      }
       else if (key === 'to' && s && s.step === 'to') {
         s.to = Number(arg); s.step = 'n';
         if (s.type === 'attack') { const half = Math.floor(p.troops / 2); s.fore = { half: half >= g.rules.attackMin ? g.forecast(p.id, s.to, half) : null, all: g.forecast(p.id, s.to, p.troops) }; }      // 군사가 있으면 미리 헤아려 둔다
@@ -365,7 +398,7 @@
       this.engine.clock.endPhase(); this.syncSeason();
       if (this.season !== was) this.layout.log(`${J(SEASON[this.season], '이', '가')} 왔다`);
       for (const n of notes) this.layout.log(n); this.sfx('rows'); if (notes.some(n => /큰물|메뚜기|돌림병/.test(n))) this.sfx('alert', 0.3);
-      this.mode = 'play'; this.council.poke(); this.settled();      // 달이 바뀌면서 기한이 차거나 마지막 주를 잃으면 여기서 바로 끝 화면으로 간다
+      this.mode = 'play'; this.council.poke(); this.announce(false); this.settled();      // 달이 바뀌면서 기한이 차거나 마지막 주를 잃으면 여기서 바로 끝 화면으로 간다
     }
 
     refresh() {
@@ -375,13 +408,26 @@
       L.setInfo([{ label: '날짜', value: c.label }, { label: '군주', value: me ? g.fname(me) + crownOf(me) : '고르는 중' }, { label: '주', value: me ? (g.goal < g.provinces.size ? `${own.length}/${g.goal}` : own.length) : g.provinces.size },
         { label: '병력', value: me ? fmt(own.reduce((s, p) => s + p.troops, 0)) : '-' }, { label: '남은 명령', value: me ? own.filter(p => !p.acted && !g.delegated(p.id)).length : '-' },
         ...(me && g.stage.months ? [{ label: '기한', value: `${Math.max(0, g.stage.months - g.months)}달 남음` }] : [])]);
-      const pick = id => L.setMenu(this.menu(), id2 => this.command(id2));
+      const pick = () => {
+        L.setMenu(this.menu(), id2 => this.command(id2));
+        const el = L.menuEl; if (!el || !el.dataset) return;                                   // node 시험의 가짜 화면에는 없다
+        if (this.mode === 'pick' && g.factions.size >= 10) el.dataset.cols = '3'; else delete el.dataset.cols;      // 군주가 많은 시나리오는 한 줄에 셋씩 놓는다
+        const picks = this.sub && this.sub.step === 'who' ? this.sub.picks || [] : [];
+        for (const b of el.querySelectorAll('button[data-id^="who:"]')) { const on = picks.includes(Number(b.dataset.id.slice(4))); b.classList.toggle('sam-on', on); if (/^who:\d+$/.test(b.dataset.id)) b.setAttribute('aria-pressed', String(on)); }
+      };
+      /** 주 정보를 12칸 격자로 놓는다. rows의 셋째 값이 칸 너비다(이름 + 값): w 한 줄(2 + 10) · h 절반(2 + 4) · t 1/3(2 + 2) · g 금(1 + 4) · r 쌀(1 + 6). 칸 모양은 style.css의 .sam-grid가 정한다 */
+      const detail = d => {
+        L.setDetail(d);
+        const dl = L.detailEl && L.detailEl.querySelector ? L.detailEl.querySelector('dl.dh-rows') : null; if (!dl) return;
+        dl.classList.add('sam-grid');
+        d.rows.forEach((r, i) => { const k = 'sam-c-' + (r[2] || 'w'); if (dl.children[2 * i + 1]) { dl.children[2 * i].className = k; dl.children[2 * i + 1].className = k; } });
+      };
       this.zoomIcons(); this.council.sync(this); this.council.paint(L);
       if (!sel) {
-        if (this.mode === 'pick') L.setDetail({ title: '군주를 고른다', rows: [['주', g.provinces.size], ['장수', g.officers.size], ['군주', g.factions.size]], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 지도 위 + · − 아이콘으로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
+        if (this.mode === 'pick') detail({ title: '군주를 고른다', rows: [['시나리오', this.world.title || this.world.meta.scenario || '-'], ['주', g.provinces.size, 't'], ['장수', g.officers.size, 't'], ['군주', g.factions.size, 't']], note: '아래에서 군주를 고르면 시작한다. 지도의 주를 찍으면 그 땅의 사정이 보인다. 끌면 지도가 움직이고 지도 위 + · − 아이콘으로 크기를 바꾼다. 키보드로는 지도를 한 번 누른 뒤 방향키로 주를 고르고 숫자 키로 버튼을 누른다.' });
         else {
           const adv = g.advisorOf(me), gens = g.generalsOf(me), T = g.thrones;
-          L.setDetail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음'],
+          detail({ title: this.title(), rows: [['우리 주', own.map(p => p.name).join(' · ') || '없음'], ['동맹', g.alliesOf(me).map(a => `${g.fname(a.id)}(${a.months}달 남음)`).join(' · ') || '없음'],
             ['벼슬', `군사 ${adv ? adv.name : '없음'} · 장군 ${gens.length ? gens.map(o => o.name).join(' · ') : '없음'}(${gens.length}/${g.generalCap(me)})`],
             ['자리', g.rank === 2 ? '황제 · 폐하' : g.rank === 1 ? `왕 · 전하(주 ${T.emperor}곳이면 황제)` : `군주 · 주군(주 ${T.king}곳이면 왕)`]], note: this.note(null) });
         }
@@ -389,12 +435,15 @@
       }
       const inc = g.income(sel.id), off = g.officersOf(sel.id), gov = g.governor(sel.id), adv = g.advisorOf(sel.owner), auto = g.delegated(sel.id);
       const tag = o => (gov === o ? ' · 태수' : '') + (adv === o ? ' · 군사' : '') + (o.general ? ' · 장군' : '');
-      L.setDetail({ title: `${sel.name} ${sel.hanja || ''}`, rows: [
-        ['세력', g.fname(sel.owner) + crownOf(sel.owner) + (sel.owner && sel.owner === me ? ' · 우리 땅' : me && g.allied(me, sel.owner) ? ` · 동맹(${g.alliesOf(me).find(a => a.id === sel.owner).months}달 남음)` : g.vacant(sel) ? ' · 장수를 보내면 차지한다' : '')], ['인구', fmt(sel.pop)],
-        ['금', sel.owner ? `${fmt(sel.gold)} (달마다 +${fmt(inc.gold)})` : fmt(sel.gold)], ['쌀', sel.owner ? `${fmt(sel.rice)} (달마다 +${fmt(inc.rice)} −${fmt(inc.upkeep)})` : fmt(sel.rice)],
-        ['병력', fmt(sel.troops)], ['민심', sel.loyalty], ['농지', sel.farm],
-        ...(sel.owner ? [['치수 · 상업', `${sel.flood} · ${sel.trade}`], ['훈련', sel.drill], ['태수', gov ? gov.name + (auto ? (auto === 'civil' ? ' · 내정을 맡겼다' : ' · 내정과 군사를 맡겼다') : '') : '없음']] : []),
+      const mineP = !!me && sel.owner === me && this.mode !== 'pick', free = mineP ? g.freeIn(sel.id).sort((a, b) => a.id - b.id) : [];
+      detail({ title: `${sel.name} ${sel.hanja || ''}`, rows: [
+        ['세력', g.fname(sel.owner) + crownOf(sel.owner) + (sel.owner && sel.owner === me ? ' · 우리 땅' : me && g.allied(me, sel.owner) ? ` · 동맹(${g.alliesOf(me).find(a => a.id === sel.owner).months}달 남음)` : g.vacant(sel) ? ' · 장수를 보내면 차지한다' : '')],
+        ['인구', fmt(sel.pop), 'h'], ['병력', fmt(sel.troops), 'h'],
+        ['금', sel.owner ? `${fmt(sel.gold)} (+${fmt(inc.gold)})` : fmt(sel.gold), 'g'], ['쌀', sel.owner ? `${fmt(sel.rice)} (+${fmt(inc.rice)} −${fmt(inc.upkeep)})` : fmt(sel.rice), 'r'],      // 괄호 안은 달마다 드나드는 양
+        ['민심', sel.loyalty, 't'], ['농지', sel.farm, 't'], ...(sel.owner ? [['훈련', sel.drill, 't'], ['치수', sel.flood, 't'], ['상업', sel.trade, 't'], ['태수', gov ? gov.name : '없음', 't']] : []),
+        ...(auto ? [['위임', `${gov.name} · ${auto === 'civil' ? '내정을 맡겼다' : '내정과 군사를 맡겼다'}`]] : []),
         ['장수', off.length ? off.map(o => `${o.name}(무${o.war} 지${o.int} 매${o.cha}${tag(o)})`).join(', ') : '없음'],
+        ...(mineP ? [['재야', free.length ? free.map(o => `${o.name}(무${o.war} 지${o.int} 매${o.cha})`).join(', ') + ' · 수색하면 맞아들일 수 있다' : '없음']] : []),
         ['이웃', sel.adj.map(id => { const q = g.P(id); return `${q.name}(${g.fname(q.owner)} ${fmt(q.troops)})`; }).join(' · ')]], note: this.note(sel) });
       pick();
     }
@@ -408,7 +457,9 @@
       if (!sel) return '우리 주를 찍으면 명령을 내릴 수 있다. 다 내렸으면 턴 종료를 누른다.';
       if (!p) return g.vacant(sel) ? '공백지다. 이웃한 우리 주에서 장수를 이동시키면 차지한다.' : g.allied(g.player, sel.owner) ? '동맹의 땅이다. 동맹인 동안에는 서로 치지 않는다.' : '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
       if (s) {
-        const last = g.officersOf(p.id).length === 1, empty = ` 장수가 한 명뿐이라, 그 장수가 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).`;
+        const here = g.officersOf(p.id).length, going = s.type === 'move' ? (s.step === 'who' ? (s.picks || []).length : s.officer ? s.officer.length : 0) : 0;
+        const last = s.type === 'move' ? going > 0 && going >= here : here === 1;            // 이동: 고른 장수가 그 주의 전부일 때 · 침공: 장수가 한 명뿐일 때
+        const empty = here === 1 ? ` 장수가 한 명뿐이라, 그 장수가 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : ` 장수가 모두 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).`;
         if (s.type === 'ally') return s.step === 'f' ? `동맹을 청할 세력을 고른다. 금 ${g.rules.ally.gold}은 받아들이든 말든 나간다. 맺으면 ${g.rules.ally.months}달 동안 서로 치지 않는다.` : `${DH.Sam.josa(g.fname(s.f), '과', '와')} 맺은 동맹을 깨면 우리 주 모두의 민심이 ${g.rules.ally.breakLoyalty} 내린다.`;
         if (s.type === 'civil') return `내정 하나를 고른다. 농지는 수확을, 치수는 여름 큰물을 막는 힘을, 상업은 세금을 올린다(지력이 높을수록 많이 오른다). 시혜는 쌀을 풀어 민심을 얻는다(매력).`;
         if (s.type === 'office') {
@@ -417,24 +468,24 @@
           if (s.step === 'adv') return `군사를 고른다(지력 ${R.advisor.int} 이상). 침공할 때 승산을 헤아려 주고, 동맹 확률과 화계 확률을 올린다. 세력에 한 명이다.`;
           if (s.step === 'gen') return `장군을 고른다(무력 ${R.general.war} 이상). 장군의 부대는 피해를 ${g.battleRules.general ?? 10}% 더 준다. 지금 ${g.generalsOf(me).length}/${g.generalCap(me)}명이고, 주 ${R.general.per}곳마다 한 명 더 둘 수 있다. 장군을 다시 고르면 물린다.`;
           if (s.step === 'del') return `${J(p.name, '을', '를')} 태수에게 맡긴다. 맡긴 주는 턴 종료를 누를 때 태수가 알아서 명령을 내린다. 그 전에 손수 명령을 내리면 그 달은 그대로 따른다. 군사까지 맡기면 태수가 침공도 하고 전투도 알아서 싸운다.`;
-          return '벼슬은 명령을 쓰지 않는다. 태수와 위임은 이 주의 일이고, 군사와 장군은 세력 전체의 일이다.';
+          return "벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다. 태수와 위임은 이 주의 일이고, 군사와 장군은 세력 전체의 일이다.";
         }
-        if (s.step === 'who') return '누가 옮겨 갈지 고른다. 물자 수송은 금과 쌀을 수레에 실어 이웃한 우리 주로 보낸다.' + (last ? empty : '');
-        if (s.step === 'to') return s.type === 'move' ? (s.cart ? '수레를 어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.' : '어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.') + (s.officer != null && g.openLand(p.id).length ? ' 공백지로 가면 그 땅을 차지한다.' : '') + (s.officer != null && last ? empty : '') : '어디를 칠지 고른다. 지도에서 붉은 테의 주를 찍어도 된다.';
+        if (s.step === 'who') return '누가 옮겨 갈지 고른다. 여럿을 골라 함께 보낼 수 있다(다시 누르면 뺀다). 다 골랐으면 ‘고른 장수로’를 누른다. 물자 수송은 금과 쌀을 수레에 실어 이웃한 우리 주로 보낸다.' + (last || here === 1 ? empty : '');
+        if (s.step === 'to') return s.type === 'move' ? (s.cart ? '수레를 어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.' : '어디로 보낼지 고른다. 지도에서 노란 테의 주를 찍어도 된다.') + (s.officer != null && g.openLand(p.id).length ? ' 공백지로 가면 그 땅을 차지한다.' : '') + (last ? empty : '') : '어디를 칠지 고른다. 지도에서 붉은 테의 주를 찍어도 된다.';
         if (s.cart) return `${g.P(s.to).name}에 금과 쌀을 얼마나 실어 보낼지 고른다. 지금 금 ${fmt(p.gold)} · 쌀 ${fmt(p.rice)}이 있다.`;
-        if (s.type === 'move') return `${g.P(s.to).name}에 병력을 얼마나 딸려 보낼지 고른다.` + (s.officer != null && last ? empty : '');
+        if (s.type === 'move') return (s.officer ? `${s.officer.map(id => g.officers.get(id).name).join(' · ')}: ` : '') + `${g.P(s.to).name}에 병력을 얼마나 딸려 보낼지 고른다.` + (last ? empty : '');
         const F = s.fore, tell = x => x ? (x.win ? `이길 듯합니다(${x.days}일 · 약 ${fmt(x.left)} 남음)` : '이기기 어렵습니다') : '';
         const fore = F && F.all ? ` 군사 ${F.all.advisor.name}: “${g.title}, 전부 보내면 ${tell(F.all)}.${F.half ? ` 절반이면 ${tell(F.half)}.` : ''}”` : '';
         const f = g.fighters(p.id); return fore.trimStart() + (fore ? ' ' : '') + `${g.P(s.to).name}에 보낼 병력을 고른다. ` + (f.length ? `${f.map(o => o.name).join(' · ')}${f.length > 1 ? ' 부대로 나뉘어' : josaGa(f[0].name)} 나선다.` : `장수가 없어 원정대(무력 ${g.rules.baseStat})가 나선다.`) + (last ? ` 이기면 장수가 옮겨 가 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : '');
       }
-      if (p.acted) return '이번 달 명령을 이미 내렸다. 다른 주를 고르거나 턴 종료를 누른다. 벼슬은 명령과 따로 내릴 수 있다.';
+      if (p.acted) return "이번 달 명령을 이미 내렸다. 다른 주를 고르거나 턴 종료를 누른다. 벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않아 지금도 내릴 수 있다.";
       if (g.delegated(p.id)) return `태수 ${g.governor(p.id).name}에게 맡긴 주다. 그대로 두면 턴 종료 때 태수가 움직이고, 지금 손수 명령을 내려도 된다.`;
       const no = [['develop', '농지 개발'], ['draft', '징병'], ['drill', '훈련'], ['move', '이동'], ['attack', '침공'], ['relief', '시혜'], ['ally', '동맹']].map(([k, n]) => [n, g.can(p.id, k)]).filter(([, r]) => !r.ok).map(([n, r]) => `${n}: ${r.why}`);
       return '명령 하나를 고른다. 주마다 한 달에 한 번이다.' + (no.length ? ' 지금 못 하는 것 — ' + no.join(' · ') : '');
     }
     menu() {
       const g = this.game, p = this.mine, s = this.sub, cancel = { id: 'cancel', label: '그만두기' };
-      if (this.mode === 'pick') return [...[...g.factions.values()].map(f => ({ id: 'f:' + f.id, label: `${f.name} · 주 ${g.provincesOf(f.id).length}` }))];
+      if (this.mode === 'pick') return [...[...g.factions.values()].map(f => ({ id: 'f:' + f.id, label: `${f.name}${g.factions.size >= 10 ? '\n' : ' · '}주 ${g.provincesOf(f.id).length}` }))];      // 군주가 많으면 세 줄로 놓으니 이름과 주 수를 두 줄로 적는다
       if (this.mode === 'over') return [{ id: 'again', label: '다시 하기', primary: true }];
       if (p && s && s.type === 'ally') {
         const A = g.rules.ally, me = g.player;
@@ -459,7 +510,8 @@
           { id: 'odel', label: `위임 · ${auto === 'civil' ? '내정' : auto === 'war' ? '내정과 군사' : '없음'}`, disabled: !gov || here, hint: !gov ? '태수를 먼저 임명한다' : here ? '군주가 머무는 주는 맡기지 않는다' : '' }, cancel];
       }
       if (p && s) {
-        if (s.step === 'who') { const tr = g.can(p.id, 'transport'); return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${o.name} 무${o.war}` })), { id: 'who:none', label: '병력만', disabled: p.troops <= 0 || !g.friends(p.id).length }, { id: 'who:cart', label: '물자 수송', disabled: !tr.ok, hint: tr.ok ? '금과 쌀을 이웃한 우리 주로 보낸다' : tr.why }, cancel]; }
+        if (s.step === 'who') { const tr = g.can(p.id, 'transport'), picks = s.picks || [], n = g.officersOf(p.id).filter(o => picks.includes(o.id)).length;
+          return [...g.officersOf(p.id).map(o => ({ id: 'who:' + o.id, label: `${picks.includes(o.id) ? '✓ ' : ''}${o.name} 무${o.war}` })), { id: 'who:ok', label: n ? `고른 장수로 ${n}명` : '고른 장수로', primary: n > 0, disabled: !n, hint: n ? '고른 장수를 함께 보낸다' : '보낼 장수를 먼저 고른다' }, { id: 'who:none', label: '병력만', disabled: p.troops <= 0 || !g.friends(p.id).length }, { id: 'who:cart', label: '물자 수송', disabled: !tr.ok, hint: tr.ok ? '금과 쌀을 이웃한 우리 주로 보낸다' : tr.why }, cancel]; }
         if (s.step === 'to') return [...this.candidates().map(q => ({ id: 'to:' + q.id, primary: s.aim === q.id, label: s.type === 'move' ? (g.vacant(q) ? `${q.name} · 공백지` : `${q.name} ${fmt(q.troops)}`) : `${q.name} · ${g.fname(q.owner)} ${fmt(q.troops)}` })), cancel];
         const half = Math.floor(p.troops / 2), min = g.rules.attackMin;
         if (s.cart) { const hg = Math.floor(p.gold / 2), hr = Math.floor(p.rice / 2); return [{ id: `cg:${hg}:0`, label: `금 절반 ${fmt(hg)}`, disabled: hg <= 0 }, { id: `cg:0:${hr}`, label: `쌀 절반 ${fmt(hr)}`, disabled: hr <= 0 }, { id: `cg:${hg}:${hr}`, label: '금과 쌀 절반씩', disabled: hg + hr <= 0 }, { id: `cg:${p.gold}:${p.rice}`, label: '금과 쌀 전부' }, cancel]; }
@@ -469,10 +521,12 @@
       const R = g.rules, busy = this.mode === 'busy' || !!this.hold, why = this.hold ? '부대가 길을 가는 중이다' : busy ? '다른 군주들의 차례다' : '우리 주를 먼저 찍는다';
       const can = id => p && !busy ? g.can(p.id, id) : { ok: false, why }, cmd = (id, label) => { const r = can(id); return { id, label, disabled: !r.ok, hint: r.ok ? '' : r.why }; };
       const civ = CIVIL.map(can), mv = [can('move'), can('transport')];
+      const fr = p ? g.freeIn(p.id).sort((a, b) => a.id - b.id) : [], sr = can('search');     // 수색 버튼에 재야 장수가 있는지 적는다(허탕을 치지 않게)
+      const find = { id: 'search', label: !p ? '수색' : fr.length ? `수색 · 재야 ${fr.length}명` : '수색 · 재야 없음', disabled: !sr.ok, hint: !sr.ok ? sr.why : fr.length ? `재야: ${fr.map(o => o.name).join(' · ')}` : '재야 장수가 없다. 가끔 금을 줍는다' };
       return [{ id: 'civil', label: '내정', disabled: !civ.some(r => r.ok), hint: civ.some(r => r.ok) ? '농지 개발 · 치수 · 상업 · 시혜' : civ[0].why },
         cmd('draft', `징병 +${fmt(R.draft.troops)} · 금 ${R.draft.gold}`), cmd('drill', `훈련 · 금 ${R.drill.gold}`),
-        { id: 'move', label: '이동', disabled: !mv.some(r => r.ok), hint: mv.some(r => r.ok) ? '장수 · 병력 · 물자를 옮긴다' : mv[0].why }, cmd('attack', '침공'), cmd('search', '수색'), cmd('ally', '동맹'),
-        { id: 'office', label: '벼슬', disabled: !p || busy || !!g.over, hint: p && !busy ? '태수 · 군사 · 장군 · 위임(명령을 쓰지 않는다)' : why },
+        { id: 'move', label: '이동', disabled: !mv.some(r => r.ok), hint: mv.some(r => r.ok) ? '장수 · 병력 · 물자를 옮긴다' : mv[0].why }, cmd('attack', '침공'), find, cmd('ally', '동맹'),
+        { id: 'office', label: '벼슬', disabled: !p || busy || !!g.over, hint: p && !busy ? "태수 · 군사 · 장군 · 위임('주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동)" : why },
         { id: 'end', label: '턴 종료', primary: true, disabled: busy, hint: '다른 군주들이 움직이고 달이 넘어간다' }];
     }
 
@@ -502,6 +556,7 @@
         }
         A.draw(g, kind, P.x, P.y + 4.5, 1, A.castlePal(p.owner ? this.colorOf(p) : null));
         if (me && p.owner === me && !p.acted && this.mode === 'play') { g.beginPath(); g.arc(P.x + 7, P.y - top + 1, 1.9, 0, Math.PI * 2); g.fillStyle = gm.delegated(p.id) ? '#7fb3d9' : '#fff'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = INK; g.stroke(); }      // 아직 명령을 내리지 않은 우리 주(태수에게 맡긴 주는 하늘빛)
+        if (me && p.owner === me && this.mode !== 'pick' && gm.freeIn(p.id).length) { const x = P.x - 7, y = P.y - top + 1, r = 2.7; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fillStyle = ACCENT; g.fill(); g.lineWidth = 0.8; g.strokeStyle = INK; g.stroke(); }      // 재야 장수가 있는 우리 주(노란 마름모)
         if (me && gm.allied(me, p.owner)) { g.beginPath(); g.arc(P.x - 7, P.y - top + 1, 1.9, 0, Math.PI * 2); g.fillStyle = '#2e9e5b'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = '#fff'; g.stroke(); }                  // 동맹의 주
       }
       // 길을 가는 부대와 수레: 지나온 길에 점선을 남기고, 걸음에 맞춰 조금씩 들썩인다
@@ -562,24 +617,26 @@
     /** 저장 묶음으로 판을 되살린다. 하나라도 맞지 않으면 하던 판을 그대로 둔다. 전투 중이었으면 전투를 접는다.
      *  @returns {{ok:true, text, applied:string[]} | {ok:false, why}} */
     loadGame(d) {
-      const e = this.engine, w = this.world; let st, game, rep;
+      const e = this.engine; let st, game, rep, w;
       try {
         DH.Save.head(d, SAVE.format, SAVE.version, SAVE.name);
-        st = DH.Sam.newState(); rep = DH.Sam.lang.applySettings(d.settings, st, { world: w });
+        w = this.worlds[DH.Sam.scenarioOf(d.settings)];                                        // 저장된 설정의 31번이 판 배치를 정한다(v1.00까지의 저장 파일은 기본 배치)
+        DH.Save.need(w, '저장된 시나리오가 이 자료에 없다.');
+        st = DH.Sam.newState(); rep = DH.Sam.lang.applySettings(d.settings, st, { world: w, worlds: this.worlds });
         DH.Save.need(rep.ok, '저장된 설정이 맞지 않는다. ' + rep.errors.join(' '));
         e.checkSnapshot(d);
         game = DH.Sam.Game.restore(w, d.game, { rng: e.rng, state: st });
         DH.Save.need(d.clock.actors.length === 1 && d.clock.actors[0] === game.player, '날짜 정보가 맞지 않는다.');
       } catch (err) { return NO(err.message); }
       while (e.scene && e.scene !== this) e.popScene();
-      this.state = st; this.settings = d.settings.map(x => [...x]); this.game = game; e.restore(d);
+      this.setWorld(w); this.state = st; this.settings = d.settings.map(x => [...x]); this.game = game; e.restore(d);
       this.mode = game.over ? 'over' : 'play'; this.sub = null; this.flash = null; this.pause = 0; this.marches = []; this.crown = null; game.crowned = 0; this.syncSeason();
       const v = d.scene || {}, c = v.cam, num = x => typeof x === 'number' && isFinite(x);
       this.selected = w.provinces.has(v.selected) ? v.selected : null;
       if (c && num(c.x) && num(c.y) && num(c.zoom)) { this.cam.zoom = Math.min(this.cam.maxZoom, Math.max(this.cam.minZoom, c.zoom)); this.cam.x = c.x; this.cam.y = c.y; this.cam.clampTo(this.grid); }
       this.council.restore(v.council); this.council.poke();                                   // 낭자의 주머니도 이어 간다(없으면 하던 대로)
       const text = `저장한 판을 불러왔다 · ${game.fname(game.player)} · ${e.clock.label}`;
-      this.layout.log(text);
+      this.layout.log(text); this.announce(true);
       if (d.game.pacts === undefined && [...game.provinces.values()].some(p => p.owner && !game.officersOf(p.id).length)) this.layout.log('v0.05까지의 저장 파일이다. 장수가 없는 주는 달이 바뀔 때 공백지가 된다. 그 전에 장수를 보내 두면 지킬 수 있다');
       this.refresh();
       return { ok: true, text, applied: rep.applied };
@@ -589,15 +646,16 @@
 
   /** 자료를 읽어 동현삼을 띄운다. host: 화면을 지을 자리. opt.player를 주면 군주 고르기를 건너뛴다. opt.script는 동현랭 설정이다. */
   async function boot(host, src, opt = {}) {
-    const world = DH.Sam.parse(await DH.Data.load(src));
+    const worlds = DH.Sam.worlds(await DH.Data.load(src)), world = worlds[0];                // 기본 배치와 시나리오들. 동현랭 설정 31번이 고른다
     const W = 480, H = 360;
     const layout = new DH.Layout(host, { title: '동현삼', width: W, height: H, hotkeys: true });      // 조작 버튼에 번호가 붙는다(숫자 키)
     const engine = new DH.Engine({ canvas: layout.canvas, width: W, height: H, seed: opt.seed ?? 1, background: MAP.deep, clock: { unit: 'month', start: world.meta.start } });
-    const scene = new SamMapScene(engine, world, layout); engine.setScene(scene);
+    const scene = new SamMapScene(engine, world, layout, worlds); engine.setScene(scene);
     if (opt.script) scene.applyDonghyunLang(opt.script);                      // 동현랭 설정을 주면 그 값으로 연다
     if (opt.player) scene.start(opt.player);
     if (opt.autostart !== false) engine.start();
-    return { engine, layout, scene, world, get game() { return scene.game; }, lang: DH.Sam.lang, examples: DH.Sam.examples(world), convention: DH.Sam.lang.describe(DH.Sam.newState()),
+    return { engine, layout, scene, worlds, get world() { return scene.world; }, get game() { return scene.game; }, lang: DH.Sam.lang, examples: DH.Sam.examples(worlds), convention: DH.Sam.lang.describe(DH.Sam.newState()),
+      readLang: text => DH.Sam.readLang(text, worlds),                          // 판을 건드리지 않고 읽어만 본다(편집기의 미리 읽기)
       get state() { return scene.state; }, applyDonghyunLang: text => scene.applyDonghyunLang(text), save: SAVE };
   }
 
