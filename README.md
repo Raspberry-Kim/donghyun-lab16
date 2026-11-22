@@ -688,4 +688,4 @@ python3 tools/check_zhuangzi.py   # 『장자』 100구절 원문 대조 (위키
 
 ## 시리즈 연결
 
-[동현랭](https://raspberry-kim.github.io/donghyun-lang/)과 스무 실험실을 상단 메뉴로 오간다. [동현레](https://raspberry-kim.github.io/donghyun-lab19/)는 기지를 짓고 부대를 모아 컴퓨터와 1:1로 겨루는 실시간 전략 게임이고, [동현페](https://raspberry-kim.github.io/donghyun-lab20/)는 아몰랑이 궁전 열네 층을 지나는 모험 게임이다. 데스크톱 메뉴는 동현랭이 두 줄 높이, 나머지는 10열×2줄이다. 모바일은 두 열이며 홀수 개일 때 동현랭만 두 칸 너비를 쓴다.
+[동현랭](https://raspberry-kim.github.io/donghyun-lang/)과 스물한 실험실을 상단 메뉴로 오간다. [동현레](https://raspberry-kim.github.io/donghyun-lab19/)는 기지를 짓고 부대를 모아 컴퓨터와 1:1로 겨루는 실시간 전략 게임이고, [동현페](https://raspberry-kim.github.io/donghyun-lab20/)는 아몰랑이 궁전 열네 층을 지나는 모험 게임이고, [동현스](https://raspberry-kim.github.io/donghyun-lab21/)는 연필로 그린 비행기를 조종하는 세로 슈팅 게임이다. 데스크톱 메뉴는 11열×2줄, 모바일은 두 열이다.
