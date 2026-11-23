@@ -38,7 +38,7 @@
   const CIVIL = ['develop', 'flood', 'trade', 'relief'], ORDERS = { develop: 'pop', flood: 'pop', trade: 'coin', relief: 'pop', draft: 'foot', drill: 'drum', search: 'ping' };
 
   class SamMapScene extends DH.MapScene {
-    /** @param worlds 고를 수 있는 판 배치들(DH.Sam.worlds). 주지 않으면 world 하나뿐이다. */
+    /** @param worlds 고를 수 있는 판 배치들(DH.Sam.worlds). 주지 않으면 world 하나다. */
     constructor(engine, world, layout, worlds) {
       super(engine); this.world = world; this.told = world; this.layout = layout; this.worlds = worlds && worlds.length ? worlds : [world];
       this.state = DH.Sam.newState();                             // globalState: 기본값. 동현랭 설정이 오면 새로 지어 덮어쓴다
@@ -72,7 +72,7 @@
     setWorld(w, quiet) {
       if (!w) return false;
       this.peek(quiet && (w !== this.told || this.opened) ? w : null); if (!quiet) this.opened = true;
-      if (!quiet && w !== this.told) { this.told = w; this.layout.log(`시나리오: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`); }   // 미리 보기는 쌓이는 줄을 남기지 않는다(peek의 한 줄뿐). 판을 열 때 앞서 알린 배치와 다르면 한 번 적는다
+      if (!quiet && w !== this.told) { this.told = w; this.layout.log(`시나리오: ${w.title || w.meta.scenario} · 군주 ${w.factions.size}`); }   // 미리 보기는 쌓이는 줄을 남기지 않는다(peek의 한 줄). 판을 열 때 앞서 알린 배치와 다르면 한 번 적는다
       if (w === this.world) return false;
       this.world = w;
       if (this.grid && this.tiles) { const pal = this.palette(this.grid); this.seasons = pal.seasons; this.tiles.tileAt = pal.tileAt; this.tiles.styles = pal.seasons[this.season]; }
@@ -509,8 +509,8 @@
       if (!p) return g.vacant(sel) ? '공백지다. 이웃한 우리 주에서 장수를 이동시키면 차지한다.' : g.allied(g.player, sel.owner) ? '동맹의 땅이다. 동맹인 동안에는 서로 치지 않는다.' : '남의 땅이다. 우리 주를 찍으면 명령을 내릴 수 있다.';
       if (s) {
         const here = g.officersOf(p.id).length, going = s.type === 'move' ? (s.step === 'who' ? (s.picks || []).length : s.officer ? s.officer.length : 0) : 0;
-        const last = s.type === 'move' ? going > 0 && going >= here : here === 1;            // 이동: 고른 장수가 그 주의 전부일 때 · 침공: 장수가 한 명뿐일 때
-        const empty = here === 1 ? ` 장수가 한 명뿐이라, 그 장수가 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : ` 장수가 모두 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).`;
+        const last = s.type === 'move' ? going > 0 && going >= here : here === 1;            // 이동: 고른 장수가 그 주의 전부일 때 · 침공: 장수가 한 명일 때
+        const empty = here === 1 ? ` 장수가 한 명이라, 그 장수가 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).` : ` 장수가 모두 떠나면 ${DH.Sam.josa(p.name, '은', '는')} 공백지가 된다(남은 병력은 흩어진다).`;
         if (s.type === 'ally') return s.step === 'f' ? `동맹을 청할 세력을 고른다. 금 ${g.rules.ally.gold}은 받아들이든 말든 나간다. 맺으면 ${g.rules.ally.months}달 동안 서로 치지 않는다.` : `${DH.Sam.josa(g.fname(s.f), '과', '와')} 맺은 동맹을 깨면 우리 주 모두의 민심이 ${g.rules.ally.breakLoyalty} 내린다.`;
         if (s.type === 'civil') return `내정 하나를 고른다. 농지는 수확을, 치수는 여름 큰물을 막는 힘을, 상업은 세금을 올린다(지력이 높을수록 많이 오른다). 시혜는 쌀을 풀어 민심을 얻는다(매력).`;
         if (s.type === 'office') {
