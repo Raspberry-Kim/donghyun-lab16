@@ -211,7 +211,7 @@ ok('사로잡기: 침공에 이기면 지키던 장수는 30% 확률로 이긴 �
     const hh = g.officers.get(102); assert.deepStrictEqual([hh.faction, hh.status, hh.province], ['liubei', 'active', 11]); assert.ok(/사로잡힌 하후돈이 유비 편에 들었다/.test(out.text), out.text);
     g = newGame({ player: 'cao' }); g.P(11).troops = 9000; r = g.attack(11, 12, 9000); assert.deepStrictEqual(r.pending.officers, [102]); out = g.settle(r.pending, { winner: 'att', attTroops: 5000, defTroops: 0, reason: '시험' });
     assert.deepStrictEqual([g.officers.get(121).faction, g.officers.get(121).province], ['liubei', 13], '군주 유비는 물러난다'); assert.deepStrictEqual([g.officers.get(123).faction, g.officers.get(123).province], ['cao', 12]);
-    assert.ok(/진류: 장수가 없어 공백지가 되었다/.test(out.text), '하나뿐인 장수가 나가 이기면 출발지는 공백지가 된다 ' + out.text); assert.strictEqual(g.P(11).owner, null);
+    assert.ok(/진류: 장수가 없어 공백지가 되었다/.test(out.text), '하나 있는 장수가 나가 이기면 출발지는 공백지가 된다 ' + out.text); assert.strictEqual(g.P(11).owner, null);
     S.RULES.capture = 0.3; let n = 0; for (let i = 0; i < 400; i++) { g = newGame({ rng: new DH.RNG(100 + i) }); r = g.attack(12, 11, 4000); g.settle(r.pending, { winner: 'att', attTroops: 2500, defTroops: 0, reason: '시험' }); if (g.officers.get(102).faction === 'liubei') n++; }
     assert.ok(n > 90 && n < 150, '400번에 120번쯤 ' + n);
   } finally { S.RULES.capture = cap; }
@@ -234,17 +234,17 @@ ok('동맹: 이웃 세력에 금 300 · 확률 20% + 매력÷2 % (+10%p) · 12�
 });
 ok('AI 군주의 우선순위: 시혜 → 수색 → 공백지 진주 → 병력 확보 → 훈련 → 가장 약한 이웃 공격(병력의 70%, 장수가 둘 이상일 때) → 후방의 장수 · 병력을 전선으로 → 가장 낮은 내정', () => {
   const g = newGame({ player: null }), A = S.RULES.ai; assert.deepStrictEqual([A.needMin, A.needRatio, A.sendRatio, A.reliefBelow, A.occupyRatio], [6000, 2.5, 0.7, 40, 0.3]);
-  const p = g.P(11), jw = g.officers.get(214); assert.deepStrictEqual(g.aiDecide(11), { type: 'search' }, '진류: 장수가 하후돈뿐이고 재야에 전위가 있다');
+  const p = g.P(11), jw = g.officers.get(214); assert.deepStrictEqual(g.aiDecide(11), { type: 'search' }, '진류: 장수가 하후돈 하나이고 재야에 전위가 있다');
   Object.assign(jw, { faction: 'cao', status: 'active' }); assert.deepStrictEqual(g.aiDecide(11), { type: 'draft' }, '진류 8,000: 가장 약한 이웃 5,000의 2.5배(12,500)에 못 미친다');
   p.troops = 12500; assert.deepStrictEqual([A.drillBelow, A.drillMin, p.drill], [55, 3000, 50]); assert.deepStrictEqual(g.aiDecide(11), { type: 'drill' }, '병력이 모였는데 훈련이 55 아래면 먼저 조련한다'); p.drill = 60;
   assert.deepStrictEqual(g.aiDecide(11), { type: 'attack', to: 12, troops: 8700 }, '12,500이 모이면 70%를 보낸다');
-  jw.province = 14; assert.deepStrictEqual(g.aiDecide(11), { type: 'trade' }, '장수가 한 명뿐이면 주를 비우고 나가지 않는다(농지 60 · 상업 30 · 치수 30 가운데 가장 낮은 상업)'); p.trade = 40; assert.deepStrictEqual(g.aiDecide(11), { type: 'flood' }); p.flood = 70; p.trade = 70; assert.deepStrictEqual(g.aiDecide(11), { type: 'develop' }); p.trade = 30; p.flood = 30; jw.province = 11;
+  jw.province = 14; assert.deepStrictEqual(g.aiDecide(11), { type: 'trade' }, '장수가 한 명이면 주를 비우고 나가지 않는다(농지 60 · 상업 30 · 치수 30 가운데 가장 낮은 상업)'); p.trade = 40; assert.deepStrictEqual(g.aiDecide(11), { type: 'flood' }); p.flood = 70; p.trade = 70; assert.deepStrictEqual(g.aiDecide(11), { type: 'develop' }); p.trade = 30; p.flood = 30; jw.province = 11;
   p.loyalty = 39; assert.deepStrictEqual(g.aiDecide(11), { type: 'relief' }, '민심이 40 아래면 쌀을 푼다'); p.rice = 800; assert.deepStrictEqual(g.aiDecide(11), { type: 'attack', to: 12, troops: 8700 }, '군량 석 달 치가 남지 않으면 풀지 않는다'); p.loyalty = 70; p.rice = 2400;
   const sp = g.P(12); sp.troops = 12500; sp.drill = 60; assert.deepStrictEqual(g.aiDecide(12), { type: 'attack', to: 10, troops: 8700 }, '병력이 같으면 번호가 앞선 복양'); g.P(16).troops = 3000; assert.deepStrictEqual(g.aiDecide(12), { type: 'attack', to: 16, troops: 8700 }, '가장 약한 이웃을 고른다'); sp.troops = 5000; g.P(16).troops = 5000; p.troops = 5900; assert.deepStrictEqual(g.aiDecide(11), { type: 'draft' }, '적어도 6,000은 모은다');
   p.gold = 0; assert.deepStrictEqual(g.aiDecide(11), { type: 'wait' }, '금이 없으면 쉰다'); p.gold = 500; p.loyalty = 20; p.rice = 0; assert.deepStrictEqual(g.aiDecide(11), { type: 'trade' }, '징병을 못 하면 내정을 한다'); p.acted = true; assert.deepStrictEqual(g.aiDecide(11), { type: 'wait' });
-  assert.deepStrictEqual(g.aiDecide(39), { type: 'move', to: 41, troops: 2400, officer: 152 }, '성도: 군주 유장은 남고 장임이 병력 30%와 건녕으로 간다'); assert.deepStrictEqual(g.aiDecide(40), { type: 'trade' }, '강주: 장수가 엄안뿐이라 공백지로 나가지 않는다');
+  assert.deepStrictEqual(g.aiDecide(39), { type: 'move', to: 41, troops: 2400, officer: 152 }, '성도: 군주 유장은 남고 장임이 병력 30%와 건녕으로 간다'); assert.deepStrictEqual(g.aiDecide(40), { type: 'trade' }, '강주: 장수가 엄안 하나라 공백지로 나가지 않는다');
   const d = g.frontDistance('cao'); assert.deepStrictEqual([d.get(14), d.get(11)], [1, 0]); const mv = g.aiDecide(14); assert.deepStrictEqual([mv.type, mv.officer, mv.troops], ['move', 105, 4000], '허창(후방): 군주가 아닌 허저가 병력 절반과 간다'); assert.ok(d.get(mv.to) === 0 && g.P(mv.to).owner === 'cao', '전선에 더 가까운 우리 주로');
-  const q = g.P(3), dy = g.frontDistance('yuan'); assert.strictEqual(dy.get(3), 1); assert.deepStrictEqual(g.aiDecide(3), { type: 'move', to: 2, troops: 2500, officer: null }, '계(후방): 장수가 원희뿐이라 병력만 보낸다');
+  const q = g.P(3), dy = g.frontDistance('yuan'); assert.strictEqual(dy.get(3), 1); assert.deepStrictEqual(g.aiDecide(3), { type: 'move', to: 2, troops: 2500, officer: null }, '계(후방): 장수가 원희 하나라 병력만 보낸다');
   q.troops = 3900; assert.deepStrictEqual(g.aiDecide(3), { type: 'trade' }, '보낼 만큼 없으면 내정을 한다');
 });
 ok('AI 차례: 사람의 주를 치면 전투를 돌려주고 멈춘다 · AI끼리는 바로 셈한다 · 사람의 주에는 손대지 않는다', () => {
@@ -292,8 +292,8 @@ ok('어댑터: 오류가 하나라도 있으면 하나도 덮어쓰지 않는다
   const st = { gold: 500, list: [] }, same = JSON.stringify(st);
   const E = (src, re) => { const r = t.applyDonghyunLang(src, st); assert.strictEqual(r.ok, false, src); assert.ok(re.test(r.errors[0]), r.errors[0]); assert.deepStrictEqual(r.applied, []); assert.strictEqual(JSON.stringify(st), same, '상태가 바뀌었다'); };
   E(put(3, 1000, 4, 1), /3번째 정수 4은 시험 설정 번호가 아니다\. 쓸 수 있는 번호: 3 · 30/); E(put(3, 20000), /금 값 20,000은 쓸 수 없다\. 0~9,999, 100 단위만 된다/); E(put(3, 250), /100 단위만/);
-  E(put(3, 1000, 30, 7), /설정 30\(장수\) 뒤에 값이 2개 있어야 하는데 1개뿐이다/); E(put(3, 1000, 30, 7, 101), /장수의 값 값 101은 쓸 수 없다\. 1~100만 된다/); E(put(3, 1000, 30, 13, 50), /설정 30\(장수\): 13번은 없다/);
-  E(HEAD + '뿡뿡뿡 ' + A.expression(65) + TAIL, /1번째 출력 'A'는 정수가 아니다/); E(put(3) + '', /값이 1개 있어야 하는데 0개뿐/); E(HEAD + A.print(3) + '\n포동이 ' + A.expression(1500) + TAIL, /설정 3\(금\)의 값 '1\.500'는 정수가 아니다/); E('뿡뿡 도옹', /^동현랭 오류/); E(HEAD + '동현아 도옹\n몰라요' + TAIL, /^동현랭 오류 \(3번 문장\)/);
+  E(put(3, 1000, 30, 7), /설정 30\(장수\) 뒤에 값이 2개 있어야 하는데 1개다/); E(put(3, 1000, 30, 7, 101), /장수의 값 값 101은 쓸 수 없다\. 1~100만 된다/); E(put(3, 1000, 30, 13, 50), /설정 30\(장수\): 13번은 없다/);
+  E(HEAD + '뿡뿡뿡 ' + A.expression(65) + TAIL, /1번째 출력 'A'는 정수가 아니다/); E(put(3) + '', /값이 1개 있어야 하는데 0개다/); E(HEAD + A.print(3) + '\n포동이 ' + A.expression(1500) + TAIL, /설정 3\(금\)의 값 '1\.500'는 정수가 아니다/); E('뿡뿡 도옹', /^동현랭 오류/); E(HEAD + '동현아 도옹\n몰라요' + TAIL, /^동현랭 오류 \(3번 문장\)/);
   assert.throws(() => new A({ commands: { 1: { key: 'x', label: 'x', min: 5, max: 1, path: 'x' } } }), /범위/); assert.throws(() => new A({ commands: { 1: { key: 'x', label: 'x', min: 0, max: 1 } } }), /path/);
   const none = new A({ name: '시험', runtime: { run: () => { throw new Error('없다'); } }, commands: {} }); assert.strictEqual(none.parse(put(1)).ok, false);
 });
@@ -336,7 +336,7 @@ ok('동현삼 설정: 틀린 번호와 값은 까닭을 말하고 globalState를
   const w = S.parse(samJ()), st = S.newState(), same = JSON.stringify(st), L = S.lang;
   const E = (list, re) => { const r = S.applyDonghyunLang(L.compose(list), st, { world: w }); assert.strictEqual(r.ok, false); assert.ok(re.test(r.errors[0]), r.errors[0]); assert.strictEqual(JSON.stringify(st), same); };
   E([[3, 500], [8, 99, 1, 100]], /설정 8\(주 초기값\): 99번 주는 없다/); E([[8, 12, 4, 101]], /민심 값 101은 쓸 수 없다\. 0~100만 된다/); E([[8, 12, 3, 1250]], /병력 값 1,250은 쓸 수 없다\. 0~99,900, 100 단위만 된다/);
-  E([[30, 999, 1, 50]], /999번 장수는 없다/); E([[20, 42]], /주는 41개뿐이다/); E([[10, 1050]], /징병 수량 값 1,050은 쓸 수 없다\. 100~10,000, 100 단위만 된다/); E([[6, 50], [5, 150]], /우리 주 시작 병력 값 150은/);
+  E([[30, 999, 1, 50]], /999번 장수는 없다/); E([[20, 42]], /주는 41개다/); E([[10, 1050]], /징병 수량 값 1,050은 쓸 수 없다\. 100~10,000, 100 단위만 된다/); E([[6, 50], [5, 150]], /우리 주 시작 병력 값 150은/);
   const r = S.applyDonghyunLang(put(32, 1), st, { world: w }); assert.ok(/1번째 정수 32은 동현삼 설정 번호가 아니다/.test(r.errors[0]));
   const ws = S.worlds(samJ()), ex = S.examples(ws); assert.deepStrictEqual(ex.map(e => e.id), ['none', 's189', 's194', 's201', 's208', 's221', 's235', 'e189', 'e194', 'e200', 'e201', 'e208', 'e221', 'e235', 'rich', 'stage', 'weak', 'unify', 'fast', 'calm', 'swap', 'heart', 'duel', 'crown', 'scale', 'loop']);
   for (const e of ex) { const s2 = S.newState(), q = S.readLang(e.code, ws, s2); assert.ok(q.ok, e.name + q.errors.join()); assert.strictEqual(q.empty, e.id === 'none'); assert.ok(e.code.startsWith('나는 동현이냐?') && e.code.endsWith('동현이구나')); assert.ok(e.group, e.id + ': 묶음 이름'); }
@@ -491,7 +491,7 @@ ok('동현삼 키보드: 한 달을 키보드로만 보낸다(징병 → 이동 
   k.key('Digit2'); assert.deepStrictEqual([g().P(12).troops, g().P(12).acted], [6000, true]);
   k.key('Space'); assert.strictEqual(s.selected, 13); k.key('Digit4'); assert.deepStrictEqual([s.sub.type, s.sub.step], ['move', 'who']); k.key('Escape'); assert.strictEqual(s.sub, null, 'Esc는 고르던 것을 그만둔다'); assert.strictEqual(s.selected, 13);
   k.key('Digit4'); const who = k.layout.keyed(); assert.strictEqual(who[who.length - 1].id, 'cancel'); k.key('Digit' + who.find(x => x.id === 'who:none').n); assert.strictEqual(s.sub.step, 'to');
-  k.key('ArrowLeft'); assert.strictEqual(s.sub.aim, 12, '이웃 우리 주는 소패뿐'); assert.ok(k.layout.items.find(x => x.id === 'to:12').primary, '겨눈 대상이 노란 버튼이 된다'); k.key('Enter'); assert.deepStrictEqual([s.sub.step, s.sub.to], ['n', 12]);
+  k.key('ArrowLeft'); assert.strictEqual(s.sub.aim, 12, '이웃 우리 주는 소패 하나'); assert.ok(k.layout.items.find(x => x.id === 'to:12').primary, '겨눈 대상이 노란 버튼이 된다'); k.key('Enter'); assert.deepStrictEqual([s.sub.step, s.sub.to], ['n', 12]);
   // 얼마나: 수로 정한다. 버튼에는 번호가 없고 숫자 키는 수를 적는다. ← → 100 · ↑ ↓ 1,000 · Backspace · Enter
   assert.deepStrictEqual([s.sub.n, k.layout.keyed().filter(x => x.n).length, k.layout.items.find(x => x.id === 'qok').label], [2500, 0, '보낸다 · 병력 2,500'], '병력만 보내면 절반(백 단위)에서 시작한다');
   const seq = (...keys) => { for (const c of keys) k.key(c); return s.sub.n; };
@@ -649,7 +649,7 @@ ok('벼슬: 태수(세금 +매력÷4 % · 수확 +지력÷4 % · 성 방어 +무
   assert.strictEqual(g.governor(12), null); let r = g.setGovernor(12, 121); assert.ok(r.ok && r.text === '소패: 유비를 태수로 삼았다(세금 +25% · 수확 +19% · 성 방어 +8%p)', r.text); assert.strictEqual(p.acted, false, "벼슬은 '주마다 한 달에 명령 하나' 원칙에 해당하지 않는 군주의 행동이다");
   assert.deepStrictEqual([g.governor(12).name, g.income(12).gold, g.income(12).rice], ['유비', Math.floor(84.5 * 1.25), Math.floor(180 * 475 / 400)]);
   assert.deepStrictEqual(g.fighters(12).map(o => o.name), ['장비'], '태수는 남고 장비가 나선다'); assert.strictEqual(g.setGovernor(12, 122).why, '이 주에 있는 우리 장수가 아니다');
-  g.setGovernor(12, 123); assert.deepStrictEqual(g.fighters(12).map(o => o.name), ['유비'], '장비가 태수면 유비가 나선다'); g.setGovernor(13, 122); assert.deepStrictEqual(g.fighters(13).map(o => o.name), ['관우'], '혼자뿐이면 태수라도 나선다');
+  g.setGovernor(12, 123); assert.deepStrictEqual(g.fighters(12).map(o => o.name), ['유비'], '장비가 태수면 유비가 나선다'); g.setGovernor(13, 122); assert.deepStrictEqual(g.fighters(13).map(o => o.name), ['관우'], '혼자이면 태수라도 나선다');
   O(123).province = 13; assert.strictEqual(g.governor(12), null, '자리를 뜨면 태수가 아니다'); O(123).province = 12;
   // 태수의 무력은 성의 방어에 더해진다(성 0.4 + 95 ÷ 1000)
   const bt = g.makeBattle(11, 12, 5000, new DH.RNG(1)), def = bt.units.find(u => u.side === 'def'), att = bt.units.find(u => u.side === 'att'); assert.strictEqual(bt.castleDef, 0.095); assert.strictEqual(bt.at(def.c, def.r), 'castle'); assert.strictEqual(bt.defAt(def), 0.495);
@@ -896,8 +896,8 @@ ok('동현삼 설정 31 시나리오 · 9 우리 주 배율: 시나리오를 먼
   const ws = S.worlds(samJ()), read = code => { const st = S.newState(), r = S.readLang(code, ws, st); return { st, r }; };
   // 31번은 어디에 적어도 같다(먼저 읽는다)
   for (const code of [put(31, 5, 1, 2), put(1, 2, 31, 5)]) { const { st, r } = read(code); assert.ok(r.ok, r.errors.join()); assert.deepStrictEqual([r.world.index, st.start.scenario, st.start.player, r.applied.slice().sort()], [5, 5, 2, ['군주 유비', '시나리오 221년 4월 · 세 나라']]); }
-  let x = read(put(31, 5, 1, 5)); assert.ok(!x.r.ok && /'221년 4월 · 세 나라'의 군주는 4명뿐이다/.test(x.r.errors.join()), x.r.errors.join()); assert.deepStrictEqual(x.st, S.newState(), '오류가 있으면 globalState를 건드리지 않는다');
-  x = read(put(31, 7)); assert.ok(!x.r.ok, '없는 시나리오'); x = read(put(31, 1, 1, 14)); assert.ok(x.r.ok && x.st.start.player === 14, '189년은 군주가 열넷'); x = read(put(1, 10)); assert.ok(!x.r.ok && /군주는 9명뿐이다/.test(x.r.errors.join()));
+  let x = read(put(31, 5, 1, 5)); assert.ok(!x.r.ok && /'221년 4월 · 세 나라'의 군주는 4명이다/.test(x.r.errors.join()), x.r.errors.join()); assert.deepStrictEqual(x.st, S.newState(), '오류가 있으면 globalState를 건드리지 않는다');
+  x = read(put(31, 7)); assert.ok(!x.r.ok, '없는 시나리오'); x = read(put(31, 1, 1, 14)); assert.ok(x.r.ok && x.st.start.player === 14, '189년은 군주가 열넷'); x = read(put(1, 10)); assert.ok(!x.r.ok && /군주는 9명이다/.test(x.r.errors.join()));
   x = read(put()); assert.ok(x.r.ok && x.r.empty && x.r.world === ws[0]);
   assert.strictEqual(S.scenarioOf([[1, 2], [31, 3], [9, 300]]), 3); assert.strictEqual(S.scenarioOf([[1, 2]]), 0); assert.strictEqual(S.scenarioOf(null), 0);
   // 9번: 10~1000, 10 단위
@@ -952,7 +952,7 @@ ok('재야 알림: 새 달마다 수행낭자가 우리 주의 재야 장수를 
   assert.deepStrictEqual([find().label, find().hint, row('재야')], ['수색 · 재야 1명', '재야: 미축', '미축(무' + s.game.freeIn(13)[0].war + ' 지' + s.game.freeIn(13)[0].int + ' 매' + s.game.freeIn(13)[0].cha + ') · 수색하면 맞아들일 수 있다']);
   see(12); assert.deepStrictEqual([find().label, find().hint, row('재야')], ['수색 · 재야 없음', '재야 장수가 없다. 가끔 금을 줍는다', '없음']);
   see(10); assert.strictEqual(row('재야'), undefined, '남의 주의 재야는 보여 주지 않는다');
-  k.endMonth(); assert.ok(s.council.b.includes('하비에 미축'), '다음 달에도 아뢴다'); assert.strictEqual(L.logs.filter(t => t.startsWith('재야: ')).length, 1, '목록이 같으면 기록은 한 번뿐이다');
+  k.endMonth(); assert.ok(s.council.b.includes('하비에 미축'), '다음 달에도 아뢴다'); assert.strictEqual(L.logs.filter(t => t.startsWith('재야: ')).length, 1, '목록이 같으면 기록은 한 번이다');
   s.game.rules.search.base = 1;                                                                                          // 확률은 그대로 두었다(30% + 매력÷2 %). 여기서는 반드시 찾게 해 두고 본다
   s.selected = 13; s.command('search'); assert.ok(s.game.officersOf(13).some(o => o.name === '미축'), '찾으면 우리 장수가 된다'); assert.strictEqual(s.talents().length, 0);
   k.endMonth(); assert.ok(!s.council.b.includes('재야에 사람이 있습니다'), '없으면 평소의 한 마디가 나온다: ' + s.council.b); assert.ok(DH.Sam.TIPS.length === 124);

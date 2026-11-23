@@ -44,7 +44,7 @@
 
   const lang = new DH.DonghyunLangAdapter({ name: '동현삼', commands: {
     1: { key: 'start.player', label: '군주', min: 0, max: 16, path: 'start.player', hint: '0 고르는 화면 · 1부터는 고른 시나리오에 적힌 순서', def: '0',
-      check: ([n], { world }) => (world && n > world.factions.size ? `${world.title ? `'${world.title}'의 ` : ''}군주는 ${world.factions.size}명뿐이다` : null),
+      check: ([n], { world }) => (world && n > world.factions.size ? `${world.title ? `'${world.title}'의 ` : ''}군주는 ${world.factions.size}명이다` : null),
       show: ([n], { world }) => (n === 0 ? '고르는 화면' : factionAt(world, n) ? factionAt(world, n).name : n + '번') },
     2: { key: 'start.seed', label: '난수 시드', min: 1, max: 2147483646, path: 'start.seed', hint: '같은 시드면 같은 판', def: '1' },
     3: startCmd('gold', 1), 4: startCmd('rice', 2), 5: startCmd('troops', 3), 6: startCmd('loyalty', 4), 7: startCmd('farm', 5),
@@ -69,7 +69,7 @@
     18: { key: 'advisor.int', label: '군사가 되는 지력', min: 1, max: 100, path: 'rules.advisor.int', hint: '이 지력부터 군사로 삼을 수 있다' },
     19: { key: 'general.war', label: '장군이 되는 무력', min: 1, max: 100, path: 'rules.general.war', hint: '이 무력부터 장군으로 올릴 수 있다' },
     20: { key: 'stage.goal', label: '승리 조건: 차지할 주 수', min: 2, max: 999, path: 'stage.goal', hint: '이만큼 차지하면 이긴다 · 정하지 않으면 다른 세력을 모두 무너뜨려야 한다', def: '모든 주',
-      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
+      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개다` : null) },
     21: { key: 'stage.months', label: '기한(달)', min: 0, max: 1200, path: 'stage.months', hint: '이 달 수가 지나면 진다 · 0 기한 없음' },
     22: { key: 'battle.days', label: '전투 기한(일)', min: 5, max: 60, path: 'battle.days', hint: '공격 측이 이 안에 못 이기면 물러난다' },
     23: { key: 'battle.mp', label: '부대 이동력', min: 1, max: 12, path: 'battle.mp', hint: '하루에 쓰는 이동력' },
@@ -77,9 +77,9 @@
       show: ([v]) => `${v / 10}배`, set: (st, [v]) => { st.rules.ai.needRatio = v / 10; } },
     25: { key: 'battle.duel', label: '일기토 최대 합', min: 0, max: 30, path: 'battle.duel', hint: '이 합을 채우면 비긴다 · 0 일기토 없음', show: ([v]) => (v ? v + '합' : '일기토 없음') },
     26: { key: 'rank.king', label: '왕이 되는 주 수', min: 1, max: 999, path: 'rules.rank.king', hint: '이만큼 차지하면 왕에 올라 전하라 불린다', def: '주 수의 1/4',
-      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
+      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개다` : null) },
     27: { key: 'rank.emperor', label: '황제가 되는 주 수', min: 1, max: 999, path: 'rules.rank.emperor', hint: '이만큼 차지하면 황제에 올라 폐하라 불린다', def: '주 수의 1/3',
-      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개뿐이다` : null) },
+      check: ([n], { world }) => (world && n > world.provinces.size ? `주는 ${world.provinces.size}개다` : null) },
     28: { key: 'battle.fire', label: '화계 피해(%)', min: 0, max: 90, path: 'battle.fire', hint: '불이 난 칸의 부대가 날마다 잃는 병력 · 0 화계 없음', show: ([v]) => (v ? v + '%' : '화계 없음') },
     29: { key: 'events.scale', label: '철마다 나는 일의 확률 배율(%)', min: 0, max: 300, path: 'rules.events.scale', hint: '큰물 · 메뚜기 · 돌림병 · 풍년 · 100이 보통 · 0이면 나지 않는다', show: ([v]) => (v ? v + '%' : '나지 않는다') },
     30: { key: 'officers', label: '장수 능력치', multi: true, hint: '능력 1 무력 · 2 지력 · 3 매력', def: '자료 값',
@@ -108,7 +108,7 @@
   const scenarioOf = list => { const s = Array.isArray(list) ? list.filter(x => Array.isArray(x) && x[0] === 31).pop() : null; return s ? s[1] : 0; };
 
   /* 손으로 쓴 예제(변수 · 반복문)를 짓는 도우미. 수는 어댑터의 식 적기(expression)로 적는다.
-   * script(줄들): 줄을 잇는다. '@' 한 글자뿐인 줄은 되돌아올 자리(빈 문장)이고, 다른 줄의 {@}는 그 문장 번호를 적은 식으로 바뀐다.
+   * script(줄들): 줄을 잇는다. '@' 한 글자인 줄은 되돌아올 자리(빈 문장)이고, 다른 줄의 {@}는 그 문장 번호를 적은 식으로 바뀐다.
    * 문장 번호는 동현랭 명세대로 센다: 줄바꿈과 ~로 나눈 조각마다 하나, 주석만 있는 줄도 하나. */
   const A = DH.DonghyunLangAdapter, lit = n => A.expression(n), say = e => `뿡뿡 ${e}~뿡뿡뿡`;
   function script(lines) {

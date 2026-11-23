@@ -414,7 +414,7 @@
       }
       return null;
     }
-    /** 두 주를 잇는 가장 짧은 길(이웃을 따라). [from, …, to]. 이웃이면 두 곳뿐이다. 길이 없으면 [from, to] */
+    /** 두 주를 잇는 가장 짧은 길(이웃을 따라). [from, …, to]. 이웃이면 두 곳이다. 길이 없으면 [from, to] */
     route(fromPid, toPid) {
       const prev = new Map([[fromPid, null]]); let ring = [fromPid];
       while (ring.length && !prev.has(toPid)) { const next = []; for (const id of ring) for (const b of this.P(id).adj) if (!prev.has(b)) { prev.set(b, id); next.push(b); } ring = next; }
@@ -486,10 +486,10 @@
     /** 내정 가운데 지금 할 수 있고 값이 가장 낮은 것(농지 · 상업 · 치수). 없으면 null */
     civilPick(pid) { const p = this.P(pid), list = [['develop', p.farm], ['trade', p.trade], ['flood', p.flood]].filter(([k]) => this.can(pid, k).ok).sort((a, b) => a[1] - b[1]); return list.length ? list[0][0] : null; }
     /** AI 군주(와 위임받은 태수)가 그 주에서 내릴 명령 하나를 정한다(실행은 하지 않는다).
-     *  우선순위: ⓪ 시혜(민심이 낮고 쌀이 넉넉할 때) → ① 수색(재야 장수가 있고 장수가 한 명뿐일 때) → ② 공백지 진주(장수가 둘 이상일 때)
+     *  우선순위: ⓪ 시혜(민심이 낮고 쌀이 넉넉할 때) → ① 수색(재야 장수가 있고 장수가 한 명일 때) → ② 공백지 진주(장수가 둘 이상일 때)
      *           → ③ 병력 확보(징병) → ④ 훈련(병력이 넉넉한데 훈련이 낮을 때) → ⑤ 인접 영지 공격(장수가 둘 이상일 때만. 한 명은 남아 주를 지킨다)
      *           → ⑥ 후방의 남는 장수 · 병력을 전선 쪽으로 → ⑦ 농지 · 상업 · 치수 가운데 가장 낮은 것 → 쉰다.
-     *  주를 비우지 않는다: 장수가 한 명뿐인 주에서는 장수를 내보내지 않는다. 군주와 태수는 이동 · 진주에 나서지 않는다.
+     *  주를 비우지 않는다: 장수가 한 명인 주에서는 장수를 내보내지 않는다. 군주와 태수는 이동 · 진주에 나서지 않는다.
      *  mode가 'civil'이면(내정만 맡은 태수) 시혜 · 수색 · 훈련 · 내정만 한다.
      *  @returns {{type:'relief'|'search'|'draft'|'drill'|'attack'|'move'|'develop'|'trade'|'flood'|'wait', to?:number, troops?:number, officer?:number|null}} */
     aiDecide(pid, mode = 'war') {
@@ -515,11 +515,11 @@
         const next = this.friends(pid).filter(q => (d.get(q.id) ?? Infinity) < here).sort((a, b) => d.get(a.id) - d.get(b.id) || a.id - b.id)[0];
         const troops = p.troops >= A.moveMin ? hundreds(p.troops * A.moveRatio) : 0;
         if (next && n >= 2 && spare()) return { type: 'move', to: next.id, troops, officer: spare().id };              // ⑥ 남는 장수가 병력 절반을 데리고 간다
-        if (next && troops > 0) return { type: 'move', to: next.id, troops, officer: null };                           //    장수가 한 명뿐이면 병력만 보낸다
+        if (next && troops > 0) return { type: 'move', to: next.id, troops, officer: null };                           //    장수가 한 명이면 병력만 보낸다
       }
       return civil();                                                                                                  // ⑦
     }
-    /** 세력 f의 벼슬을 알아서 채운다(AI 군주). 태수: 주마다 군주가 아닌 장수 가운데 매력 + 지력이 가장 높은 이(군주뿐이면 군주가 직접).
+    /** 세력 f의 벼슬을 알아서 채운다(AI 군주). 태수: 주마다 군주가 아닌 장수 가운데 매력 + 지력이 가장 높은 이(군주만 있으면 군주가 직접).
      *  군사: 지력이 가장 높은 이(조건을 넘을 때) · 장군: 무력 순으로 정원까지. 이미 있는 자리는 건드리지 않는다. */
     autoOffices(f) {
       const fa = this.factions.get(f); if (!fa || !fa.alive) return;

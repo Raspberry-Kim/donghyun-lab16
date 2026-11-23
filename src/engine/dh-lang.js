@@ -1,6 +1,6 @@
 /* 동현 공통 엔진 · lang — 동현랭(donghyun-lang) 연동. 두 게임이 똑같이 쓴다.
  *
- * 동현랭에는 '자금'이나 '병력' 같은 낱말이 없다. 값은 모두 정수이고, 밖으로 나가는 것은 출력뿐이다.
+ * 동현랭에는 '자금'이나 '병력' 같은 낱말이 없다. 값은 모두 정수이고, 밖으로 나가는 것은 출력 하나다.
  * 그래서 시리즈의 다른 게임과 같은 규약을 쓴다: 동현랭 프로그램이 출력한 정수를 [설정 번호, 값…] 묶음으로 읽는다.
  *     뿡뿡 도오오옹~뿡뿡뿡        ㅋㅋ 3번 설정
  *     뿡뿡 … ~뿡뿡뿡              ㅋㅋ 그 값
@@ -98,7 +98,7 @@
         const vals = [];
         for (let k = 0; k < c.args.length; k++) {
           const a = c.args[k], raw = tok[i + 1 + k];
-          if (raw === undefined) return fail(`설정 ${n}(${c.label}) 뒤에 값이 ${c.args.length}개 있어야 하는데 ${k}개뿐이다.`);
+          if (raw === undefined) return fail(`설정 ${n}(${c.label}) 뒤에 값이 ${c.args.length}개 있어야 하는데 ${k}개다.`);
           if (!INT.test(raw)) return fail(`설정 ${n}(${c.label})의 값 '${raw.slice(0, 12)}'는 정수가 아니다.`);
           const v = Number(raw);
           if (v < a.min || v > a.max || (a.step > 1 && v % a.step !== 0)) return fail(`${c.args.length > 1 ? `${c.label}의 ${a.label}` : c.label} 값 ${DH.josa(fmt(v), '은', '는')} 쓸 수 없다. ${DonghyunLangAdapter.rangeText(a)}만 된다.`);
