@@ -327,6 +327,15 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
  .series-strip .series-links:has(.series-item:nth-child(23):last-child) .series-item[data-series="lang"]{grid-column:span 2;grid-row:auto}
 }
 
+/* SERIES-24: 24칸(동현랭 + 23실험실)은 짝수라 모두 같은 크기. 데스크톱 12열×2줄, 휴대폰 두 열. */
+@media(min-width:781px){
+ .series-strip .series-links:has(.series-item:nth-child(24):last-child){grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(2,1fr);grid-auto-flow:row;min-width:0}
+ .series-strip .series-links:has(.series-item:nth-child(24):last-child) .series-note{white-space:normal}
+}
+@media(max-width:780px){
+ .series-strip .series-links:has(.series-item:nth-child(24):last-child){grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none}
+}
+
 /* 수학적 원리 */
 .math-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 40px;margin-top:8px}
 .math-grid article{min-width:0;border-top:1px solid var(--line);padding:2px 0 14px}
