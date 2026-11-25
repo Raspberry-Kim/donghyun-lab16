@@ -336,6 +336,24 @@ html.pseudo-full-on,html.pseudo-full-on body{overflow:hidden;overscroll-behavior
  .series-strip .series-links:has(.series-item:nth-child(24):last-child){grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none}
 }
 
+/* SERIES-25: 데스크톱은 동현랭 두 줄 높이 + 24실험실 12열×2줄. 모바일은 기존 홀수 규칙. */
+@media(min-width:781px){
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child){grid-template-columns:repeat(13,minmax(0,1fr));grid-template-rows:repeat(2,1fr);grid-auto-flow:row;min-width:0}
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-item[data-series="lang"]{grid-column:auto;grid-row:span 2;align-items:center;text-align:center}
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-item[data-series="lang"] .series-name{font-size:19px}
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-note{white-space:normal;word-break:keep-all}
+}
+@media(min-width:781px) and (max-width:980px){
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-item[data-series="lang"] .series-name{font-size:16px}
+}
+@media(min-width:781px) and (max-width:840px){
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-name,.series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-item[data-series="lang"] .series-name{font-size:14px}
+}
+@media(max-width:780px){
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child){grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none}
+ .series-strip .series-links:has(.series-item:nth-child(25):last-child) .series-item[data-series="lang"]{grid-column:span 2;grid-row:auto}
+}
+
 /* 수학적 원리 */
 .math-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 40px;margin-top:8px}
 .math-grid article{min-width:0;border-top:1px solid var(--line);padding:2px 0 14px}
