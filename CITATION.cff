@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "Donghyunsam (동현삼): a single-player Three Kingdoms strategy simulation game on a map of 41 provinces with hex battles, duels and fire attacks, with starting values and rule numbers set through the esoteric language Donghyun-lang"
 type: software
-version: "1.13"
+version: "1.14"
 doi: "10.5281/zenodo.24106052"
 date-released: "2026-11-25"
 authors:
@@ -14,6 +14,11 @@ license: MIT
 repository-code: "https://github.com/Raspberry-Kim/donghyun-lab16"
 url: "https://raspberry-kim.github.io/donghyun-lab16/"
 abstract: >-
+  Version 1.14 changes only the screen test (qa/ui.cjs): full-page
+  screenshots are taken in pieces of at most 12,000 device pixels in
+  height, because a single capture of the long rules tab at three times
+  phone scale (1170 x 72,894 px) failed where temporary storage was
+  short; rules, data, the save format and the AI are unchanged.
   Version 1.13 corrects the ordinal of this lab in the README
   (seventeenth in the series, counting the Donghyunlang site first);
   rules, data, the save format and the AI are unchanged.

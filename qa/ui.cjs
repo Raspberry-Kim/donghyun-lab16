@@ -1,6 +1,15 @@
 // 동현삼 화면 시험(Playwright): node build.cjs 뒤에 node qa/ui.cjs
 const { chromium } = require('/home/user/node_modules/playwright'); const assert = require('assert'), fs = require('fs'), path = require('path'), fmt = n => Number(n).toLocaleString('ko-KR');
 const url = 'file://' + path.join(__dirname, '..', 'index.html'), shot = path.join(__dirname, 'tmp'); fs.mkdirSync(shot, { recursive: true });
+// 쪽 전체를 찍는다. 긴 쪽을 한 장으로 찍으면 캡처 버퍼가 수백 MB가 되어(휴대폰 3배율 규칙 탭 1170×72894px) 임시 저장 공간이 모자란 곳에서 캡처가 실패하고 쪽이 죽는다.
+// 그래서 한 장의 세로를 기기 픽셀 12,000 이하로 두고, 넘으면 같은 높이의 -1, -2, … 로 나눠 찍는다.
+const pageShot = async (pg, file) => {
+  const [H, dpr] = await pg.evaluate(() => [document.documentElement.scrollHeight, devicePixelRatio]), W = pg.viewportSize().width, k = Math.ceil(H * dpr / 12000), step = Math.ceil(H / k), part = i => file.replace(/\.png$/, '-' + i + '.png');
+  for (const f of fs.readdirSync(path.dirname(file))) if (f.startsWith(path.basename(file, '.png') + '-') && /-\d+\.png$/.test(f)) fs.rmSync(path.join(path.dirname(file), f));
+  if (k <= 1) return pg.screenshot({ path: file, fullPage: true });
+  fs.rmSync(file, { force: true });
+  for (let i = 0; i < k; i++) await pg.screenshot({ path: part(i + 1), fullPage: true, clip: { x: 0, y: i * step, width: W, height: Math.min(step, H - i * step) } });
+};
 // 예제를 고른다. 하던 판이 있으면 '바꾼다'고 답한다(v1.11: 예제를 고르면 지도가 그 배치로 바뀐다)
 const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const y = pg.locator('#menu .mi:has(span:text-is("바꾼다"))'); if (await y.isVisible()) await y.click(); };
 (async () => {
@@ -205,9 +214,9 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
   const NAME = '동현삼', TABS = ['지도', '동현삼 출전 규약', '규칙', '엔진과 자료', '수학적 원리', '모델과 출처'], HEADS = { protocol: ['설정 번호', '예제 스물여섯', '시나리오'], rules: ['플레이 방법', '조작', '동현삼 규칙'], engine: ['엔진의 층', '게임이 얹는 법', '동현랭 어댑터', 'JSON 규격', '파일', '돌려 보기'], about: ['상표와 관계', '이 자료가 무엇이고 무엇이 아닌지', '자료 출처'] };
   const band = await p.evaluate(() => ({ n: document.querySelectorAll('.series-item').length, ctx: document.querySelector('.series-context').textContent, here: [...document.querySelectorAll('.series-item[aria-current=page]')].map(a => a.querySelector('.series-name').textContent), hrefs: [...document.querySelectorAll('a.series-item')].map(a => a.getAttribute('href')),
     ed: document.querySelector('.edition').textContent.trim(), foot: document.querySelector('footer').textContent, title: document.title, left: document.documentElement.innerHTML.match(/__[A-Z_]+__|<!--README/g) }));
-  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [24, [NAME + '™'], 23, null]); assert.ok(band.ctx.includes('스물세 개의 작은 세계') && band.ed.startsWith('v1.13') && band.foot.includes(NAME + ' v1.13') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
+  assert.deepStrictEqual([band.n, band.here, band.hrefs.length, band.left], [24, [NAME + '™'], 23, null]); assert.ok(band.ctx.includes('스물세 개의 작은 세계') && band.ed.startsWith('v1.14') && band.foot.includes(NAME + ' v1.14') && band.title.includes(NAME), JSON.stringify([band.ctx, band.ed, band.title]));
   assert.ok(band.hrefs.every(h => /^https:\/\/raspberry-kim\.github\.io\/donghyun-(lang|lab\d+)\/$/.test(h)) && new Set(band.hrefs).size === 23, '띠의 주소 스물세 개가 서로 다르다');
-  ok(`시리즈 띠 24칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v1.13 · 빌드 자리표가 남지 않았다`);
+  ok(`시리즈 띠 24칸(지금 여기: ${NAME}) · 머리글과 바닥글의 판 번호 v1.14 · 빌드 자리표가 남지 않았다`);
 
   const tabsNow = () => p.evaluate(() => ({ names: [...document.querySelectorAll('.tabs button')].map(b => b.textContent), on: [...document.querySelectorAll('.tabs button[aria-current=page]')].map(b => b.dataset.tab), shown: [...document.querySelectorAll('.tab-panel')].filter(x => !x.hidden).map(x => x.id), sw: document.documentElement.scrollWidth, run: __dh.engine.loop.running }));
   await G(() => __dh.engine.start()); let T = await tabsNow(); assert.deepStrictEqual([T.names, T.on, T.shown, T.run], [TABS, ['play'], ['tab-play'], true]);
@@ -217,7 +226,7 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
     const d = await p.evaluate(id => { const s = document.querySelector('#tab-' + id); return { heads: [...s.querySelectorAll('h2, h3, h4')].map(h => h.textContent), chars: s.textContent.length, tables: s.querySelectorAll('table').length, pre: s.querySelectorAll('pre').length, raw: /(^|\n)#{1,4} |\*\*|\]\(http/.test(s.textContent),
       wide: [...s.querySelectorAll('table, pre, p, li')].filter(e => { const w = e.closest('.table-wrap') || e; return w.getBoundingClientRect().right > innerWidth + 1; }).length }; }, id);
     for (const h of heads) assert.ok(d.heads.some(x => x.includes(h)), `${id} 탭에 ‘${h}’ 제목이 없다: ${d.heads.join(' | ')}`); assert.ok(d.chars > 1500 && !d.raw && d.wide === 0, id + ' ' + JSON.stringify({ chars: d.chars, raw: d.raw, wide: d.wide })); docs[id] = d;
-    await p.screenshot({ path: shot + '/ui-tab-' + id + '.png', fullPage: true });
+    await pageShot(p, shot + '/ui-tab-' + id + '.png');
   }
   assert.ok(docs.protocol.tables >= 1 && docs.protocol.pre >= 1 && docs.engine.tables >= 1 && docs.engine.pre >= 1, '규약과 엔진 탭에 표와 코드 상자');
   await p.click('.tabs button[data-tab=play]'); T = await tabsNow(); assert.deepStrictEqual([T.on, T.shown, T.run], [['play'], ['tab-play'], true], '돌아오면 판이 다시 흐른다');
@@ -244,7 +253,7 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
   // 화면 전환 · 입력 표식
   const look = () => p.evaluate(() => ({ theme: document.documentElement.dataset.theme || 'light', pressed: document.querySelector('#theme').getAttribute('aria-pressed'), bg: getComputedStyle(document.body).backgroundColor, ink: getComputedStyle(document.body).color }));
   const light = await look(); await p.click('#theme'); const dark = await look(); assert.deepStrictEqual([dark.theme, dark.pressed], ['dark', 'true']); assert.ok(dark.bg !== light.bg && dark.ink !== light.ink, JSON.stringify([light, dark]));
-  await p.evaluate(() => scrollTo(0, 0)); await step(1); await p.screenshot({ path: shot + '/ui-dark.png', fullPage: true }); await p.click('#theme'); assert.deepStrictEqual(await look(), light);
+  await p.evaluate(() => scrollTo(0, 0)); await step(1); await pageShot(p, shot + '/ui-dark.png'); await p.click('#theme'); assert.deepStrictEqual(await look(), light);
   const marks = await p.evaluate(() => [...document.querySelectorAll('.input-marks .mark')].map(e => [e.getAttribute('aria-label'), e.classList.contains('off'), (e.dataset.tip || '').length > 10])); assert.strictEqual(marks.length, 4); assert.ok(marks.every(k => k[0] && k[2] && k[1] === /없음$/.test(k[0])), JSON.stringify(marks));
   ok(`화면 전환: 어두운 화면과 밝은 화면을 오간다 · 입력 표식 넷(${marks.map(k => k[0]).join(' · ')})`);
 
@@ -304,7 +313,7 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
   ok(`휴대폰: 유장으로 시작 · 장임을 보내 공백지 건녕을 차지 · 자동에서 한중 침공 · 손가락으로 부대와 칸 찍기(누름 덧칠 없음) · 맡기기 → ${win === 'att' ? '한중을 차지했다' : '물러났다'} · 가로 넘침 없음`);
 
   // 휴대폰 페이지: 시리즈 띠 · 탭 다섯 · 편집기가 390px 안에 든다
-  await m.evaluate(() => { document.querySelector('.tabs button[data-tab=play]').click(); scrollTo(0, 0); }); await m.evaluate(() => __dh.engine.step(1)); await m.screenshot({ path: shot + '/ui-phone-play.png', fullPage: true });
+  await m.evaluate(() => { document.querySelector('.tabs button[data-tab=play]').click(); scrollTo(0, 0); }); await m.evaluate(() => __dh.engine.step(1)); await pageShot(m, shot + '/ui-phone-play.png');
   const mb = await m.evaluate(() => { const it = [...document.querySelectorAll('.series-item')].map(e => e.getBoundingClientRect()); return { n: it.length, right: Math.max(...it.map(r => r.right)), left: Math.min(...it.map(r => r.left)), h: Math.min(...it.map(r => r.height)), w: [...new Set(it.map(r => Math.round(r.width)))], sw: document.documentElement.scrollWidth,
     ed: ['.ed-panel', '#code', '#example', '#run', '#result', '.file-row', '.lang-rule', '.tabs', '.getting-started'].map(s => [s, Math.round(document.querySelector(s).getBoundingClientRect().right)]).filter(x => x[1] > 390) }; });
   assert.ok(mb.n === 24 && mb.right <= 390 && mb.left >= 0 && mb.h >= 44 && mb.sw <= 390 && mb.ed.length === 0, JSON.stringify(mb)); assert.strictEqual(mb.w.length, 1, '띠 24칸(짝수): 모두 같은 폭: ' + mb.w);
@@ -312,7 +321,7 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
   for (const id of ['protocol', 'rules', 'engine', 'about']) {
     const h = await m.$(`.tabs button[data-tab=${id}]`); await h.scrollIntoViewIfNeeded(); const r = await h.boundingBox(); assert.ok(r.height >= 44, id + ' 탭 버튼 높이 ' + r.height); await m.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2);
     const d = await m.evaluate(id => { const s = document.querySelector('#tab-' + id); return { shown: !s.hidden, sw: document.documentElement.scrollWidth, wide: [...s.querySelectorAll('h2, h3, h4, p, li, a, pre, .table-wrap, .science-block')].filter(e => e.getBoundingClientRect().right > 391).map(e => e.tagName + ':' + e.textContent.slice(0, 20)), scroll: [...s.querySelectorAll('.table-wrap, pre')].filter(e => e.scrollWidth > e.clientWidth + 1).length }; }, id);
-    assert.ok(d.shown && d.sw <= 390 && d.wide.length === 0, id + ' ' + JSON.stringify(d)); mdocs.push(id + (d.scroll ? `(옆으로 미는 표·코드 ${d.scroll})` : '')); await m.screenshot({ path: shot + '/ui-phone-' + id + '.png', fullPage: true });
+    assert.ok(d.shown && d.sw <= 390 && d.wide.length === 0, id + ' ' + JSON.stringify(d)); mdocs.push(id + (d.scroll ? `(옆으로 미는 표·코드 ${d.scroll})` : '')); await pageShot(m, shot + '/ui-phone-' + id + '.png');
   }
   ok(`휴대폰 페이지: 시리즈 띠 24칸, 모두 같은 폭(${mb.w[0]}px)으로 390px 안 · 편집기와 저장 줄 넘침 없음 · 설명 탭 넷(${mdocs.join(' · ')}) 가로 넘침 없음`);
 
@@ -354,7 +363,7 @@ const pickEx = async (pg, id) => { await pg.selectOption('#example', id); const 
   await s.keyboard.press('Escape'); assert.strictEqual(await gm(), null); assert.deepStrictEqual([await S(() => __dh.engine.loop.running), await onMap()], [true, true], 'Esc로 닫으면 판이 다시 돌고 키보드는 지도에 듣는다');
   await s.click('#game-save'); await s.mouse.click(12, 12); assert.strictEqual(await gm(), null, '메뉴 바깥을 누르면 닫힌다'); await S(() => __dh.engine.stop());
   await s.click('#game-save'); await s.keyboard.press('Enter'); assert.strictEqual(await gm(), null); assert.deepStrictEqual(await status(), ['브라우저 칸 1에 저장했다 · 유비 · 200년 1월', '']);
-  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '1.13', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
+  let d1 = await slot(1); assert.deepStrictEqual([d1.format, d1.version, d1.lab, d1.summary, d1.settings, d1.game.player, d1.game.provinces[11].farm], ['donghyunsam-save', 1, '1.14', { title: '유비', date: '200년 1월', line: '주 2 · 병력 10,000' }, [], 'liubei', 45]); assert.ok(!isNaN(new Date(d1.savedAt)));
   await s.click('button[data-id=civil]'); await s.click('button[data-id=develop]'); assert.strictEqual(await S(() => __dh.game.P(12).farm), 51); assert.ok(await onMap(), '버튼을 누른 뒤에도 키보드는 지도에 듣는다');
   await s.click('#game-save'); M = await gm(); assert.ok(/^유비 · 200년 1월 · 주 2 · 병력 10,000 · \d+\/\d+ \d\d:\d\d 저장$/.test(M.notes[0]), M.notes[0]); await pick('브라우저 칸 1'); M = await gm(); assert.deepStrictEqual([M.title, M.items], ['칸 1에 덮어쓸까?', ['덮어쓴다', '그만둔다']]);
   await pick('그만둔다'); assert.strictEqual((await gm()).title, '저장'); assert.strictEqual((await slot(1)).game.provinces[11].farm, 45, '그만두면 칸은 그대로다');
